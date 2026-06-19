@@ -1,0 +1,56 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { sendEmail, invoiceEmailHtml } from '@/lib/email'
+import { formatCurrency } from '@/lib/utils'
+
+export async function POST(req: NextRequest) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const { invoiceId } = await req.json()
+  const service = createServiceClient()
+
+  const { data: invoice } = await service
+    .from('invoices')
+    .select('*, customers(name, email), companies(name, email, phone), jobs(title)')
+    .eq('id', invoiceId)
+    .single()
+
+  if (!invoice) return NextResponse.json({ error: 'Invoice not found' }, { status: 404 })
+
+  const customer = invoice.customers as { name: string; email: string | null }
+  if (!customer?.email) return NextResponse.json({ error: 'Customer has no email address' }, { status: 400 })
+
+  const company = invoice.companies as { name: string; email: string | null; phone: string | null }
+  const job = invoice.jobs as { title: string } | null
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
+  const viewUrl = `${appUrl}/i/${invoice.public_token}`
+
+  const html = invoiceEmailHtml({
+    companyName: company.name,
+    customerName: customer.name,
+    invoiceNumber: invoice.invoice_number,
+    jobTitle: job?.title,
+    total: formatCurrency(invoice.total),
+    amountDue: formatCurrency(invoice.total - invoice.amount_paid),
+    dueDate: invoice.due_date,
+    viewUrl,
+    companyPhone: company.phone,
+    companyEmail: company.email,
+  })
+
+  const result = await sendEmail({
+    to: customer.email,
+    subject: `Invoice ${invoice.invoice_number} from ${company.name}`,
+    html,
+    replyTo: company.email ?? undefined,
+  })
+
+  if (result.error) return NextResponse.json({ error: result.error }, { status: 500 })
+
+  await service.from('invoices').update({ status: 'sent', sent_at: new Date().toISOString() }).eq('id', invoiceId)
+
+  return NextResponse.json({ ok: true })
+}

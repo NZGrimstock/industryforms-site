@@ -1,0 +1,66 @@
+{
+  "expo": {
+    "name": "IndustryForms",
+    "slug": "industryforms",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "industryforms",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": false,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#f9fafb"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.industryforms.app"
+    },
+    "android": {
+      "package": "com.industryforms.app",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#f97316"
+      },
+      "permissions": [
+        "RECEIVE_BOOT_COMPLETED",
+        "ACCESS_BACKGROUND_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "FOREGROUND_SERVICE",
+        "FOREGROUND_SERVICE_LOCATION"
+      ]
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      [
+        "@journeyapps/react-native-quick-sqlite",
+        { "enableSQLCipher": false }
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "IndustryForms tracks your location in the background to automatically log travel for your vehicle logbook.",
+          "locationWhenInUsePermission": "IndustryForms uses your location to track travel for your vehicle logbook.",
+          "isAndroidBackgroundLocationEnabled": true,
+          "isAndroidForegroundServiceEnabled": true
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "IndustryForms needs access to your photos to attach images to jobs.",
+          "cameraPermission": "IndustryForms needs your camera to take job photos."
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

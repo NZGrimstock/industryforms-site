@@ -1,0 +1,140 @@
+import { useState, useEffect, useCallback } from 'react'
+import {
+  View, Text, FlatList, TouchableOpacity, StyleSheet,
+  TextInput, ActivityIndicator, RefreshControl,
+} from 'react-native'
+import { router } from 'expo-router'
+import { SafeAreaView } from 'react-native-safe-area-context'
+import { supabase } from '@/lib/supabase'
+
+const STATUS_COLOR: Record<string, string> = {
+  unscheduled: '#6b7280',
+  scheduled:   '#3b82f6',
+  in_progress: '#f97316',
+  on_hold:     '#eab308',
+  completed:   '#22c55e',
+  cancelled:   '#ef4444',
+}
+
+const STATUS_LABEL: Record<string, string> = {
+  unscheduled: 'Unscheduled',
+  scheduled:   'Scheduled',
+  in_progress: 'In progress',
+  on_hold:     'On hold',
+  completed:   'Completed',
+  cancelled:   'Cancelled',
+}
+
+type Job = { id: string; job_number: string; title: string; status: string; description: string | null }
+
+export default function JobsScreen() {
+  const [search, setSearch] = useState('')
+  const [jobs, setJobs] = useState<Job[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
+
+  const fetchJobs = useCallback(async () => {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    const { data: profile } = await supabase.from('profiles').select('company_id').eq('id', user.id).single()
+    if (!profile) return
+    const { data } = await supabase
+      .from('jobs')
+      .select('id, job_number, title, status, description')
+      .eq('company_id', profile.company_id)
+      .order('created_at', { ascending: false })
+      .limit(200)
+    setJobs(data ?? [])
+  }, [])
+
+  useEffect(() => {
+    fetchJobs().finally(() => setIsLoading(false))
+  }, [fetchJobs])
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true)
+    await fetchJobs()
+    setRefreshing(false)
+  }, [fetchJobs])
+
+  const filtered = jobs.filter(j =>
+    j.title.toLowerCase().includes(search.toLowerCase()) ||
+    j.job_number.toLowerCase().includes(search.toLowerCase())
+  )
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <View style={styles.header}>
+        <Text style={styles.heading}>Jobs</Text>
+        <Text style={styles.count}>{filtered.length}</Text>
+      </View>
+
+      <View style={styles.searchBox}>
+        <Text style={styles.searchIcon}>🔍</Text>
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search jobs…"
+          placeholderTextColor="#9ca3af"
+          value={search}
+          onChangeText={setSearch}
+          autoCorrect={false}
+        />
+      </View>
+
+      {isLoading ? (
+        <ActivityIndicator style={{ marginTop: 40 }} color="#f97316" />
+      ) : (
+        <FlatList
+          data={filtered}
+          keyExtractor={j => j.id}
+          contentContainerStyle={{ padding: 16, gap: 10 }}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#f97316" />}
+          ListEmptyComponent={
+            <View style={styles.empty}>
+              <Text style={styles.emptyText}>{search ? 'No jobs match your search' : 'No jobs yet'}</Text>
+            </View>
+          }
+          renderItem={({ item: job }) => (
+            <TouchableOpacity
+              style={styles.card}
+              onPress={() => router.push(`/jobs/${job.id}`)}
+              activeOpacity={0.7}
+            >
+              <View style={styles.cardHeader}>
+                <Text style={styles.jobNumber}>{job.job_number}</Text>
+                <View style={[styles.statusBadge, { backgroundColor: (STATUS_COLOR[job.status] ?? '#9ca3af') + '20' }]}>
+                  <Text style={[styles.statusText, { color: STATUS_COLOR[job.status] ?? '#9ca3af' }]}>
+                    {STATUS_LABEL[job.status] ?? job.status}
+                  </Text>
+                </View>
+              </View>
+              <Text style={styles.jobTitle} numberOfLines={1}>{job.title}</Text>
+              {job.description && (
+                <Text style={styles.jobDesc} numberOfLines={2}>{job.description}</Text>
+              )}
+            </TouchableOpacity>
+          )}
+        />
+      )}
+    </SafeAreaView>
+  )
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#f9fafb' },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: 8, paddingBottom: 4 },
+  heading: { fontSize: 24, fontWeight: '700', color: '#111827' },
+  count: { fontSize: 14, color: '#9ca3af', fontWeight: '500' },
+  searchBox: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', marginHorizontal: 16, marginBottom: 4, borderRadius: 12, borderWidth: 1, borderColor: '#e5e7eb', paddingHorizontal: 12, height: 44 },
+  searchIcon: { marginRight: 8, fontSize: 14 },
+  searchInput: { flex: 1, fontSize: 15, color: '#111827' },
+  card: { backgroundColor: '#fff', borderRadius: 14, padding: 16, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, elevation: 2 },
+  cardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 },
+  jobNumber: { fontSize: 12, color: '#9ca3af', fontWeight: '600', letterSpacing: 0.5 },
+  statusBadge: { borderRadius: 100, paddingHorizontal: 8, paddingVertical: 3 },
+  statusText: { fontSize: 11, fontWeight: '600' },
+  jobTitle: { fontSize: 16, fontWeight: '600', color: '#111827' },
+  jobDesc: { fontSize: 13, color: '#6b7280', marginTop: 4, lineHeight: 18 },
+  empty: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 60 },
+  emptyText: { color: '#9ca3af', fontSize: 15 },
+})

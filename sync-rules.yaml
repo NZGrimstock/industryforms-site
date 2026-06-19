@@ -1,0 +1,30 @@
+# PowerSync sync rules for IndustryForms — upload via PowerSync Dashboard → Sync Rules.
+#
+# One bucket per company the authenticated user belongs to. The company_id is
+# resolved with a PARAMETER QUERY against profiles (no custom JWT claim needed):
+# request.user_id() is the Supabase auth user id (JWT `sub`).
+#
+# PowerSync data queries are single-table (no joins/subqueries), so every synced
+# table carries company_id — added by migration 022_powersync_company_id.sql.
+
+bucket_definitions:
+  company:
+    parameters: select company_id from profiles where id = request.user_id()
+    data:
+      - select * from jobs               where company_id = bucket.company_id
+      - select * from customers          where company_id = bucket.company_id
+      - select * from customer_sites     where company_id = bucket.company_id
+      - select * from job_visits         where company_id = bucket.company_id
+      - select * from job_notes          where company_id = bucket.company_id
+      - select * from timesheets         where company_id = bucket.company_id
+      - select * from job_materials      where company_id = bucket.company_id
+      - select * from form_templates     where company_id = bucket.company_id
+      - select * from form_submissions   where company_id = bucket.company_id
+      - select * from price_list_items   where company_id = bucket.company_id
+      - select * from travel_logs        where company_id = bucket.company_id
+      - select * from quotes             where company_id = bucket.company_id
+      - select * from quote_sections     where company_id = bucket.company_id
+      - select * from quote_line_items   where company_id = bucket.company_id
+      - select * from invoices           where company_id = bucket.company_id
+      - select * from invoice_line_items where company_id = bucket.company_id
+      - select * from job_photos         where company_id = bucket.company_id
