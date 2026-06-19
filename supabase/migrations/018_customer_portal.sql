@@ -2,7 +2,7 @@ create table if not exists customer_portal_tokens (
   id uuid primary key default gen_random_uuid(),
   customer_id uuid not null references customers(id) on delete cascade,
   company_id uuid not null references companies(id) on delete cascade,
-  token text not null unique default encode(gen_random_bytes(32), 'hex'),
+  token text not null unique default encode(extensions.gen_random_bytes(32), 'hex'),
   email text not null,
   expires_at timestamptz not null default now() + interval '30 days',
   created_at timestamptz default now()

@@ -15,7 +15,7 @@ create table job_invitations (
   project_address text,
   due_date date,
   agreed_price numeric(12,2),
-  token text not null unique default encode(gen_random_bytes(32), 'hex'),
+  token text not null unique default encode(extensions.gen_random_bytes(32), 'hex'),
   status text not null default 'pending', -- pending | accepted | declined | cancelled
   accepted_at timestamptz,
   declined_at timestamptz,
