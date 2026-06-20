@@ -54,39 +54,51 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // ── Invoice overdue reminders ─────────────────────────────────────────────
-  const { data: overdueInvoices } = await service
+  // ── Payment reminders (dunning sequence) ──────────────────────────────────
+  // Throttled to ~weekly per invoice: a "due soon" nudge from ~4 days before the
+  // due date, then escalating "overdue" reminders until paid.
+  const windowEnd = new Date(Date.now() + 4 * 86400000).toISOString()
+  const sixDaysAgo = new Date(Date.now() - 6 * 86400000).toISOString()
+  const { data: dueInvoices } = await service
     .from('invoices')
-    .select('id, invoice_number, total, amount_paid, public_token, due_date, customers(name, email, phone), companies(name, email, phone, country)')
+    .select('id, invoice_number, total, amount_paid, public_token, due_date, last_reminder_at, customers(name, email, phone), companies(name, email, phone, country)')
     .in('status', ['sent', 'partially_paid', 'overdue'])
-    .lt('due_date', new Date().toISOString())
+    .not('due_date', 'is', null)
+    .lte('due_date', windowEnd)
+    .or(`last_reminder_at.is.null,last_reminder_at.lt.${sixDaysAgo}`)
 
-  for (const invoice of overdueInvoices ?? []) {
+  for (const invoice of dueInvoices ?? []) {
     const customer = invoice.customers as unknown as { name: string; email: string | null; phone: string | null } | null
     const company = invoice.companies as unknown as { name: string; email: string | null; phone: string | null; country: string | null } | null
     if (!customer || !company) continue
-    const daysOverdue = Math.floor((Date.now() - new Date(invoice.due_date).getTime()) / 86400000)
+    const daysFromDue = Math.floor((Date.now() - new Date(invoice.due_date as string).getTime()) / 86400000)
+    const overdue = daysFromDue > 0
     const amountDue = Number(invoice.total) - Number(invoice.amount_paid)
+    if (amountDue <= 0.01) continue
     const viewUrl = `${appUrl}/i/${invoice.public_token}`
+    const dueLabel = overdue ? `${daysFromDue} day${daysFromDue !== 1 ? 's' : ''} overdue` : daysFromDue === 0 ? 'due today' : `due in ${-daysFromDue} day${-daysFromDue !== 1 ? 's' : ''}`
 
     if (customer.email) {
       const { subject, html } = reminderEmailHtml({
-        type: 'invoice_overdue', companyName: company.name, customerName: customer.name,
-        documentNumber: invoice.invoice_number, amountDue: `$${amountDue.toFixed(2)}`, daysOverdue, viewUrl,
+        type: overdue ? 'invoice_overdue' : 'invoice_due_soon', companyName: company.name, customerName: customer.name,
+        documentNumber: invoice.invoice_number, amountDue: `$${amountDue.toFixed(2)}`, daysOverdue: overdue ? daysFromDue : -daysFromDue, viewUrl,
       })
       const r = await sendEmail({ to: customer.email, subject, html, replyTo: company.email ?? undefined })
       if (r.error) errors.push(`Invoice ${invoice.invoice_number} email: ${r.error}`)
-      else sent.push(`Invoice ${invoice.invoice_number} email (${daysOverdue}d)`)
+      else sent.push(`Invoice ${invoice.invoice_number} email (${dueLabel})`)
     }
     if (customer.phone) {
       const r = await sendSms({
         to: customer.phone, country: (company.country as 'NZ' | 'AU') ?? 'NZ',
-        body: `Hi ${customer.name.split(' ')[0]}, invoice ${invoice.invoice_number} from ${company.name} is overdue ($${amountDue.toFixed(2)}). Pay here: ${viewUrl}`,
+        body: `Hi ${customer.name.split(' ')[0]}, invoice ${invoice.invoice_number} from ${company.name} ($${amountDue.toFixed(2)}) is ${dueLabel}. View & pay: ${viewUrl}`,
       })
       if (r.error && r.error !== 'SMS service not configured') errors.push(`Invoice ${invoice.invoice_number} sms: ${r.error}`)
-      else if (!r.error) sent.push(`Invoice ${invoice.invoice_number} sms (${daysOverdue}d)`)
+      else if (!r.error) sent.push(`Invoice ${invoice.invoice_number} sms (${dueLabel})`)
     }
-    await service.from('invoices').update({ status: 'overdue' }).eq('id', invoice.id).neq('status', 'overdue')
+    await service.from('invoices').update({
+      last_reminder_at: new Date().toISOString(),
+      ...(overdue ? { status: 'overdue' } : {}),
+    }).eq('id', invoice.id)
   }
 
   // ── Appointment reminders ─────────────────────────────────────────────────
