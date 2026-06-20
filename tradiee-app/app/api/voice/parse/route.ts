@@ -1,8 +1,6 @@
 import { NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 
-const client = new Anthropic()
-
 const PROMPTS: Record<string, string> = {
   customer: `Extract customer details from the following speech transcript and return a JSON object with these fields:
 {
@@ -48,6 +46,7 @@ export async function POST(request: Request) {
     const prompt = PROMPTS[mode]
     if (!prompt) return NextResponse.json({ error: 'Unknown mode' }, { status: 400 })
 
+    const client = new Anthropic()
     const message = await client.messages.create({
       model: 'claude-haiku-4-5-20251001',
       max_tokens: 512,

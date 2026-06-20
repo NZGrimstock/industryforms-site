@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import Stripe from 'stripe'
 import { createServiceClient } from '@/lib/supabase/server'
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2026-05-27.dahlia' })
+import { getStripe } from '@/lib/stripe'
 
 export async function POST(req: NextRequest) {
+  const stripe = getStripe()
   const { token } = await req.json()
   if (!token) return NextResponse.json({ error: 'Missing token' }, { status: 400 })
 

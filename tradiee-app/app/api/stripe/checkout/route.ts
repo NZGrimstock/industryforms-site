@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import Stripe from 'stripe'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2026-05-27.dahlia' })
+import { getStripe } from '@/lib/stripe'
 
 export async function POST(req: NextRequest) {
+  const stripe = getStripe()
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -47,7 +46,7 @@ export async function POST(req: NextRequest) {
 }
 
 async function getPriceId(lookupKey: string): Promise<string> {
-  const prices = await stripe.prices.list({ lookup_keys: [lookupKey], limit: 1 })
+  const prices = await getStripe().prices.list({ lookup_keys: [lookupKey], limit: 1 })
   if (!prices.data[0]) throw new Error(`Price not found for key: ${lookupKey}. Create it in Stripe dashboard.`)
   return prices.data[0].id
 }

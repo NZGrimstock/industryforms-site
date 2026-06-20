@@ -5,8 +5,9 @@
       "name": "tradiee-app",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev"],
+      "cwd": "tradiee-app",
       "port": 3000,
-      "autoPort": false
+      "autoPort": true
     }
   ]
 }
