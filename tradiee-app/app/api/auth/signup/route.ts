@@ -21,7 +21,7 @@ export async function POST(request: Request) {
 
     const userId = authData.user.id
     const gstRate = country === 'AU' ? 0.10 : 0.15
-    const trialEndsAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+    const trialEndsAt = new Date(Date.now() + 28 * 24 * 60 * 60 * 1000).toISOString()
 
     // Create company
     const { data: company, error: companyError } = await supabase
