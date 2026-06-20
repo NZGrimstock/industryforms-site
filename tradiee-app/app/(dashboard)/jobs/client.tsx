@@ -48,6 +48,8 @@ export function NewJobButton({ companyId, customers, nextJobNumber, priceItems =
   const router = useRouter()
   const { toast } = useToast()
   const [form, setForm] = useState({ customerId: '', title: '', description: '', status: 'unscheduled' })
+  const [customerMode, setCustomerMode] = useState<'existing' | 'new'>('existing')
+  const [newCust, setNewCust] = useState({ name: '', phone: '' })
 
   function set(k: string, v: string) { setForm(f => ({ ...f, [k]: v })) }
 
@@ -59,6 +61,8 @@ export function NewJobButton({ companyId, customers, nextJobNumber, priceItems =
 
   function reset() {
     setForm({ customerId: '', title: '', description: '', status: 'unscheduled' })
+    setCustomerMode('existing')
+    setNewCust({ name: '', phone: '' })
     setLines([emptyLine()])
     setSearchTerms({})
     setStep(1)
@@ -94,11 +98,33 @@ export function NewJobButton({ companyId, customers, nextJobNumber, priceItems =
   // Step 1: create job record
   async function handleCreateJob(e: React.FormEvent) {
     e.preventDefault()
-    if (!form.customerId) { toast('Select a customer', 'error'); return }
     setLoading(true)
+
+    // Resolve the customer — either an existing selection or a new one created inline.
+    let customerId = form.customerId
+    if (customerMode === 'new') {
+      const name = newCust.name.trim()
+      if (!name) { toast('Enter the customer name', 'error'); setLoading(false); return }
+      // Reuse an existing customer with the same name to avoid duplicates.
+      const { data: existing } = await supabase.from('customers')
+        .select('id').eq('company_id', companyId).ilike('name', name).limit(1).maybeSingle()
+      if (existing) {
+        customerId = existing.id
+        toast('Using existing customer with that name')
+      } else {
+        const { data: created, error: ce } = await supabase.from('customers')
+          .insert({ company_id: companyId, name, phone: newCust.phone.trim() || null })
+          .select('id').single()
+        if (ce || !created) { toast(ce?.message ?? 'Failed to create customer', 'error'); setLoading(false); return }
+        customerId = created.id
+      }
+    } else if (!customerId) {
+      toast('Select a customer', 'error'); setLoading(false); return
+    }
+
     const { data: job, error } = await supabase.from('jobs').insert({
       company_id: companyId,
-      customer_id: form.customerId,
+      customer_id: customerId,
       job_number: nextJobNumber,
       title: form.title,
       description: form.description || null,
@@ -156,8 +182,25 @@ export function NewJobButton({ companyId, customers, nextJobNumber, priceItems =
             </div>
             <div>
               <Label>Customer <span className="text-red-400">*</span></Label>
-              <Select value={form.customerId} onChange={e => set('customerId', e.target.value)}
-                placeholder="Select customer..." options={customers.map(c => ({ value: c.id, label: c.name }))} />
+              <div className="flex gap-2 mb-2">
+                <button type="button" onClick={() => setCustomerMode('existing')}
+                  className={`flex-1 py-1.5 text-xs rounded-lg border ${customerMode === 'existing' ? 'border-orange-500 bg-orange-50 text-orange-700' : 'border-gray-200 text-gray-500 hover:bg-gray-50'}`}>
+                  Existing
+                </button>
+                <button type="button" onClick={() => setCustomerMode('new')}
+                  className={`flex-1 py-1.5 text-xs rounded-lg border ${customerMode === 'new' ? 'border-orange-500 bg-orange-50 text-orange-700' : 'border-gray-200 text-gray-500 hover:bg-gray-50'}`}>
+                  + New customer
+                </button>
+              </div>
+              {customerMode === 'existing' ? (
+                <Select value={form.customerId} onChange={e => set('customerId', e.target.value)}
+                  placeholder="Select customer..." options={customers.map(c => ({ value: c.id, label: c.name }))} />
+              ) : (
+                <div className="space-y-2">
+                  <Input value={newCust.name} onChange={e => setNewCust(c => ({ ...c, name: e.target.value }))} placeholder="Customer name *" />
+                  <Input value={newCust.phone} onChange={e => setNewCust(c => ({ ...c, phone: e.target.value }))} placeholder="Phone (optional)" />
+                </div>
+              )}
             </div>
             <div>
               <Label>Title <span className="text-red-400">*</span></Label>
