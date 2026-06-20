@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/ui/toast'
-import { Send, PackageCheck, XCircle, Trash2, Mail } from 'lucide-react'
+import { Send, PackageCheck, XCircle, Trash2, Mail, FileMinus } from 'lucide-react'
 
 interface Props {
   po: { id: string; status: string; supplier_email: string | null; supplier_phone: string | null; job_id: string | null }
@@ -51,6 +51,7 @@ export function PurchaseOrderActions({ po }: Props) {
       {canSend && po.supplier_email && <Button size="sm" loading={loading === 'email'} onClick={emailSupplier}><Mail className="h-4 w-4" /> Email supplier</Button>}
       {canSend && <Button variant="outline" size="sm" loading={loading === 'sent'} onClick={() => setStatus('sent', { sent_at: new Date().toISOString() }, 'Marked as sent')}><Send className="h-4 w-4" /> Mark sent</Button>}
       {canReceive && <Button variant="secondary" size="sm" loading={loading === 'received'} onClick={() => setStatus('received', { received_at: new Date().toISOString() }, 'Marked as received')}><PackageCheck className="h-4 w-4" /> Mark received</Button>}
+      {['sent', 'received'].includes(po.status) && <Button variant="outline" size="sm" onClick={() => router.push(`/bills/new?poId=${po.id}`)}><FileMinus className="h-4 w-4" /> Create bill</Button>}
       {active && <Button variant="outline" size="sm" loading={loading === 'cancelled'} onClick={() => setStatus('cancelled', {}, 'Cancelled')}><XCircle className="h-4 w-4" /> Cancel</Button>}
       <Button variant="ghost" size="sm" loading={loading === 'delete'} onClick={deletePo}><Trash2 className="h-4 w-4 text-red-400" /></Button>
     </div>

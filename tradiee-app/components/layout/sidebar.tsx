@@ -7,7 +7,7 @@ import {
   LayoutDashboard, Users, FileText, Briefcase, Calendar,
   Clock, Receipt, BarChart3, Settings, Wrench, Package,
   MessageSquare, CheckSquare, Map, ClipboardList, ChevronLeft, ChevronRight,
-  Truck, ShoppingCart
+  Truck, ShoppingCart, FileMinus
 } from 'lucide-react'
 
 const nav = [
@@ -21,6 +21,7 @@ const nav = [
   { href: '/timesheets', label: 'Timesheets', icon: Clock },
   { href: '/invoices', label: 'Invoices', icon: Receipt },
   { href: '/purchase-orders', label: 'Purchase Orders', icon: ShoppingCart },
+  { href: '/bills', label: 'Bills', icon: FileMinus },
   { href: '/suppliers', label: 'Suppliers', icon: Truck },
   { href: '/price-list', label: 'Price List', icon: Package },
   { href: '/forms', label: 'Forms', icon: ClipboardList },
