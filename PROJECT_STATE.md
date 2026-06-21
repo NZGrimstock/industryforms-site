@@ -77,12 +77,30 @@ Tabs: Jobs (My/All), **Map** (new — Leaflet/OSM WebView, My/All, tap-to-Call +
 `RESEND_API_KEY`+`EMAIL_FROM`, `TWILIO_*`, `STRIPE_*` (+ create Stripe prices incl. `website_monthly` @ $9/mo), `CRON_SECRET` (enables the daily `/api/reminders` cron — dunning, appointment reminders, recurring jobs/invoices, service reminders), `*.industryforms.app` **wildcard domain** in Vercel + DNS (free website subdomains), `CLOUDFLARE_API_TOKEN`+`CLOUDFLARE_ZONE_ID` (website custom domains), `INBOUND_EMAIL_SECRET` + email-provider inbound webhook → `/api/inbound/email` (enquiry inbox).
 
 ## Outstanding / next steps
-1. **Mobile RBAC**: PowerSync `sync-rules.yaml` is company-scoped, so a staff device still syncs all company data offline; mobile tab nav still shows Quotes/Invoices to staff. Need role/assignment-parameterized sync rules + mobile nav gating.
-2. **Mobile custom statuses**: mobile still uses the hardcoded default status set (`STATUS_COLOR/LABEL/NEXT_STATUSES` in `app/jobs/[id].tsx`); custom statuses render with a fallback. Wire mobile to `job_statuses`.
-3. **Workflow polish (user's #1 focus — "fewer clicks")**: (a) global **"+ New" + global search** in the top bar; (b) make the job page a true unified **"Job Card"** (Fergus model — quote/costs/time/photos/tasks/invoice/status inline); (c) inline status/assignee/create-invoice from list rows; (d) one-click chains (accept→job→schedule, complete→draft invoice); (e) mobile "complete job" + **customer signature capture**.
-4. **UI refresh (user's #2 focus — "cleaner/fresher/more modern")**: design-system pass (consistent card radius/shadow, spacing scale, type hierarchy, sparing orange accent, refined neutrals); redesign dashboard into a visual command center; modernize mobile cards/typography. Suggested: mock up dashboard + Job Card direction first for sign-off.
+> **⚠ ACTION REQUIRED after the latest changes:** `sync-rules.yaml` was rewritten
+> into role-aware buckets (owner/admin = full company; staff = assigned jobs + own
+> time only). **Re-upload it via the PowerSync Dashboard → Sync Rules** for mobile
+> RBAC to take effect — editing the file alone does nothing until uploaded.
+
+1. ~~**Mobile RBAC**~~ ✅ Done in code: `sync-rules.yaml` parameterized by `profiles.role`
+   + assigned jobs; mobile tab nav hides Quotes/Invoices for `staff`. *(Upload sync rules — see above.)*
+2. ~~**Mobile custom statuses**~~ ✅ Done: mobile reads `job_statuses` (jobs list, job
+   detail picker, map active-filter) via `lib/job-statuses.ts` with default fallback.
+3. **Workflow polish (user's #1 — "fewer clicks")**: (a) ✅ global **"+ New" + Cmd/K search**
+   in the header (`/api/search`, `global-search.tsx`, `new-menu.tsx`); (b) ✅ job page is
+   already a unified Job Card; (c) ✅ inline **status** editing on the jobs list
+   (`components/jobs/inline-status.tsx`) — *inline assignee/create-invoice from rows still TODO*;
+   (d) ✅ one-click **Complete & invoice** on the Job Card — *accept→job→auto-schedule still TODO*;
+   (e) ✅ mobile **Complete job + customer signature** (WebView pad → `/api/storage/signature`
+   stores sign-off as a job photo). Remaining: inline assignee/invoice on list rows, accept→schedule chain.
+4. **UI refresh (user's #2 — "cleaner/fresher")**: dashboard stat cards modernized. Broader
+   **design-system pass** (card radius/shadow, spacing scale, type hierarchy, sparing orange,
+   refined neutrals) + mobile card/typography refresh still pending — **wants sign-off on
+   direction first** (mock up Job Card + dashboard before a full pass).
 5. **Reminder-cron comms logging** (manual sends are logged; cron sends aren't). **Invoice templates** standalone (currently lean on recurring invoices). **Pricing levels** (per-customer-group pricing). **MYOB/QuickBooks** sync (have Xero).
 6. Create admin + test accounts; run geocode backfill if importing existing sites.
+
+Latest work lives on branch **`feature/outstanding-backlog`** (not yet merged/pushed).
 
 ## Memory (auto-loaded each session, at `C:\Users\User\.claude\projects\D--TRADIEE\memory\`)
 - `project-overview.md`, `tech-stack.md`, `build-state.md`, `feedback_nextjs16_allowedDevOrigins.md`, **`tradify-parity-backlog.md`** (full feature-parity status — every Tradify checklist item is now built except where noted).
