@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Plus, X } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { AIRewriteButton } from '@/components/ui/ai-rewrite-button'
 
 type Profile = { id: string; full_name: string }
 
@@ -124,7 +125,10 @@ export function EnquiryActions({ companyId, profileId, team, mode, initialOpen =
                 <input className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-orange-400" value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Work description</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-medium text-gray-600">Work description</label>
+                  <AIRewriteButton value={form.description} onChange={v => setForm(f => ({ ...f, description: v }))} />
+                </div>
                 <textarea rows={3} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-orange-400 resize-none" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} />
               </div>
               <div className="grid grid-cols-2 gap-3">
