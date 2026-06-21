@@ -35,6 +35,24 @@ export function computeTotals(
   return { subtotal, discount, taxable, gst, total }
 }
 
+// Roll up totals with a per-line tax rate (fraction). `net` is the line's
+// pre-tax net (after any line discount). The document discount reduces the
+// taxable base proportionally, so each line's tax is charged on its share of the
+// discounted subtotal. Used for configurable / mixed-rate (GST-free) docs.
+export function computeTaxedTotals(
+  lines: { net: number; taxRate: number }[],
+  docType: DiscountType,
+  docValue: number,
+) {
+  const subtotal = round2(lines.reduce((s, l) => s + (Number(l.net) || 0), 0))
+  const discount = discountAmount(subtotal, docType, docValue)
+  const factor = subtotal > 0 ? (subtotal - discount) / subtotal : 1
+  const gst = round2(lines.reduce((s, l) => s + (Number(l.net) || 0) * factor * (Number(l.taxRate) || 0), 0))
+  const taxable = round2(subtotal - discount)
+  const total = round2(taxable + gst)
+  return { subtotal, discount, taxable, gst, total }
+}
+
 // Short human label for a discount, e.g. "10%" or "$50.00".
 export function discountLabel(type: DiscountType, value: number): string {
   if (!type || !value) return ''

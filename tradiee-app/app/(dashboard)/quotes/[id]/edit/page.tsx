@@ -24,6 +24,7 @@ export default async function EditQuotePage({ params }: { params: Promise<{ id: 
     supabase.from('kits').select('*, kit_items(*, price_list_items(*))').eq('company_id', profile!.company_id).order('name'),
     supabase.from('billing_rates').select('id, name, rate').eq('company_id', profile!.company_id).order('name'),
   ])
+  const { data: taxRatesData } = await supabase.from('tax_rates').select('id, name, rate').eq('company_id', profile!.company_id).eq('is_active', true).order('sort_order')
 
   const gstRate = (profile?.companies as { default_gst_rate: number } | null)?.default_gst_rate ?? 0.15
 
@@ -44,7 +45,7 @@ export default async function EditQuotePage({ params }: { params: Promise<{ id: 
       quote_line_items: Array<{
         description: string | null; quantity: number; unit: string | null
         unit_cost: number | null; unit_price: number; line_total: number
-        discount_type: string | null; discount_value: number | null
+        discount_type: string | null; discount_value: number | null; tax_rate: number | null
         type: string; price_list_item_id: string | null; sort_order: number
       }>
     }>)
@@ -63,6 +64,7 @@ export default async function EditQuotePage({ params }: { params: Promise<{ id: 
             unit_price: Number(l.unit_price),
             discount_type: l.discount_type ?? null,
             discount_value: l.discount_value != null ? Number(l.discount_value) : null,
+            tax_rate: l.tax_rate != null ? Number(l.tax_rate) : null,
             line_total: Number(l.line_total),
             type: l.type,
             price_list_item_id: l.price_list_item_id,
@@ -83,6 +85,7 @@ export default async function EditQuotePage({ params }: { params: Promise<{ id: 
         priceItems={priceItemsRes.data ?? []}
         kits={kitsRes.data ?? []}
         billingRates={(ratesRes.data ?? []).map(r => ({ id: r.id, name: r.name, rate: Number(r.rate) }))}
+        taxRates={(taxRatesData ?? []).map(r => ({ id: r.id, name: r.name, rate: Number(r.rate) }))}
         editQuote={editQuote}
       />
     </>

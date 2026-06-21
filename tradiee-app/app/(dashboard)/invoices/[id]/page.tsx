@@ -95,7 +95,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
                   </tr>
                 )}
                 <tr>
-                  <td colSpan={4} className="px-6 py-2 text-right text-sm text-gray-600">GST ({Math.round(gstRate * 100)}%)</td>
+                  <td colSpan={4} className="px-6 py-2 text-right text-sm text-gray-600">GST</td>
                   <td className="px-6 py-2 text-right text-sm font-medium text-gray-900">{formatCurrency(invoice.gst_amount)}</td>
                 </tr>
                 <tr className="border-t border-gray-200">

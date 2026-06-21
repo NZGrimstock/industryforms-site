@@ -166,6 +166,7 @@ export interface QuoteLineItem {
   unit_price: number
   discount_type: 'amount' | 'percent' | null
   discount_value: number
+  tax_rate: number | null
   line_total: number
   sort_order: number
   created_at: string
@@ -289,6 +290,7 @@ export interface InvoiceLineItem {
   unit_price: number
   discount_type: 'amount' | 'percent' | null
   discount_value: number
+  tax_rate: number | null
   line_total: number
   sort_order: number
   created_at: string

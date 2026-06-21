@@ -54,10 +54,14 @@ export function VoiceInput({ mode, onParsed, hint, label = 'VoiceFill' }: VoiceI
     recognition.onerror = (e: any) => {
       if (e.error === 'no-speech') {
         setError('No speech detected — tap the mic and try again.')
-      } else if (e.error === 'not-allowed') {
+      } else if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
         setError('Microphone access denied. Allow mic access in your browser settings.')
+      } else if (e.error === 'network') {
+        setError('Speech service unreachable — it needs an internet connection and works best in Chrome. You can also just type what you’d say below.')
+      } else if (e.error === 'aborted') {
+        // user stopped — not an error
       } else {
-        setError(`Mic error: ${e.error}`)
+        setError(`Mic error: ${e.error}. You can type your text below instead.`)
       }
       setRecording(false)
     }
@@ -156,17 +160,19 @@ export function VoiceInput({ mode, onParsed, hint, label = 'VoiceFill' }: VoiceI
             </div>
 
             <p className="text-center text-xs text-gray-400 mb-4">
-              {recording ? 'Listening… tap to stop' : transcript ? 'Tap to re-record' : 'Tap to start speaking'}
+              {recording ? 'Listening… tap to stop' : transcript ? 'Tap to re-record, or edit below' : 'Tap to speak — or type below'}
             </p>
 
-            {/* Live transcript */}
-            {(transcript || recording) && (
-              <div className={`rounded-xl p-3 mb-4 text-sm min-h-[56px] transition-colors ${
-                recording ? 'bg-red-50 border border-red-100 text-gray-700' : 'bg-gray-50 text-gray-700'
-              }`}>
-                {transcript || <span className="text-gray-300 italic">Listening…</span>}
-              </div>
-            )}
+            {/* Transcript (editable — also a fallback when the mic isn't available) */}
+            <textarea
+              value={transcript}
+              onChange={e => setTranscript(e.target.value)}
+              placeholder={recording ? 'Listening…' : 'Speak, or type what you’d say here…'}
+              rows={3}
+              className={`w-full rounded-xl p-3 mb-4 text-sm resize-none focus:outline-none transition-colors ${
+                recording ? 'bg-red-50 border border-red-100' : 'bg-gray-50 border border-gray-200 focus:border-orange-400'
+              } text-gray-700`}
+            />
 
             {error && (
               <p className="text-xs text-red-500 bg-red-50 rounded-lg px-3 py-2 mb-3">{error}</p>

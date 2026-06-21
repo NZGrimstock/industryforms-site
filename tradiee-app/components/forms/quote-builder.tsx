@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Dialog } from '@/components/ui/dialog'
 import { useToast } from '@/components/ui/toast'
 import { formatCurrency } from '@/lib/utils'
-import { lineNet, computeTotals, type DiscountType } from '@/lib/pricing'
+import { lineNet, computeTaxedTotals, type DiscountType } from '@/lib/pricing'
 import { Plus, Trash2, GripVertical, ChevronDown, ChevronRight, Package, Clock } from 'lucide-react'
 
 type DraftSection = Omit<QuoteSection, 'id'> & { id: string; lines: DraftLine[] }
@@ -39,6 +39,7 @@ interface EditQuoteData {
       unit_price: number
       discount_type: string | null
       discount_value: number | null
+      tax_rate: number | null
       line_total: number
       type: string
       price_list_item_id: string | null
@@ -60,6 +61,7 @@ interface Props {
   defaultCustomerId?: string
   defaultTerms?: string
   billingRates?: { id: string; name: string; rate: number }[]
+  taxRates?: { id: string; name: string; rate: number }[]
   editQuote?: EditQuoteData
 }
 
@@ -67,7 +69,7 @@ let idSeq = 0
 function newId() { return `new-${++idSeq}` }
 
 function emptyLine(overrides: Partial<DraftLine> = {}): DraftLine {
-  return { id: newId(), price_list_item_id: null, type: 'material', description: '', quantity: 1, unit: 'each', unit_cost: 0, unit_price: 0, discount_type: null, discount_value: 0, line_total: 0, sort_order: 0, ...overrides }
+  return { id: newId(), price_list_item_id: null, type: 'material', description: '', quantity: 1, unit: 'each', unit_cost: 0, unit_price: 0, discount_type: null, discount_value: 0, tax_rate: null, line_total: 0, sort_order: 0, ...overrides }
 }
 
 function labourLine(): DraftLine {
@@ -133,7 +135,9 @@ function CustomerCombobox({ customers, value, onChange }: {
   )
 }
 
-export function QuoteBuilder({ companyId, profileId, quoteNumber, gstRate, customers, priceItems, kits, defaultCustomerId, defaultTerms, billingRates = [], editQuote }: Props) {
+export function QuoteBuilder({ companyId, profileId, quoteNumber, gstRate, customers, priceItems, kits, defaultCustomerId, defaultTerms, billingRates = [], taxRates = [], editQuote }: Props) {
+  // Tax options for the per-line picker — fall back to a standard GST + GST-free pair.
+  const taxOptions = taxRates.length > 0 ? taxRates : [{ id: 'std', name: 'GST', rate: gstRate }, { id: 'free', name: 'GST Free', rate: 0 }]
   const router = useRouter()
   const supabase = createClient()
   const { toast } = useToast()
@@ -175,6 +179,7 @@ export function QuoteBuilder({ companyId, profileId, quoteNumber, gstRate, custo
                 unit_price: Number(l.unit_price),
                 discount_type: (l.discount_type as DiscountType) ?? null,
                 discount_value: Number(l.discount_value ?? 0),
+                tax_rate: l.tax_rate != null ? Number(l.tax_rate) : null,
                 line_total: Number(l.line_total),
               })),
           }))
@@ -261,9 +266,9 @@ export function QuoteBuilder({ companyId, profileId, quoteNumber, gstRate, custo
     setAddItemOpen(null)
   }
 
-  const totals = computeTotals(
-    sections.flatMap(s => s.lines).map(l => l.line_total),
-    docDiscountType, docDiscountValue, gstRate,
+  const totals = computeTaxedTotals(
+    sections.flatMap(s => s.lines).map(l => ({ net: l.line_total, taxRate: l.tax_rate ?? gstRate })),
+    docDiscountType, docDiscountValue,
   )
   const { subtotal, discount: docDiscountAmount, gst: gstAmount, total } = totals
 
@@ -315,6 +320,7 @@ export function QuoteBuilder({ companyId, profileId, quoteNumber, gstRate, custo
         unit_cost: l.unit_cost, unit_price: l.unit_price,
         discount_type: Number(l.discount_value) > 0 ? l.discount_type : null,
         discount_value: Number(l.discount_value) > 0 ? l.discount_value : 0,
+        tax_rate: l.tax_rate ?? gstRate,
         line_total: l.line_total, sort_order: li,
       }))
       if (lineInserts.length > 0) await supabase.from('quote_line_items').insert(lineInserts)
@@ -403,6 +409,7 @@ export function QuoteBuilder({ companyId, profileId, quoteNumber, gstRate, custo
                       <th className="text-left px-3 py-2 font-medium w-16">Unit</th>
                       <th className="text-right px-3 py-2 font-medium w-28">Unit price</th>
                       <th className="text-right px-3 py-2 font-medium w-28">Discount</th>
+                      <th className="text-left px-3 py-2 font-medium w-24">Tax</th>
                       <th className="text-right px-3 py-2 font-medium w-28">Total</th>
                       <th className="w-8"></th>
                     </tr>
@@ -450,6 +457,15 @@ export function QuoteBuilder({ companyId, profileId, quoteNumber, gstRate, custo
                               {l.discount_type === 'percent' ? '%' : '$'}
                             </button>
                           </div>
+                        </td>
+                        <td className="px-3 py-2">
+                          <select
+                            className="h-7 text-xs border border-gray-200 rounded px-1 text-gray-600 w-full"
+                            value={String(l.tax_rate ?? gstRate)}
+                            onChange={e => updateLine(s.id, l.id, 'tax_rate', parseFloat(e.target.value))}
+                          >
+                            {taxOptions.map(t => <option key={t.id} value={String(t.rate)}>{t.name} ({Math.round(t.rate * 100)}%)</option>)}
+                          </select>
                         </td>
                         <td className="px-3 py-2 text-right font-medium text-gray-700 text-sm whitespace-nowrap">
                           {formatCurrency(l.line_total)}
@@ -522,7 +538,7 @@ export function QuoteBuilder({ companyId, profileId, quoteNumber, gstRate, custo
                 </div>
                 {docDiscountAmount > 0 && <div className="flex justify-between text-green-600 text-xs mt-0.5"><span>Applied</span><span>−{formatCurrency(docDiscountAmount)}</span></div>}
               </div>
-              <div className="flex justify-between text-gray-600"><span>GST ({Math.round(gstRate * 100)}%)</span><span>{formatCurrency(gstAmount)}</span></div>
+              <div className="flex justify-between text-gray-600"><span>GST</span><span>{formatCurrency(gstAmount)}</span></div>
               <div className="flex justify-between font-semibold text-gray-900 text-base border-t border-gray-100 pt-2 mt-2">
                 <span>Total</span><span>{formatCurrency(total)}</span>
               </div>

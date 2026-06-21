@@ -16,6 +16,7 @@ export default async function NewQuotePage({ searchParams }: { searchParams: Pro
     supabase.from('companies').select('default_terms').eq('id', profile!.company_id).single(),
     supabase.from('billing_rates').select('id, name, rate').eq('company_id', profile!.company_id).order('name'),
   ])
+  const { data: taxRatesData } = await supabase.from('tax_rates').select('id, name, rate').eq('company_id', profile!.company_id).eq('is_active', true).order('sort_order')
 
   const nextNumber = await nextDocNumber(supabase, profile!.company_id, 'quote')
   const gstRate = (profile?.companies as {default_gst_rate: number} | null)?.default_gst_rate ?? 0.15
@@ -34,6 +35,7 @@ export default async function NewQuotePage({ searchParams }: { searchParams: Pro
         defaultCustomerId={sp.customerId}
         defaultTerms={companyRes.data?.default_terms ?? undefined}
         billingRates={(ratesRes.data ?? []).map(r => ({ id: r.id, name: r.name, rate: Number(r.rate) }))}
+        taxRates={(taxRatesData ?? []).map(r => ({ id: r.id, name: r.name, rate: Number(r.rate) }))}
       />
     </>
   )

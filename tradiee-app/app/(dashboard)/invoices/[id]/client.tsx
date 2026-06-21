@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select } from '@/components/ui/select'
 import { useToast } from '@/components/ui/toast'
-import { lineNet, discountAmount, round2, type DiscountType } from '@/lib/pricing'
+import { lineNet, computeTaxedTotals, type DiscountType } from '@/lib/pricing'
 import { Plus, Send, DollarSign, Trash2, Mail, RefreshCw, MessageSquare, Tag } from 'lucide-react'
 
 interface Props {
@@ -42,7 +42,21 @@ export function InvoiceDetailClient({ invoice, companyId, gstRate, xeroConnected
   const [activeDialog, setActiveDialog] = useState<Dialog>(null)
   const [loading, setLoading] = useState(false)
 
-  const [lineForm, setLineForm] = useState({ description: '', quantity: '1', unit: 'each', unit_price: '0', discount_value: '0', discount_type: 'amount' as 'amount' | 'percent' })
+  const [lineForm, setLineForm] = useState({ description: '', quantity: '1', unit: 'each', unit_price: '0', discount_value: '0', discount_type: 'amount' as 'amount' | 'percent', tax_rate: String(gstRate) })
+
+  // Company tax rates for the line tax picker (fallback: GST + GST Free).
+  const [taxRates, setTaxRates] = useState<{ name: string; rate: number }[]>([{ name: 'GST', rate: gstRate }, { name: 'GST Free', rate: 0 }])
+  useEffect(() => {
+    supabase.from('tax_rates').select('name, rate').eq('company_id', companyId).eq('is_active', true).order('sort_order')
+      .then(({ data }) => { if (data && data.length) setTaxRates(data.map(t => ({ name: t.name, rate: Number(t.rate) }))) })
+  }, [companyId, supabase])
+
+  // Recompute invoice totals from all current line items (per-line tax + doc discount).
+  async function recompute(discType: DiscountType, discVal: number) {
+    const { data: lines } = await supabase.from('invoice_line_items').select('line_total, tax_rate').eq('invoice_id', invoice.id)
+    const taxed = computeTaxedTotals((lines ?? []).map(l => ({ net: Number(l.line_total), taxRate: l.tax_rate != null ? Number(l.tax_rate) : gstRate })), discType, discVal)
+    await supabase.from('invoices').update({ subtotal: taxed.subtotal, discount_amount: taxed.discount, gst_amount: taxed.gst, total: taxed.total }).eq('id', invoice.id)
+  }
   const [paymentForm, setPaymentForm] = useState({ amount: (invoice.total - invoice.amount_paid).toString(), method: 'bank_transfer', notes: '' })
   const [discountForm, setDiscountForm] = useState({ value: (invoice.discount_value || 0).toString(), type: (invoice.discount_type ?? 'amount') as 'amount' | 'percent' })
 
@@ -66,31 +80,25 @@ export function InvoiceDetailClient({ invoice, companyId, gstRate, xeroConnected
     const lineDiscType: DiscountType = lineDiscVal > 0 ? lineForm.discount_type : null
     const lineTotal = lineNet(qty, price, lineDiscType, lineDiscVal)
 
-    // Recalculate invoice totals, preserving any document-level discount.
-    const newSubtotal = round2(invoice.subtotal + lineTotal)
-    const docDisc = discountAmount(newSubtotal, invoice.discount_type, invoice.discount_value)
-    const newGst = round2((newSubtotal - docDisc) * gstRate)
-    const newTotal = round2(newSubtotal - docDisc + newGst)
+    const { error } = await supabase.from('invoice_line_items').insert({
+      invoice_id: invoice.id,
+      type: 'misc',
+      description: lineForm.description,
+      quantity: qty,
+      unit: lineForm.unit,
+      unit_price: price,
+      discount_type: lineDiscType,
+      discount_value: lineDiscVal,
+      tax_rate: parseFloat(lineForm.tax_rate),
+      line_total: lineTotal,
+      sort_order: 99,
+    })
+    if (error) { toast(error.message, 'error'); setLoading(false); return }
 
-    const [lineRes] = await Promise.all([
-      supabase.from('invoice_line_items').insert({
-        invoice_id: invoice.id,
-        type: 'misc',
-        description: lineForm.description,
-        quantity: qty,
-        unit: lineForm.unit,
-        unit_price: price,
-        discount_type: lineDiscType,
-        discount_value: lineDiscVal,
-        line_total: lineTotal,
-        sort_order: 99,
-      }),
-    ])
-
-    await supabase.from('invoices').update({ subtotal: newSubtotal, discount_amount: docDisc, gst_amount: newGst, total: newTotal }).eq('id', invoice.id)
-
-    if (lineRes.error) toast(lineRes.error.message, 'error')
-    else { toast('Line added'); setActiveDialog(null); setLineForm({ description: '', quantity: '1', unit: 'each', unit_price: '0', discount_value: '0', discount_type: 'amount' }); router.refresh() }
+    await recompute(invoice.discount_type, invoice.discount_value)
+    toast('Line added'); setActiveDialog(null)
+    setLineForm({ description: '', quantity: '1', unit: 'each', unit_price: '0', discount_value: '0', discount_type: 'amount', tax_rate: String(gstRate) })
+    router.refresh()
     setLoading(false)
   }
 
@@ -99,13 +107,8 @@ export function InvoiceDetailClient({ invoice, companyId, gstRate, xeroConnected
     setLoading(true)
     const value = parseFloat(discountForm.value) || 0
     const type: DiscountType = value > 0 ? discountForm.type : null
-    const docDisc = discountAmount(invoice.subtotal, type, value)
-    const newGst = round2((invoice.subtotal - docDisc) * gstRate)
-    const newTotal = round2(invoice.subtotal - docDisc + newGst)
-    await supabase.from('invoices').update({
-      discount_type: type, discount_value: value, discount_amount: docDisc,
-      gst_amount: newGst, total: newTotal,
-    }).eq('id', invoice.id)
+    await supabase.from('invoices').update({ discount_type: type, discount_value: value }).eq('id', invoice.id)
+    await recompute(type, value)
     toast('Discount updated')
     setActiveDialog(null)
     router.refresh()
@@ -207,11 +210,17 @@ export function InvoiceDetailClient({ invoice, companyId, gstRate, xeroConnected
             <div><Label>Unit</Label><Input value={lineForm.unit} onChange={e => setLineForm(f => ({ ...f, unit: e.target.value }))} /></div>
             <div><Label>Unit price</Label><Input type="number" step="0.01" value={lineForm.unit_price} onChange={e => setLineForm(f => ({ ...f, unit_price: e.target.value }))} /></div>
           </div>
-          <div>
-            <Label>Line discount (optional)</Label>
-            <div className="flex gap-2">
-              <Input type="number" min="0" step="0.01" value={lineForm.discount_value} onChange={e => setLineForm(f => ({ ...f, discount_value: e.target.value }))} className="flex-1" />
-              <Select value={lineForm.discount_type} onChange={e => setLineForm(f => ({ ...f, discount_type: e.target.value as 'amount' | 'percent' }))} options={[{ value: 'amount', label: '$ off' }, { value: 'percent', label: '% off' }]} />
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label>Line discount (optional)</Label>
+              <div className="flex gap-2">
+                <Input type="number" min="0" step="0.01" value={lineForm.discount_value} onChange={e => setLineForm(f => ({ ...f, discount_value: e.target.value }))} className="flex-1" />
+                <Select value={lineForm.discount_type} onChange={e => setLineForm(f => ({ ...f, discount_type: e.target.value as 'amount' | 'percent' }))} options={[{ value: 'amount', label: '$' }, { value: 'percent', label: '%' }]} />
+              </div>
+            </div>
+            <div>
+              <Label>Tax</Label>
+              <Select value={lineForm.tax_rate} onChange={e => setLineForm(f => ({ ...f, tax_rate: e.target.value }))} options={taxRates.map(t => ({ value: String(t.rate), label: `${t.name} (${Math.round(t.rate * 100)}%)` }))} />
             </div>
           </div>
           <div className="flex gap-3"><Button type="submit" loading={loading}>Add line</Button><Button type="button" variant="outline" onClick={() => setActiveDialog(null)}>Cancel</Button></div>
