@@ -11,7 +11,7 @@ import { Select } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { useToast } from '@/components/ui/toast'
 import { formatCurrency } from '@/lib/utils'
-import { Plus, MessageSquare, Clock, Receipt, Settings2, UserCog } from 'lucide-react'
+import { Plus, MessageSquare, Clock, Receipt, Settings2, UserCog, CheckCircle2 } from 'lucide-react'
 
 interface Props {
   job: { id: string; job_number: string; status: string; customer_id: string; title: string; description: string | null; tags: string[] | null; assigned_to: string | null }
@@ -25,7 +25,7 @@ interface Props {
   alreadyInvoiced: number
   actualLines: { description: string; quantity: number; unit: string; unit_price: number; type: 'material' | 'labour' }[]
   actualTotal: number
-  jobStatuses: { key: string; label: string }[]
+  jobStatuses: { key: string; label: string; is_terminal?: boolean }[]
 }
 
 export function JobDetailClient({ job, companyId, profileId, team, gstRate, nextInvoiceNumber, jobTotal, quoteId, alreadyInvoiced, actualLines, actualTotal, jobStatuses }: Props) {
@@ -340,9 +340,31 @@ export function JobDetailClient({ job, companyId, profileId, team, gstRate, next
   }
 
   const assigneeName = team.find(t => t.id === job.assigned_to)?.full_name
+  // The "done" status = first terminal status that isn't a cancellation.
+  const doneStatus = jobStatuses.find(s => s.is_terminal && s.key !== 'cancelled') ?? jobStatuses.find(s => s.key === 'completed')
+  const isDone = doneStatus ? job.status === doneStatus.key : false
+
+  // One-click chain: mark the job complete and open the invoice dialog in one go.
+  async function completeAndInvoice() {
+    if (doneStatus && job.status !== doneStatus.key) {
+      if (db) await db.execute('UPDATE jobs SET status = ? WHERE id = ?', [doneStatus.key, job.id])
+      if (navigator.onLine) {
+        const { error } = await supabase.from('jobs').update({ status: doneStatus.key }).eq('id', job.id)
+        if (error) { toast(error.message, 'error'); return }
+      }
+      toast('Job marked complete')
+      router.refresh()
+    }
+    setActiveDialog('invoice')
+  }
 
   return (
     <div className="flex flex-wrap gap-2">
+      {doneStatus && !isDone && (
+        <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white" onClick={completeAndInvoice}>
+          <CheckCircle2 className="h-4 w-4" /> Complete &amp; invoice
+        </Button>
+      )}
       <Button variant="outline" size="sm" onClick={() => setActiveDialog('visit')}><Plus className="h-4 w-4" /> Schedule visit</Button>
       <Button variant="outline" size="sm" onClick={() => setActiveDialog('note')}><MessageSquare className="h-4 w-4" /> Add note</Button>
       <Button variant="outline" size="sm" onClick={() => setActiveDialog('timesheet')}><Clock className="h-4 w-4" /> Log time</Button>

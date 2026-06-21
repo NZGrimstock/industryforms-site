@@ -8,8 +8,40 @@ import { useQuery } from '@powersync/react'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import * as ImagePicker from 'expo-image-picker'
+import { WebView } from 'react-native-webview'
 import { supabase } from '@/lib/supabase'
 import { getJobStatuses, resolveStatus, statusHex, DEFAULT_JOB_STATUSES, type JobStatus } from '@/lib/job-statuses'
+
+// Self-contained HTML signature pad — draws to a canvas and posts a PNG data URL
+// (or 'EMPTY' if untouched) back to React Native.
+const SIGNATURE_HTML = `<!DOCTYPE html><html><head>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<style>
+ html,body{margin:0;height:100%;overflow:hidden;font-family:-apple-system,sans-serif}
+ #wrap{display:flex;flex-direction:column;height:100%}
+ #pad{flex:1;touch-action:none;background:#fff;border-bottom:1px dashed #d1d5db}
+ #bar{display:flex;gap:8px;padding:10px}
+ button{flex:1;padding:14px;border:0;border-radius:10px;font-size:15px;font-weight:700}
+ #clear{background:#e5e7eb;color:#374151}
+ #save{background:#22c55e;color:#fff}
+</style></head>
+<body><div id="wrap">
+ <canvas id="pad"></canvas>
+ <div id="bar"><button id="clear">Clear</button><button id="save">Save & complete</button></div>
+</div>
+<script>
+ var c=document.getElementById('pad'),ctx=c.getContext('2d'),drawing=false,dirty=false;
+ function resize(){var r=c.getBoundingClientRect();c.width=r.width*2;c.height=r.height*2;ctx.scale(2,2);ctx.lineWidth=2.5;ctx.lineCap='round';ctx.strokeStyle='#111'}
+ function pos(e){var r=c.getBoundingClientRect();var t=e.touches?e.touches[0]:e;return{x:t.clientX-r.left,y:t.clientY-r.top}}
+ function start(e){drawing=true;dirty=true;var p=pos(e);ctx.beginPath();ctx.moveTo(p.x,p.y);e.preventDefault()}
+ function move(e){if(!drawing)return;var p=pos(e);ctx.lineTo(p.x,p.y);ctx.stroke();e.preventDefault()}
+ function end(){drawing=false}
+ c.addEventListener('touchstart',start);c.addEventListener('touchmove',move);c.addEventListener('touchend',end);
+ c.addEventListener('mousedown',start);c.addEventListener('mousemove',move);c.addEventListener('mouseup',end);
+ document.getElementById('clear').onclick=function(){ctx.clearRect(0,0,c.width,c.height);dirty=false};
+ document.getElementById('save').onclick=function(){window.ReactNativeWebView.postMessage(dirty?c.toDataURL('image/png'):'EMPTY')};
+ window.addEventListener('load',resize);
+</script></body></html>`
 
 const ACTIVE_JOB_KEY = 'TRADIEE_ACTIVE_JOB'
 type ActiveJob = { jobId: string; timesheetId: string; startedAt: string }
@@ -66,6 +98,8 @@ export default function JobDetailScreen() {
   const [uploadingPhoto, setUploadingPhoto] = useState(false)
   const [photoUrls, setPhotoUrls] = useState<Record<string, string>>({})
   const [statuses, setStatuses] = useState<JobStatus[]>(DEFAULT_JOB_STATUSES)
+  const [showComplete, setShowComplete] = useState(false)
+  const [completing, setCompleting] = useState(false)
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -278,6 +312,37 @@ export default function JobDetailScreen() {
     if (error) Alert.alert('Error', error.message)
   }
 
+  // Complete the job: optionally upload a customer signature, then set the job to
+  // the company's terminal ("done") status. `signature` is a PNG data URL or 'EMPTY'.
+  async function finishComplete(signature: string | null) {
+    setCompleting(true)
+    try {
+      if (signature && signature !== 'EMPTY') {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!session) throw new Error('Not signed in')
+        const apiBase = (process.env.EXPO_PUBLIC_API_URL ?? '').replace(/\/$/, '')
+        const res = await fetch(`${apiBase}/api/storage/signature`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+          body: JSON.stringify({ jobId: id, dataBase64: signature }),
+        })
+        if (!res.ok) throw new Error((await res.json()).error ?? 'Could not save signature')
+      }
+      const doneKey = (statuses.find(s => s.is_terminal && s.key !== 'cancelled') ?? statuses.find(s => s.key === 'completed'))?.key
+      if (doneKey) {
+        const { error } = await supabase.from('jobs').update({ status: doneKey }).eq('id', id)
+        if (error) throw new Error(error.message)
+      }
+      if (activeJob) await stopJob()
+      setShowComplete(false)
+      Alert.alert('Job completed', signature && signature !== 'EMPTY' ? 'Customer sign-off saved.' : 'Status set to complete.')
+    } catch (e: any) {
+      Alert.alert('Could not complete', e.message ?? 'Unknown error')
+    } finally {
+      setCompleting(false)
+    }
+  }
+
   if (isLoading) {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
@@ -296,6 +361,8 @@ export default function JobDetailScreen() {
 
   const otherStatuses = statuses.filter(s => s.key !== job.status)
   const current = resolveStatus(statuses, job.status)
+  const doneStatus = statuses.find(s => s.is_terminal && s.key !== 'cancelled') ?? statuses.find(s => s.key === 'completed')
+  const isDone = doneStatus ? job.status === doneStatus.key : false
   const materialsTotal = (materials ?? []).reduce((sum, m) => sum + m.quantity * m.unit_price, 0)
 
   return (
@@ -346,6 +413,12 @@ export default function JobDetailScreen() {
             <Text style={styles.metaLabel}>Created</Text>
             <Text style={styles.metaValue}>{formatDate(job.created_at)}</Text>
           </View>
+
+          {doneStatus && !isDone && (
+            <TouchableOpacity style={styles.completeBtn} onPress={() => setShowComplete(true)} activeOpacity={0.85}>
+              <Text style={styles.completeBtnText}>✓ Complete job &amp; get sign-off</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Visits */}
@@ -486,6 +559,36 @@ export default function JobDetailScreen() {
         </TouchableOpacity>
       </SafeAreaView>
 
+      {/* Complete job + customer signature modal */}
+      <Modal visible={showComplete} transparent animationType="slide" onRequestClose={() => !completing && setShowComplete(false)}>
+        <View style={styles.completeOverlay}>
+          <SafeAreaView edges={['top', 'bottom']} style={styles.completeSheet}>
+            <View style={styles.completeHeader}>
+              <Text style={styles.completeTitle}>Customer sign-off</Text>
+              <TouchableOpacity onPress={() => !completing && setShowComplete(false)} disabled={completing}>
+                <Text style={styles.completeClose}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.completeHint}>Ask the customer to sign below to confirm the work is complete. Leave blank to complete without a signature.</Text>
+            <View style={styles.signatureBox}>
+              <WebView
+                originWhitelist={['*']}
+                source={{ html: SIGNATURE_HTML }}
+                style={{ flex: 1, backgroundColor: 'transparent' }}
+                scrollEnabled={false}
+                onMessage={e => finishComplete(e.nativeEvent.data)}
+              />
+            </View>
+            {completing && (
+              <View style={styles.completeBusy}>
+                <ActivityIndicator color="#22c55e" />
+                <Text style={styles.completeBusyText}>Completing…</Text>
+              </View>
+            )}
+          </SafeAreaView>
+        </View>
+      </Modal>
+
       {/* Status picker modal */}
       <Modal visible={showStatusPicker} transparent animationType="fade">
         <TouchableOpacity style={styles.overlay} onPress={() => setShowStatusPicker(false)} activeOpacity={1}>
@@ -553,6 +656,17 @@ const styles = StyleSheet.create({
   photoGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 4 },
   photoThumb: { borderRadius: 8, overflow: 'hidden' },
   photoImg: { width: 90, height: 90, borderRadius: 8 },
+  completeBtn: { marginTop: 14, backgroundColor: '#22c55e', borderRadius: 12, paddingVertical: 14, alignItems: 'center' },
+  completeBtnText: { color: '#fff', fontWeight: '800', fontSize: 15 },
+  completeOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+  completeSheet: { backgroundColor: '#f9fafb', borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingHorizontal: 16, height: '82%' },
+  completeHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 12, paddingBottom: 4 },
+  completeTitle: { fontSize: 18, fontWeight: '800', color: '#111827' },
+  completeClose: { fontSize: 15, color: '#9ca3af', fontWeight: '600' },
+  completeHint: { fontSize: 13, color: '#6b7280', lineHeight: 18, marginBottom: 12 },
+  signatureBox: { flex: 1, borderRadius: 14, overflow: 'hidden', borderWidth: 1, borderColor: '#e5e7eb', backgroundColor: '#fff', marginBottom: 12 },
+  completeBusy: { position: 'absolute', left: 0, right: 0, bottom: 28, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  completeBusyText: { color: '#22c55e', fontWeight: '700' },
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', padding: 32 },
   picker: { backgroundColor: '#fff', borderRadius: 20, padding: 20 },
   pickerTitle: { fontSize: 16, fontWeight: '700', color: '#111827', marginBottom: 14 },
