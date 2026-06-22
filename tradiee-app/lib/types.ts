@@ -16,6 +16,7 @@ export interface Company {
   default_gst_rate: number
   logo_url: string | null
   brand_color: string | null
+  theme_accent: string | null
   email: string | null
   phone: string | null
   address: string | null

@@ -14,8 +14,9 @@ import { Badge } from '@/components/ui/badge'
 import { Dialog } from '@/components/ui/dialog'
 import { useToast } from '@/components/ui/toast'
 import { BillingRatesManager, PaymentMethodsManager, TaxRatesManager, EnquiryInboxManager, JobStatusesManager } from '@/components/forms/company-lists'
-import { Upload, Pencil, X, ArrowRightLeft, PenLine, Trash2 } from 'lucide-react'
+import { Upload, Pencil, X, ArrowRightLeft, PenLine, Trash2, Check } from 'lucide-react'
 import { getPlan, planForSeats } from '@/lib/plans'
+import { extractAccent } from '@/lib/extract-color'
 
 interface Props {
   profile: Profile & { companies: Company }
@@ -36,6 +37,8 @@ export function SettingsClient({ profile, company, team: initialTeam, googleConn
   const logoInputRef = useRef<HTMLInputElement>(null)
   const [logoPreview, setLogoPreview] = useState<string | null>(company.logo_url ?? null)
   const [logoUploading, setLogoUploading] = useState(false)
+  const [themeAccent, setThemeAccent] = useState<string | null>(company.theme_accent ?? null)
+  const [suggestedAccent, setSuggestedAccent] = useState<string | null>(null)
   const [googleConnected, setGoogleConnected] = useState(initialGoogleConnected)
   const [googleSyncing, setGoogleSyncing] = useState(false)
   const [googleDisconnecting, setGoogleDisconnecting] = useState(false)
@@ -88,6 +91,9 @@ export function SettingsClient({ profile, company, team: initialTeam, googleConn
 
   async function uploadLogo(file: File) {
     setLogoUploading(true)
+    // Sample the logo for a dominant accent — only offered as a suggestion;
+    // owner clicks "Use" to actually apply.
+    extractAccent(file).then(c => { if (c) setSuggestedAccent(c) }).catch(() => {})
     const ext = file.name.split('.').pop() ?? 'png'
 
     const res = await fetch('/api/storage/upload-url', {
@@ -114,6 +120,15 @@ export function SettingsClient({ profile, company, team: initialTeam, googleConn
     await supabase.from('companies').update({ logo_url: null }).eq('id', company.id)
     setLogoPreview(null)
     toast('Logo removed')
+  }
+
+  async function saveAccent(hex: string | null) {
+    const { error } = await supabase.from('companies').update({ theme_accent: hex }).eq('id', company.id)
+    if (error) { toast(error.message, 'error'); return }
+    setThemeAccent(hex)
+    setSuggestedAccent(null)
+    toast(hex ? 'Theme accent updated' : 'Theme accent reset')
+    router.refresh()
   }
 
   async function syncGoogleCalendar() {
@@ -331,6 +346,36 @@ export function SettingsClient({ profile, company, team: initialTeam, googleConn
                   <Upload className="h-4 w-4" />
                   {logoUploading ? 'Uploading...' : logoPreview ? 'Change logo' : 'Upload logo'}
                 </button>
+              </div>
+            </div>
+
+            <div>
+              <Label>Theme accent</Label>
+              <p className="text-xs text-gray-400 mb-2">Drives the &ldquo;+ New&rdquo; button and any unscoped pages. Suggested from your logo.</p>
+              <div className="flex items-center gap-3 flex-wrap">
+                <div className="flex items-center gap-2 border border-gray-200 rounded-lg pl-1 pr-3 py-1">
+                  <input
+                    type="color"
+                    value={themeAccent ?? '#f97316'}
+                    onChange={e => setThemeAccent(e.target.value)}
+                    className="h-7 w-9 rounded cursor-pointer border-0 bg-transparent"
+                  />
+                  <span className="text-xs font-mono text-gray-600">{themeAccent ?? '#f97316'}</span>
+                </div>
+                <Button size="sm" type="button" onClick={() => saveAccent(themeAccent)}>Save accent</Button>
+                {themeAccent && (
+                  <button type="button" onClick={() => saveAccent(null)} className="text-xs text-gray-500 hover:underline">Reset to default</button>
+                )}
+                {suggestedAccent && suggestedAccent.toLowerCase() !== (themeAccent ?? '').toLowerCase() && (
+                  <div className="flex items-center gap-2 ml-2 pl-3 border-l border-gray-200">
+                    <span className="text-xs text-gray-500">From logo:</span>
+                    <span className="h-5 w-5 rounded border border-gray-200" style={{ backgroundColor: suggestedAccent }} />
+                    <span className="text-xs font-mono text-gray-600">{suggestedAccent}</span>
+                    <button type="button" onClick={() => saveAccent(suggestedAccent)} className="text-xs font-medium text-[var(--accent,#f97316)] hover:underline inline-flex items-center gap-1">
+                      <Check className="h-3 w-3" /> Use this
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
 
