@@ -6,6 +6,7 @@ import { StatusBadge } from '@/components/ui/badge'
 import { formatDate, formatCurrency, formatDateTime } from '@/lib/utils'
 import Link from 'next/link'
 import { CustomerDetailClient } from './client'
+import { SmsThread } from '@/components/customers/sms-thread'
 
 export default async function CustomerDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -22,11 +23,12 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
 
   if (!customer) notFound()
 
-  const [quotesRes, jobsRes, invoicesRes, commsRes] = await Promise.all([
+  const [quotesRes, jobsRes, invoicesRes, commsRes, messagesRes] = await Promise.all([
     supabase.from('quotes').select('id, quote_number, status, total, created_at').eq('customer_id', id).order('created_at', { ascending: false }).limit(10),
     supabase.from('jobs').select('id, job_number, title, status, created_at').eq('customer_id', id).order('created_at', { ascending: false }).limit(10),
     supabase.from('invoices').select('id, invoice_number, status, total, amount_paid, due_date').eq('customer_id', id).order('created_at', { ascending: false }).limit(10),
     supabase.from('communications').select('id, channel, direction, subject, summary, created_at').eq('customer_id', id).order('created_at', { ascending: false }).limit(20),
+    supabase.from('customer_messages').select('id, direction, body, created_at').eq('customer_id', id).order('created_at', { ascending: true }).limit(200),
   ])
 
   return (
@@ -126,6 +128,20 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
             </CardContent>
           </Card>
         </div>
+
+        {/* SMS thread (owner/admin only — RLS already enforces) */}
+        {(profile?.role === 'owner' || profile?.role === 'admin') && (
+          <Card>
+            <CardHeader><CardTitle>Text messages</CardTitle></CardHeader>
+            <CardContent>
+              <SmsThread
+                customerId={id}
+                customerPhone={customer.phone ?? null}
+                initial={(messagesRes.data ?? []) as { id: string; direction: 'inbound' | 'outbound'; body: string; created_at: string }[]}
+              />
+            </CardContent>
+          </Card>
+        )}
 
         {/* Communications history */}
         <Card>
