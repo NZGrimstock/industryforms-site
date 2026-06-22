@@ -12,6 +12,7 @@ import { useToast } from '@/components/ui/toast'
 import { VoiceInput } from '@/components/ui/voice-input'
 import { SmartWriteButton } from '@/components/ui/smart-write'
 import { Dialog } from '@/components/ui/dialog'
+import { AddressAutocomplete } from '@/components/ui/address-autocomplete'
 
 interface Props {
   companyId: string
@@ -137,7 +138,7 @@ export function CustomerForm({ companyId, customer, onSuccess }: Props) {
         </div>
         <div>
           <Label>Billing address</Label>
-          <Input value={form.billing_address} onChange={e => set('billing_address', e.target.value)} />
+          <AddressAutocomplete value={form.billing_address} onChange={v => set('billing_address', v)} placeholder="Start typing an address…" />
         </div>
         <div>
           <div className="flex items-center justify-between mb-1">

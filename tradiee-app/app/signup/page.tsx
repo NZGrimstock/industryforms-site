@@ -3,6 +3,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { Wrench, Eye, EyeOff } from 'lucide-react'
 import { createClient } from '@/lib/supabase/browser'
+import { AddressAutocomplete } from '@/components/ui/address-autocomplete'
 
 export default function SignupPage() {
   const [loading, setLoading] = useState(false)
@@ -10,14 +11,40 @@ export default function SignupPage() {
   const [error, setError] = useState('')
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
+  const [phone, setPhone] = useState('')
   const [password, setPassword] = useState('')
   const [companyName, setCompanyName] = useState('')
+  const [companyAddress, setCompanyAddress] = useState('')
   const [tradeType, setTradeType] = useState('')
   const [country, setCountry] = useState('NZ')
 
+  const TRADE_TYPES = [
+    'Builder / General contractor',
+    'Electrician',
+    'Plumber',
+    'Drainlayer',
+    'Gasfitter',
+    'Roofer',
+    'Painter & decorator',
+    'Tiler',
+    'Flooring installer',
+    'Landscaper / Gardener',
+    'HVAC / Refrigeration',
+    'Fencer',
+    'Concreter',
+    'Plasterer',
+    'Cabinet maker / Joiner',
+    'Pool & spa technician',
+    'Fire protection',
+    'Solar / Renewable energy',
+    'Security / Alarm systems',
+    'Cleaning services',
+    'Other trades',
+  ]
+
   async function handleSubmit() {
-    if (!fullName || !email || !password || !companyName) {
-      setError('Please fill in all required fields.')
+    if (!fullName || !email || !password || !companyName || !phone) {
+      setError('Please fill in all required fields including phone number.')
       return
     }
     setError('')
@@ -26,7 +53,7 @@ export default function SignupPage() {
       const res = await fetch('/api/auth/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fullName, email, password, companyName, tradeType, country }),
+        body: JSON.stringify({ fullName, email, password, companyName, companyAddress, tradeType, country, phone }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? 'Signup failed')
@@ -82,9 +109,21 @@ export default function SignupPage() {
                 value={companyName} onChange={e => setCompanyName(e.target.value)} placeholder="Your company name" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Trade type</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Phone number *</label>
               <input className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
-                value={tradeType} onChange={e => setTradeType(e.target.value)} placeholder="e.g. Electrician, Plumber, Builder" />
+                type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="+64 21 123 4567" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Business address</label>
+              <AddressAutocomplete value={companyAddress} onChange={setCompanyAddress} placeholder="Start typing your address…" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Trade / industry *</label>
+              <select className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+                value={tradeType} onChange={e => setTradeType(e.target.value)} required>
+                <option value="">Select your trade…</option>
+                {TRADE_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+              </select>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Country</label>

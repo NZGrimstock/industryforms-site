@@ -12,6 +12,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { useToast } from '@/components/ui/toast'
 import { formatCurrency } from '@/lib/utils'
 import { Plus, MessageSquare, Clock, Receipt, Settings2, UserCog, CheckCircle2 } from 'lucide-react'
+import { TimePicker } from '@/components/ui/time-picker'
 
 interface Props {
   job: { id: string; job_number: string; status: string; customer_id: string; title: string; description: string | null; tags: string[] | null; assigned_to: string | null }
@@ -37,7 +38,7 @@ export function JobDetailClient({ job, companyId, profileId, team, gstRate, next
   const [loading, setLoading] = useState(false)
   const [newAssignee, setNewAssignee] = useState(job.assigned_to ?? '')
 
-  const [visitForm, setVisitForm] = useState({ start: '', end: '', assignedTo: '', notes: '' })
+  const [visitForm, setVisitForm] = useState({ date: '', startTime: '08:00', endMode: 'hours' as 'hours' | 'endTime', durationHours: '2', endTime: '10:00', assignedTo: '', notes: '' })
   const [noteBody, setNoteBody] = useState('')
   const [timesheetForm, setTimesheetForm] = useState({ start: '', end: '', breakMinutes: '0', billRate: '', isBillable: true })
   const [newStatus, setNewStatus] = useState(job.status)
@@ -48,16 +49,34 @@ export function JobDetailClient({ job, companyId, profileId, team, gstRate, next
   // Visits are office-scheduled so go direct to Supabase (not offline-critical)
   async function addVisit(e: React.FormEvent) {
     e.preventDefault()
+    if (!visitForm.date || !visitForm.startTime) { toast('Date and start time are required', 'error'); return }
     setLoading(true)
+
+    const scheduledStart = new Date(`${visitForm.date}T${visitForm.startTime}:00`)
+    let scheduledEnd: Date
+    if (visitForm.endMode === 'hours') {
+      const hrs = parseFloat(visitForm.durationHours) || 1
+      scheduledEnd = new Date(scheduledStart.getTime() + hrs * 3600000)
+    } else {
+      scheduledEnd = new Date(`${visitForm.date}T${visitForm.endTime}:00`)
+      if (scheduledEnd <= scheduledStart) scheduledEnd = new Date(scheduledStart.getTime() + 3600000)
+    }
+
     const { error } = await supabase.from('job_visits').insert({
       job_id: job.id,
       assigned_to: visitForm.assignedTo || null,
-      scheduled_start: visitForm.start,
-      scheduled_end: visitForm.end,
+      scheduled_start: scheduledStart.toISOString(),
+      scheduled_end: scheduledEnd.toISOString(),
       notes: visitForm.notes || null,
       status: 'scheduled',
     })
     if (error) { toast(error.message, 'error'); setLoading(false); return }
+
+    // Auto-advance job to 'scheduled' if it's currently unscheduled
+    if (job.status === 'unscheduled') {
+      if (db) await db.execute('UPDATE jobs SET status = ? WHERE id = ?', ['scheduled', job.id])
+      if (navigator.onLine) await supabase.from('jobs').update({ status: 'scheduled' }).eq('id', job.id)
+    }
 
     if (visitForm.assignedTo) {
       fetch('/api/notify', {
@@ -322,6 +341,12 @@ export function JobDetailClient({ job, companyId, profileId, team, gstRate, next
   }
 
   async function updateAssignment() {
+    // Confirm when changing an existing assignee
+    if (job.assigned_to && newAssignee && newAssignee !== job.assigned_to) {
+      const current = team.find(t => t.id === job.assigned_to)?.full_name ?? 'current assignee'
+      const next = team.find(t => t.id === newAssignee)?.full_name ?? 'new assignee'
+      if (!confirm(`Change assignee from ${current} to ${next}?`)) { return }
+    }
     setLoading(true)
     const value = newAssignee || null
     if (db) {
@@ -376,9 +401,45 @@ export function JobDetailClient({ job, companyId, profileId, team, gstRate, next
       <Dialog open={activeDialog === 'visit'} onClose={() => setActiveDialog(null)} title="Schedule visit">
         <form onSubmit={addVisit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
-            <div><Label>Start <span className="text-red-400">*</span></Label><Input type="datetime-local" value={visitForm.start} onChange={e => setVisitForm(f => ({ ...f, start: e.target.value }))} required /></div>
-            <div><Label>End <span className="text-red-400">*</span></Label><Input type="datetime-local" value={visitForm.end} onChange={e => setVisitForm(f => ({ ...f, end: e.target.value }))} required /></div>
+            <div>
+              <Label>Date <span className="text-red-400">*</span></Label>
+              <Input type="date" value={visitForm.date} onChange={e => setVisitForm(f => ({ ...f, date: e.target.value }))} required />
+            </div>
+            <div>
+              <Label>Start time <span className="text-red-400">*</span></Label>
+              <TimePicker value={visitForm.startTime} onChange={v => setVisitForm(f => ({ ...f, startTime: v }))} />
+            </div>
           </div>
+
+          {/* Duration or end time toggle */}
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <Label className="mb-0">Duration</Label>
+              <div className="flex gap-1 bg-gray-100 rounded-lg p-0.5 text-xs">
+                {(['hours', 'endTime'] as const).map(m => (
+                  <button key={m} type="button"
+                    onClick={() => setVisitForm(f => ({ ...f, endMode: m }))}
+                    className={`px-2 py-1 rounded-md font-medium transition-colors ${visitForm.endMode === m ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500'}`}
+                  >
+                    {m === 'hours' ? 'Hours' : 'End time'}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {visitForm.endMode === 'hours' ? (
+              <div className="flex items-center gap-2">
+                <Input type="number" min="0.25" max="24" step="0.25"
+                  value={visitForm.durationHours}
+                  onChange={e => setVisitForm(f => ({ ...f, durationHours: e.target.value }))}
+                  className="w-24"
+                />
+                <span className="text-sm text-gray-500">hours</span>
+              </div>
+            ) : (
+              <TimePicker value={visitForm.endTime} onChange={v => setVisitForm(f => ({ ...f, endTime: v }))} />
+            )}
+          </div>
+
           <div><Label>Assigned to</Label><Select value={visitForm.assignedTo} onChange={e => setVisitForm(f => ({ ...f, assignedTo: e.target.value }))} placeholder="Unassigned" options={team.map(t => ({ value: t.id, label: t.full_name }))} /></div>
           <div><Label>Notes</Label><Textarea value={visitForm.notes} onChange={e => setVisitForm(f => ({ ...f, notes: e.target.value }))} rows={2} /></div>
           <div className="flex gap-3"><Button type="submit" loading={loading}>Schedule</Button><Button type="button" variant="outline" onClick={() => setActiveDialog(null)}>Cancel</Button></div>

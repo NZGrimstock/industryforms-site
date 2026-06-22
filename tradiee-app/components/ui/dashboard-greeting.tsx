@@ -1,0 +1,20 @@
+'use client'
+import { useEffect, useState } from 'react'
+
+function getGreeting() {
+  const h = new Date().getHours()
+  if (h < 12) return 'morning'
+  if (h < 17) return 'afternoon'
+  return 'evening'
+}
+
+export function DashboardGreeting({ firstName }: { firstName: string }) {
+  const [greeting, setGreeting] = useState('')
+  useEffect(() => { setGreeting(getGreeting()) }, [])
+  if (!greeting) return null
+  return (
+    <p className="text-xl font-semibold text-gray-900">
+      Good {greeting}, {firstName}! 👋
+    </p>
+  )
+}

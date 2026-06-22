@@ -6,6 +6,7 @@ import { FileText, Briefcase, Receipt, Clock } from 'lucide-react'
 import Link from 'next/link'
 import { getProfitabilityStatus } from '@/components/ui/profitability-badge'
 import { OnboardingChecklist } from '@/components/ui/onboarding-checklist'
+import { DashboardGreeting } from '@/components/ui/dashboard-greeting'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -99,8 +100,9 @@ export default async function DashboardPage() {
 
   return (
     <>
-      <Header title={`Good ${getGreeting()}, ${profile?.full_name?.split(' ')[0] ?? 'there'}`} profile={profile} />
+      <Header title="Dashboard" profile={profile} />
       <div className="p-6 space-y-6">
+        <DashboardGreeting firstName={profile?.full_name?.split(' ')[0] ?? 'there'} />
         <OnboardingChecklist steps={onboardingSteps} />
 
         {/* Trial banner */}
@@ -221,13 +223,6 @@ export default async function DashboardPage() {
       </div>
     </>
   )
-}
-
-function getGreeting() {
-  const h = new Date().getHours()
-  if (h < 12) return 'morning'
-  if (h < 17) return 'afternoon'
-  return 'evening'
 }
 
 const statusColors: Record<string, string> = {

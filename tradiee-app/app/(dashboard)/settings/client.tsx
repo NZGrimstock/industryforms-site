@@ -91,7 +91,7 @@ export function SettingsClient({ profile, company, team: initialTeam, googleConn
   })
 
   const [editForm, setEditForm] = useState({
-    role: 'staff', hourly_bill_rate: '', hourly_cost_rate: '', is_active: true,
+    role: 'staff', hourly_bill_rate: '', hourly_cost_rate: '', is_active: true, vehicle_registration: '',
   })
 
   function setC(k: string, v: string) { setCompanyForm(f => ({ ...f, [k]: v })) }
@@ -268,6 +268,7 @@ export function SettingsClient({ profile, company, team: initialTeam, googleConn
     setEditMember(member)
     setEditForm({
       role: member.role ?? 'staff',
+      vehicle_registration: (member as unknown as { vehicle_registration?: string }).vehicle_registration ?? '',
       hourly_bill_rate: member.hourly_bill_rate?.toString() ?? '',
       hourly_cost_rate: member.hourly_cost_rate?.toString() ?? '',
       is_active: member.is_active ?? true,
@@ -283,6 +284,7 @@ export function SettingsClient({ profile, company, team: initialTeam, googleConn
       hourly_bill_rate: editForm.hourly_bill_rate ? parseFloat(editForm.hourly_bill_rate) : null,
       hourly_cost_rate: editForm.hourly_cost_rate ? parseFloat(editForm.hourly_cost_rate) : null,
       is_active: editForm.is_active,
+      vehicle_registration: editForm.vehicle_registration || null,
     }).eq('id', editMember.id)
     if (error) { toast(error.message, 'error'); setLoading(false); return }
     setTeam(prev => prev.map(m => m.id === editMember.id
@@ -827,6 +829,11 @@ export function SettingsClient({ profile, company, team: initialTeam, googleConn
                 </div>
               </div>
               <div>
+                <Label>Vehicle registration</Label>
+                <Input value={editForm.vehicle_registration} onChange={e => setEditForm(f => ({ ...f, vehicle_registration: e.target.value }))} placeholder="e.g. ABC123" />
+                <p className="text-xs text-gray-400 mt-1">Used in the vehicle logbook report</p>
+              </div>
+              <div>
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input type="checkbox" checked={editForm.is_active} onChange={e => setEditForm(f => ({ ...f, is_active: e.target.checked }))} className="rounded" />
                   <span className="text-sm text-gray-700">Active (can log in and appear in assignments)</span>
@@ -976,21 +983,55 @@ function SignatureCaptureModal({
   )
 }
 
-const PLANS = [
-  { key: 'solo', label: 'Solo', price: '$29/mo', desc: '1 user, unlimited jobs & quotes' },
-  { key: 'team', label: 'Team', price: '$79/mo', desc: 'Up to 10 users, all features' },
-  { key: 'pro', label: 'Pro', price: '$149/mo', desc: 'Unlimited users + priority support' },
+const PLAN_DETAILS = [
+  {
+    key: 'trial',
+    label: 'Free trial',
+    price: 'Free',
+    users: '1 user',
+    desc: '30-day free trial with full access',
+    features: ['All core features', 'Jobs, quotes & invoices', 'Customer management', 'Mobile app access'],
+    highlight: false,
+  },
+  {
+    key: 'solo',
+    label: 'Solo',
+    price: '$49/mo',
+    users: '1 user',
+    desc: 'Perfect for sole traders',
+    features: ['All core features', 'Unlimited jobs & quotes', 'Invoice payments', 'Customer portal', 'Price list & materials', 'SMS & email'],
+    highlight: false,
+  },
+  {
+    key: 'team',
+    label: 'Team',
+    price: '$79/mo',
+    users: 'Up to 10 users',
+    desc: 'Grow your crew',
+    features: ['Everything in Solo', 'Team scheduling & GPS map', 'Role-based access', 'Timesheets & travel logs', 'Supplier/PO/Bills module', 'Projects add-on ($19/mo)', 'Instant website ($9/mo)'],
+    highlight: true,
+  },
+  {
+    key: 'pro',
+    label: 'Pro',
+    price: '$149/mo',
+    users: 'Unlimited users',
+    desc: 'For larger operations',
+    features: ['Everything in Team', 'Unlimited team members', 'Priority support', 'Advanced reporting', 'Bulk invoicing', 'Xero & accounting sync'],
+    highlight: false,
+  },
 ]
 
 function BillingTab({ company }: { company: Company }) {
   const [loading, setLoading] = useState<string>('')
   const { toast } = useToast()
 
-  // Snapshot "now" once so the render stays pure (no Date.now() during render).
   const [nowMs] = useState(() => Date.now())
   const trialDaysLeft = company.trial_ends_at
     ? Math.max(0, Math.ceil((new Date(company.trial_ends_at).getTime() - nowMs) / 86400000))
     : null
+
+  const currentPlan = company.subscription_plan ?? 'trial'
 
   async function subscribe(plan: string) {
     setLoading(plan)
@@ -1008,46 +1049,96 @@ function BillingTab({ company }: { company: Company }) {
     window.location.href = data.url
   }
 
-  const isActive = company.subscription_plan !== 'trial'
+  const PLAN_ORDER = ['trial', 'solo', 'team', 'pro']
+  const currentIdx = PLAN_ORDER.indexOf(currentPlan)
 
   return (
-    <div className="max-w-2xl space-y-6">
+    <div className="space-y-6">
+      {/* Status banner */}
       <Card>
-        <CardHeader><CardTitle>Current plan</CardTitle></CardHeader>
-        <CardContent>
+        <CardContent className="py-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-lg font-semibold text-gray-900 capitalize">{company.subscription_plan} plan</p>
-              <p className="text-sm text-gray-500 capitalize">Status: {company.subscription_status}</p>
-              {trialDaysLeft !== null && trialDaysLeft > 0 && (
-                <p className="text-sm text-[var(--accent,#f97316)] font-medium mt-1">{trialDaysLeft} days left in trial</p>
-              )}
-              {trialDaysLeft === 0 && company.subscription_plan === 'trial' && (
-                <p className="text-sm text-red-600 font-medium mt-1">Trial expired — subscribe to continue</p>
+              <p className="text-base font-semibold text-gray-900">
+                Current plan: <span className="text-[var(--accent,#f97316)] capitalize">{currentPlan === 'trial' ? 'Free trial' : currentPlan}</span>
+              </p>
+              <p className="text-sm text-gray-500 capitalize mt-0.5">
+                Status: {company.subscription_status ?? 'trialing'}
+                {trialDaysLeft !== null && trialDaysLeft > 0 && ` · ${trialDaysLeft} days left`}
+              </p>
+              {trialDaysLeft === 0 && currentPlan === 'trial' && (
+                <p className="text-sm text-red-600 font-medium mt-1">Trial expired — choose a plan below to continue</p>
               )}
             </div>
-            {isActive && (
+            {currentPlan !== 'trial' && (
               <Button variant="outline" size="sm" loading={loading === 'portal'} onClick={openPortal}>Manage billing</Button>
             )}
           </div>
         </CardContent>
       </Card>
 
-      {!isActive && (
-        <div className="grid gap-4">
-          <p className="text-sm font-medium text-gray-700">Choose a plan to get started</p>
-          {PLANS.map(plan => (
-            <Card key={plan.key} className="flex items-center justify-between p-4">
-              <div>
-                <p className="font-semibold text-gray-900">{plan.label} <span className="text-orange-500">{plan.price}</span></p>
-                <p className="text-sm text-gray-500">{plan.desc}</p>
+      {/* Plan grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {PLAN_DETAILS.map((plan, i) => {
+          const isCurrent = plan.key === currentPlan
+          const isUpgrade = PLAN_ORDER.indexOf(plan.key) > currentIdx
+          const isDowngrade = PLAN_ORDER.indexOf(plan.key) < currentIdx && plan.key !== 'trial'
+          return (
+            <div
+              key={plan.key}
+              className={`relative rounded-2xl border-2 p-5 flex flex-col transition-all ${
+                isCurrent
+                  ? 'border-[var(--accent,#f97316)] bg-orange-50'
+                  : plan.highlight
+                  ? 'border-blue-400 bg-blue-50/40'
+                  : 'border-gray-200 bg-white'
+              }`}
+            >
+              {isCurrent && (
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                  <span className="bg-[var(--accent,#f97316)] text-white text-xs font-bold px-3 py-0.5 rounded-full">Current plan</span>
+                </div>
+              )}
+              {plan.highlight && !isCurrent && (
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                  <span className="bg-blue-600 text-white text-xs font-bold px-3 py-0.5 rounded-full">Most popular</span>
+                </div>
+              )}
+              <div className="mb-4">
+                <p className="text-base font-bold text-gray-900">{plan.label}</p>
+                <p className="text-2xl font-bold text-[var(--accent,#f97316)] mt-1">{plan.price}</p>
+                <p className="text-xs text-gray-500 mt-0.5">{plan.users}</p>
+                <p className="text-xs text-gray-400 mt-1">{plan.desc}</p>
               </div>
-              <Button size="sm" loading={loading === plan.key} onClick={() => subscribe(plan.key)}>Subscribe</Button>
-            </Card>
-          ))}
-        </div>
-      )}
+              <ul className="space-y-1.5 flex-1 mb-5">
+                {plan.features.map(f => (
+                  <li key={f} className="flex items-start gap-2 text-xs text-gray-600">
+                    <Check className="h-3.5 w-3.5 text-green-500 mt-0.5 shrink-0" />
+                    {f}
+                  </li>
+                ))}
+              </ul>
+              {isCurrent ? (
+                <div className="rounded-lg bg-[var(--accent,#f97316)]/10 text-[var(--accent,#f97316)] text-xs font-semibold text-center py-2">
+                  Active
+                </div>
+              ) : plan.key === 'trial' ? null : (
+                <Button
+                  size="sm"
+                  variant={isDowngrade ? 'outline' : 'default'}
+                  loading={loading === plan.key}
+                  onClick={() => subscribe(plan.key)}
+                  className="w-full"
+                >
+                  {isUpgrade ? `Upgrade to ${plan.label}` : `Switch to ${plan.label}`}
+                </Button>
+              )}
+            </div>
+          )
+        })}
+      </div>
 
+      <p className="text-xs text-gray-400">Prices in NZD. Upgrades and downgrades take effect immediately. Cancel any time from the billing portal.</p>
     </div>
   )
 }

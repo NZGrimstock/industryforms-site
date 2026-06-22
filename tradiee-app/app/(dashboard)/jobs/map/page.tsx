@@ -12,7 +12,6 @@ export default async function JobMapPage() {
       .from('jobs')
       .select('id, job_number, title, status, assigned_to, customer_sites!site_id(address, label, lat, lng), customers(name, phone), profiles!assigned_to(full_name)')
       .eq('company_id', profile!.company_id)
-      .not('site_id', 'is', null)
       .in('status', ['scheduled', 'in_progress', 'unscheduled'])
       .order('created_at', { ascending: false }),
     supabase.from('profiles').select('id, full_name').eq('company_id', profile!.company_id).eq('is_active', true).order('full_name'),
@@ -25,7 +24,6 @@ export default async function JobMapPage() {
   type AssigneeRow = { full_name: string }
 
   const mapJobs = (jobsRes.data ?? [])
-    .filter(j => (j.customer_sites as unknown as SiteRow | null)?.address)
     .map(j => {
       const site = j.customer_sites as unknown as SiteRow | null
       return {
@@ -41,6 +39,7 @@ export default async function JobMapPage() {
         site_label: site?.label ?? null,
         lat: site?.lat != null ? Number(site.lat) : null,
         lng: site?.lng != null ? Number(site.lng) : null,
+        has_site: !!site?.address,
       }
     })
 

@@ -1,9 +1,21 @@
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
-  ActivityIndicator,
+  ActivityIndicator, Linking, Platform,
 } from 'react-native'
 import { useLocalSearchParams, Stack, router } from 'expo-router'
 import { useQuery } from '@powersync/react'
+
+function openPhone(phone: string) {
+  Linking.openURL(`tel:${phone.replace(/\s/g, '')}`)
+}
+
+function openMaps(address: string) {
+  const encoded = encodeURIComponent(address)
+  const url = Platform.OS === 'ios'
+    ? `maps://maps.apple.com/?q=${encoded}`
+    : `https://maps.google.com/?q=${encoded}`
+  Linking.openURL(url)
+}
 
 const JOB_STATUS_COLOR: Record<string, string> = {
   unscheduled: '#6b7280',
@@ -122,16 +134,16 @@ export default function CustomerDetailScreen() {
             </View>
           )}
           {customer.phone && (
-            <View style={styles.metaRow}>
+            <TouchableOpacity style={styles.metaRow} onPress={() => openPhone(customer.phone!)} activeOpacity={0.7}>
               <Text style={styles.metaLabel}>Phone</Text>
-              <Text style={styles.metaValue}>{customer.phone}</Text>
-            </View>
+              <Text style={[styles.metaValue, { color: '#f97316' }]}>{customer.phone}</Text>
+            </TouchableOpacity>
           )}
           {customer.billing_address && (
-            <View style={styles.metaRow}>
+            <TouchableOpacity style={styles.metaRow} onPress={() => openMaps(customer.billing_address!)} activeOpacity={0.7}>
               <Text style={styles.metaLabel}>Address</Text>
-              <Text style={[styles.metaValue, { flex: 1 }]} numberOfLines={3}>{customer.billing_address}</Text>
-            </View>
+              <Text style={[styles.metaValue, { flex: 1, color: '#f97316' }]} numberOfLines={3}>{customer.billing_address}</Text>
+            </TouchableOpacity>
           )}
         </View>
 
@@ -140,17 +152,17 @@ export default function CustomerDetailScreen() {
           <View style={styles.card}>
             <Text style={styles.sectionTitle}>Sites</Text>
             {(sites ?? []).map((site, idx) => (
-              <View key={site.id} style={[styles.siteRow, idx === 0 && { borderTopWidth: 0 }]}>
+              <TouchableOpacity key={site.id} style={[styles.siteRow, idx === 0 && { borderTopWidth: 0 }]} onPress={() => openMaps(site.address)} activeOpacity={0.7}>
                 <View style={{ flex: 1 }}>
                   {site.label && (
                     <Text style={styles.siteLabel}>{site.label}</Text>
                   )}
-                  <Text style={styles.siteAddress}>{site.address}</Text>
+                  <Text style={[styles.siteAddress, { color: '#f97316' }]}>{site.address}</Text>
                   {site.access_notes && (
                     <Text style={styles.siteNotes} numberOfLines={2}>{site.access_notes}</Text>
                   )}
                 </View>
-              </View>
+              </TouchableOpacity>
             ))}
           </View>
         )}

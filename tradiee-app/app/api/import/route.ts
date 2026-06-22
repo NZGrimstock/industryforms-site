@@ -18,11 +18,12 @@ export async function POST(req: NextRequest) {
       .single()
     if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 403 })
 
-    const { dataType, rows }: { dataType: DataType; rows: ImportRow[] } = await req.json()
+    const { dataType, rows, duplicateMode }: { dataType: DataType; rows: ImportRow[]; duplicateMode?: 'skip' | 'overwrite' } = await req.json()
     const companyId = profile.company_id
 
     let inserted = 0
     let skipped = 0
+    let updated = 0
 
     if (dataType === 'customers') {
       for (const row of rows) {
@@ -49,6 +50,7 @@ export async function POST(req: NextRequest) {
       for (const row of rows) {
         const name = row.name?.trim()
         if (!name) { skipped++; continue }
+        const code = row.sku?.trim() || null
         const payload = {
           company_id: companyId,
           name,
@@ -56,9 +58,22 @@ export async function POST(req: NextRequest) {
           sell_price: parsePrice(row.sell_price),
           cost_price: parsePrice(row.cost_price),
           category: row.category?.trim() || null,
-          code: row.sku?.trim() || null,     // schema uses 'code'; import exposes as 'sku'
+          code,
           is_active: true,
         }
+
+        if (duplicateMode === 'overwrite' && (code || name)) {
+          // Try to find existing by code (preferred) or name
+          const match = code
+            ? await service.from('price_list_items').select('id').eq('company_id', companyId).eq('code', code).maybeSingle()
+            : await service.from('price_list_items').select('id').eq('company_id', companyId).ilike('name', name).maybeSingle()
+          if (match.data) {
+            const { error } = await service.from('price_list_items').update(payload).eq('id', match.data.id)
+            if (error) skipped++; else updated++
+            continue
+          }
+        }
+
         const { error } = await service.from('price_list_items').insert(payload)
         if (error) skipped++
         else inserted++
@@ -168,7 +183,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    return NextResponse.json({ inserted, skipped })
+    return NextResponse.json({ inserted, skipped, updated })
   } catch (e: unknown) {
     console.error('[import]', e)
     return NextResponse.json({ error: e instanceof Error ? e.message : 'Import failed' }, { status: 500 })

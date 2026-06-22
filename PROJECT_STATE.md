@@ -207,7 +207,7 @@ screens use **PowerSync** `useQuery`; photos via presigned R2.
   (Personal/Ignore/Work→job).
 - **Tap to Pay** (scaffolding only — see Sprint 3 above).
 
-## Migrations (supabase/migrations/) — all 042 applied to cloud
+## Migrations (supabase/migrations/) — all 043 applied to cloud
 001–021 base schema. **022** PowerSync. **023** billing_exempt. **024**
 visit reminder_sent_at. **025** suppliers/POs. **026** bills. **027** invoice
 last_reminder_at. **028** company_websites. **029** cf_hostname_id. **030**
@@ -219,7 +219,8 @@ inbound_email_token. **037** custom job statuses. **038** auto-generated todos.
 **039** projects + project_stages + project_contacts + project_subcontractors
 + jobs/invoices.project_id/project_stage_id + companies.addons. **040**
 companies.theme_accent. **041** review_link + review_request_enabled +
-invoices.review_request_sent_at. **042** customer_messages.
+invoices.review_request_sent_at. **042** customer_messages. **043**
+profiles.vehicle_registration.
 
 ## Key decisions & gotchas
 - **Next 16** uses `proxy.ts` (not `middleware.ts`) + `allowedDevOrigins` in

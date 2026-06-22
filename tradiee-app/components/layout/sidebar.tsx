@@ -49,6 +49,7 @@ const groups: Group[] = [
       { href: '/jobs/map', label: 'Job Map', icon: Map },
       { href: '/schedule', label: 'Schedule', icon: Calendar },
       { href: '/timesheets', label: 'Timesheets', icon: Clock },
+      { href: '/logbook', label: 'Vehicle Logbook', icon: Truck },
       { href: '/invoices', label: 'Invoices', icon: Receipt },
       { href: '/forms', label: 'Forms', icon: ClipboardList },
       { href: '/todos', label: 'To-Do', icon: CheckSquare },

@@ -29,9 +29,10 @@ export function ImportWizard() {
   const [parsed, setParsed]     = useState<ParsedData | null>(null)
   const [mapping, setMapping]   = useState<Record<string, string>>({})  // targetField → sourceHeader
   const [loading, setLoading]   = useState(false)
-  const [result, setResult]     = useState<{ inserted: number; skipped: number } | null>(null)
+  const [result, setResult]     = useState<{ inserted: number; skipped: number; updated?: number } | null>(null)
   const [fileName, setFileName] = useState('')
   const [dragOver, setDragOver] = useState(false)
+  const [duplicateMode, setDuplicateMode] = useState<'skip' | 'overwrite'>('skip')
   const fileRef = useRef<HTMLInputElement>(null)
   const { toast } = useToast()
 
@@ -59,7 +60,7 @@ export function ImportWizard() {
           skipEmptyLines: true,
           complete: (res) => {
             const headers = res.meta.fields ?? []
-            const rows = (res.data as Record<string, string>[]).slice(0, 500) // cap at 500 rows
+            const rows = (res.data as Record<string, string>[]).slice(0, 1000) // cap at 1000 rows
             setParsed({ headers, rows })
             if (program && dataType) {
               setMapping(autoMap(headers, program, dataType))
@@ -74,7 +75,7 @@ export function ImportWizard() {
         const ws = wb.Sheets[wb.SheetNames[0]]
         const data = XLSX.utils.sheet_to_json<Record<string, string>>(ws, { defval: '' })
         const headers = data.length > 0 ? Object.keys(data[0]) : []
-        const rows = data.slice(0, 500)
+        const rows = data.slice(0, 1000)
         setParsed({ headers, rows })
         if (program && dataType) {
           setMapping(autoMap(headers, program, dataType))
@@ -110,7 +111,7 @@ export function ImportWizard() {
       const res = await fetch('/api/import', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ dataType, rows: mapped }),
+        body: JSON.stringify({ dataType, rows: mapped, duplicateMode }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
@@ -236,7 +237,7 @@ export function ImportWizard() {
             <ChevronLeft className="h-4 w-4" /> Back
           </button>
           <h2 className="text-lg font-semibold text-gray-900 mb-1">Upload your export file</h2>
-          <p className="text-sm text-gray-500 mb-6">CSV or Excel (.xlsx) files accepted. Max 500 rows per import.</p>
+          <p className="text-sm text-gray-500 mb-6">CSV or Excel (.xlsx) files accepted. Max 1,000 rows per import.</p>
           <div
             onDragOver={e => { e.preventDefault(); setDragOver(true) }}
             onDragLeave={() => setDragOver(false)}
@@ -351,6 +352,23 @@ export function ImportWizard() {
             </table>
           </div>
 
+          {/* Duplicate handling — only relevant for price list where items have codes/names that might clash */}
+          <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 mb-4">
+            <p className="text-sm font-medium text-gray-700 mb-2">If duplicates are found:</p>
+            <div className="flex gap-3">
+              {([
+                { v: 'skip', label: 'Skip duplicates', desc: 'Keep existing items unchanged' },
+                { v: 'overwrite', label: 'Overwrite duplicates', desc: 'Update prices + details from this file' },
+              ] as const).map(opt => (
+                <label key={opt.v} className={`flex-1 cursor-pointer rounded-lg border-2 p-3 transition-colors ${duplicateMode === opt.v ? 'border-[var(--accent,#f97316)] bg-orange-50' : 'border-gray-200 bg-white hover:border-gray-300'}`}>
+                  <input type="radio" name="dupMode" value={opt.v} checked={duplicateMode === opt.v} onChange={() => setDuplicateMode(opt.v)} className="sr-only" />
+                  <p className="text-sm font-semibold text-gray-800">{opt.label}</p>
+                  <p className="text-xs text-gray-500 mt-0.5">{opt.desc}</p>
+                </label>
+              ))}
+            </div>
+          </div>
+
           <div className="flex gap-3">
             <Button loading={loading} onClick={runImport}>
               Import {parsed.rows.length} records
@@ -369,7 +387,8 @@ export function ImportWizard() {
           <h2 className="text-xl font-semibold text-gray-900 mb-1">Import complete</h2>
           <p className="text-gray-500 text-sm mb-6">
             <span className="font-semibold text-green-600">{result.inserted}</span> records imported
-            {result.skipped > 0 && <span className="text-gray-400">, {result.skipped} skipped (missing required fields)</span>}
+            {(result.updated ?? 0) > 0 && <span className="text-gray-400">, <span className="font-semibold text-blue-600">{result.updated}</span> updated</span>}
+            {result.skipped > 0 && <span className="text-gray-400">, {result.skipped} skipped</span>}
           </p>
           <div className="flex gap-3 justify-center">
             <Button onClick={() => {

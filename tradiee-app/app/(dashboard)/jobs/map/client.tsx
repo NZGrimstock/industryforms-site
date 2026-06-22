@@ -17,6 +17,7 @@ type MapJob = {
   site_label: string | null
   lat: number | null
   lng: number | null
+  has_site?: boolean
 }
 
 type GeoJob = Omit<MapJob, 'lat' | 'lng'> & { lat: number; lng: number }
@@ -43,7 +44,8 @@ export function JobMap({ jobs, team }: { jobs: MapJob[]; team: TeamMember[] }) {
     const ready: GeoJob[] = jobs
       .filter(j => j.lat != null && j.lng != null)
       .map(j => ({ ...j, lat: j.lat as number, lng: j.lng as number }))
-    const missing = jobs.filter(j => j.lat == null || j.lng == null)
+    // Only try to geocode jobs that have an address but no stored coordinates
+    const missing = jobs.filter(j => j.has_site && j.address && (j.lat == null || j.lng == null))
     if (missing.length === 0) { setGeoJobs(ready); setLoading(false); return }
 
     let cancelled = false
@@ -144,8 +146,11 @@ export function JobMap({ jobs, team }: { jobs: MapJob[]; team: TeamMember[] }) {
           <div>
             <p className="text-sm font-medium text-gray-700">{filteredJobs.length} active job{filteredJobs.length !== 1 ? 's' : ''}</p>
             {loading && <p className="text-xs text-gray-400 mt-0.5 flex items-center gap-1"><Loader2 className="h-3 w-3 animate-spin" />Locating addresses…</p>}
-            {!loading && filteredJobs.length > 0 && locatedMissing > 0 && (
-              <p className="text-xs text-orange-500 mt-0.5 flex items-center gap-1"><AlertCircle className="h-3 w-3" />{locatedMissing} address{locatedMissing !== 1 ? 'es' : ''} could not be located</p>
+            {!loading && filteredJobs.filter(j => !j.has_site).length > 0 && (
+              <p className="text-xs text-orange-500 mt-0.5 flex items-center gap-1"><AlertCircle className="h-3 w-3" />{filteredJobs.filter(j => !j.has_site).length} job{filteredJobs.filter(j => !j.has_site).length !== 1 ? 's' : ''} have no site address</p>
+            )}
+            {!loading && filteredJobs.filter(j => j.has_site).length > 0 && locatedMissing > 0 && (
+              <p className="text-xs text-orange-500 mt-0.5 flex items-center gap-1"><AlertCircle className="h-3 w-3" />{locatedMissing} address{locatedMissing !== 1 ? 'es' : ''} could not be geocoded</p>
             )}
           </div>
         </div>
@@ -170,9 +175,9 @@ export function JobMap({ jobs, team }: { jobs: MapJob[]; team: TeamMember[] }) {
                     <p className="text-xs font-medium text-orange-500">{job.job_number}</p>
                     <p className="text-sm font-medium text-gray-900 truncate">{job.title}</p>
                     <p className="text-xs text-gray-500 truncate">{job.customer_name}</p>
-                    <p className="text-xs text-gray-400 truncate mt-0.5 flex items-center gap-0.5">
+                    <p className={`text-xs truncate mt-0.5 flex items-center gap-0.5 ${job.has_site ? 'text-gray-400' : 'text-orange-400'}`}>
                       <MapPin className="h-3 w-3 flex-shrink-0" />
-                      {job.site_label ? `${job.site_label} — ` : ''}{job.address}
+                      {job.has_site ? `${job.site_label ? `${job.site_label} — ` : ''}${job.address}` : 'No site address — add a site to show on map'}
                     </p>
                     <p className="text-xs text-gray-400 truncate mt-0.5 flex items-center gap-0.5">
                       <User className="h-3 w-3 flex-shrink-0" />{job.assignee_name ?? 'Unassigned'}

@@ -3,7 +3,7 @@ import { createServiceClient } from '@/lib/supabase/server'
 
 export async function POST(request: Request) {
   try {
-    const { fullName, email, password, companyName, tradeType, country } = await request.json()
+    const { fullName, email, password, companyName, companyAddress, tradeType, country, phone } = await request.json()
 
     if (!fullName || !email || !password || !companyName) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
@@ -30,6 +30,8 @@ export async function POST(request: Request) {
         name: companyName,
         trade_type: tradeType || null,
         country,
+        phone: phone || null,
+        address: companyAddress || null,
         default_gst_rate: gstRate,
         subscription_plan: 'trial',
         subscription_status: 'trialing',
@@ -50,6 +52,7 @@ export async function POST(request: Request) {
         company_id: company.id,
         full_name: fullName,
         email,
+        phone: phone || null,
         role: 'owner',
       })
     if (profileError) {

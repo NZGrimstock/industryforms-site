@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { useToast } from '@/components/ui/toast'
 import { geocodeAddress } from '@/lib/geocode'
+import { AddressAutocomplete } from '@/components/ui/address-autocomplete'
 
 interface Props {
   customerId: string
@@ -48,7 +49,7 @@ export function SiteForm({ customerId, onSuccess }: Props) {
       </div>
       <div>
         <Label>Address <span className="text-red-400">*</span></Label>
-        <Input value={form.address} onChange={e => set('address', e.target.value)} required />
+        <AddressAutocomplete value={form.address} onChange={v => set('address', v)} required />
       </div>
       <div>
         <Label>Access notes</Label>

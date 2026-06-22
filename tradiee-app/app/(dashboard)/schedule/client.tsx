@@ -3,8 +3,13 @@ import { useState, useCallback } from 'react'
 import Link from 'next/link'
 import { formatDateTime } from '@/lib/utils'
 import { StatusBadge } from '@/components/ui/badge'
-import { ChevronLeft, ChevronRight, Calendar } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Calendar, Edit2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { TimePicker } from '@/components/ui/time-picker'
+import { Dialog } from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 
 // Deterministic colour per staff member
 const STAFF_COLORS = [
@@ -65,13 +70,25 @@ function VisitCard({ visit, colorIdx = 5, isDragging = false }: { visit: Visit; 
   )
 }
 
-function DraggableVisit({ visit, colorIdx }: { visit: Visit; colorIdx?: number }) {
+function DraggableVisit({ visit, colorIdx, onEdit }: { visit: Visit; colorIdx?: number; onEdit: (v: Visit) => void }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: visit.id, data: { visit } })
+  const c = STAFF_COLORS[(colorIdx ?? 5) % STAFF_COLORS.length]
   return (
-    <div ref={setNodeRef} {...listeners} {...attributes}>
-      <Link href={`/jobs/${visit.jobs?.id}`} onClick={e => { if (isDragging) e.preventDefault() }}>
-        <VisitCard visit={visit} colorIdx={colorIdx} isDragging={isDragging} />
-      </Link>
+    <div ref={setNodeRef} className="relative group">
+      <div {...listeners} {...attributes}>
+        <Link href={`/jobs/${visit.jobs?.id}`} onClick={e => { if (isDragging) e.preventDefault() }}>
+          <VisitCard visit={visit} colorIdx={colorIdx} isDragging={isDragging} />
+        </Link>
+      </div>
+      <button
+        type="button"
+        onPointerDown={e => e.stopPropagation()}
+        onClick={e => { e.preventDefault(); e.stopPropagation(); onEdit(visit) }}
+        className={`absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded ${c.bg} ${c.text} border ${c.border}`}
+        title="Edit time"
+      >
+        <Edit2 className="h-3 w-3" />
+      </button>
     </div>
   )
 }
@@ -90,7 +107,49 @@ export function ScheduleClient({ visits: initialVisits, team = [] }: { visits: V
   const [visits, setVisits] = useState<Visit[]>(initialVisits)
   const [activeVisit, setActiveVisit] = useState<Visit | null>(null)
   const [selectedStaff, setSelectedStaff] = useState<string[]>([]) // empty = all
+  const [editVisit, setEditVisit] = useState<Visit | null>(null)
+  const [editForm, setEditForm] = useState({ date: '', startTime: '08:00', endMode: 'hours' as 'hours' | 'endTime', durationHours: '2', endTime: '10:00' })
+  const [editLoading, setEditLoading] = useState(false)
   const supabase = createClient()
+
+  function openEdit(v: Visit) {
+    const start = new Date(v.scheduled_start)
+    const end = new Date(v.scheduled_end)
+    const dh = Math.round((end.getTime() - start.getTime()) / 360000) / 10
+    const toHHMM = (d: Date) => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+    setEditForm({
+      date: start.toISOString().slice(0, 10),
+      startTime: toHHMM(start),
+      endMode: 'hours',
+      durationHours: String(dh),
+      endTime: toHHMM(end),
+    })
+    setEditVisit(v)
+  }
+
+  async function saveEdit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!editVisit) return
+    setEditLoading(true)
+    const newStart = new Date(`${editForm.date}T${editForm.startTime}:00`)
+    let newEnd: Date
+    if (editForm.endMode === 'hours') {
+      newEnd = new Date(newStart.getTime() + (parseFloat(editForm.durationHours) || 1) * 3600000)
+    } else {
+      newEnd = new Date(`${editForm.date}T${editForm.endTime}:00`)
+      if (newEnd <= newStart) newEnd = new Date(newStart.getTime() + 3600000)
+    }
+    await supabase.from('job_visits').update({
+      scheduled_start: newStart.toISOString(),
+      scheduled_end: newEnd.toISOString(),
+    }).eq('id', editVisit.id)
+    setVisits(vs => vs.map(v => v.id === editVisit.id
+      ? { ...v, scheduled_start: newStart.toISOString(), scheduled_end: newEnd.toISOString() }
+      : v
+    ))
+    setEditVisit(null)
+    setEditLoading(false)
+  }
 
   // Build stable colour index map for each staff member
   const staffColorMap = Object.fromEntries(team.map((m, i) => [m.id, i]))
@@ -224,7 +283,7 @@ export function ScheduleClient({ visits: initialVisits, team = [] }: { visits: V
                   <DroppableDay day={day}>
                     <div className="space-y-1.5">
                       {dayVisits.map(v => (
-                        <DraggableVisit key={v.id} visit={v} colorIdx={v.profiles ? (staffColorMap[v.profiles.id] ?? 5) : 5} />
+                        <DraggableVisit key={v.id} visit={v} colorIdx={v.profiles ? (staffColorMap[v.profiles.id] ?? 5) : 5} onEdit={openEdit} />
                       ))}
                     </div>
                   </DroppableDay>
@@ -254,21 +313,78 @@ export function ScheduleClient({ visits: initialVisits, team = [] }: { visits: V
             </div>
           ) : (
             visits.map(v => (
-              <Link key={v.id} href={`/jobs/${v.jobs?.id}`} className="block bg-white border border-gray-200 rounded-xl px-5 py-3 hover:border-[var(--accent,#f97316)]/40 transition-colors">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">{v.jobs?.title ?? '—'}</p>
-                    <p className="text-xs text-gray-400 mt-0.5">
-                      {formatDateTime(v.scheduled_start)} · {v.jobs?.customers?.name} · {v.profiles?.full_name ?? 'Unassigned'}
-                    </p>
+              <div key={v.id} className="flex items-center gap-2">
+                <Link href={`/jobs/${v.jobs?.id}`} className="flex-1 bg-white border border-gray-200 rounded-xl px-5 py-3 hover:border-[var(--accent,#f97316)]/40 transition-colors">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">{v.jobs?.title ?? '—'}</p>
+                      <p className="text-xs text-gray-400 mt-0.5">
+                        {formatDateTime(v.scheduled_start)} · {v.jobs?.customers?.name} · {v.profiles?.full_name ?? 'Unassigned'}
+                      </p>
+                    </div>
+                    <StatusBadge status={v.status} />
                   </div>
-                  <StatusBadge status={v.status} />
-                </div>
-              </Link>
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => openEdit(v)}
+                  className="p-2 rounded-lg border border-gray-200 text-gray-400 hover:text-gray-600 hover:border-gray-300 transition-colors"
+                  title="Edit time"
+                >
+                  <Edit2 className="h-4 w-4" />
+                </button>
+              </div>
             ))
           )}
         </div>
       )}
+
+      {/* Edit visit time dialog */}
+      <Dialog open={!!editVisit} onClose={() => setEditVisit(null)} title="Edit visit time">
+        <form onSubmit={saveEdit} className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label>Date</Label>
+              <Input type="date" value={editForm.date} onChange={e => setEditForm(f => ({ ...f, date: e.target.value }))} required />
+            </div>
+            <div>
+              <Label>Start time</Label>
+              <TimePicker value={editForm.startTime} onChange={v => setEditForm(f => ({ ...f, startTime: v }))} />
+            </div>
+          </div>
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <Label className="mb-0">Duration</Label>
+              <div className="flex gap-1 bg-gray-100 rounded-lg p-0.5 text-xs">
+                {(['hours', 'endTime'] as const).map(m => (
+                  <button key={m} type="button"
+                    onClick={() => setEditForm(f => ({ ...f, endMode: m }))}
+                    className={`px-2 py-1 rounded-md font-medium transition-colors ${editForm.endMode === m ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500'}`}
+                  >
+                    {m === 'hours' ? 'Hours' : 'End time'}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {editForm.endMode === 'hours' ? (
+              <div className="flex items-center gap-2">
+                <Input type="number" min="0.25" max="24" step="0.25"
+                  value={editForm.durationHours}
+                  onChange={e => setEditForm(f => ({ ...f, durationHours: e.target.value }))}
+                  className="w-24"
+                />
+                <span className="text-sm text-gray-500">hours</span>
+              </div>
+            ) : (
+              <TimePicker value={editForm.endTime} onChange={v => setEditForm(f => ({ ...f, endTime: v }))} />
+            )}
+          </div>
+          <div className="flex gap-3">
+            <Button type="submit" loading={editLoading}>Save changes</Button>
+            <Button type="button" variant="outline" onClick={() => setEditVisit(null)}>Cancel</Button>
+          </div>
+        </form>
+      </Dialog>
     </div>
   )
 }
