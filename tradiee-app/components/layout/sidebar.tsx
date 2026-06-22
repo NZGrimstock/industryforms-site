@@ -10,10 +10,22 @@ import {
   Truck, ShoppingCart, FileMinus, Globe, FolderKanban
 } from 'lucide-react'
 
-// Top-level item shown above the groups. Owns its own gradient.
-const home = { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard }
-const HOME_ACTIVE = 'bg-gradient-to-r from-orange-500 via-amber-500 to-yellow-500'
-const HOME_HOVER = 'hover:bg-gradient-to-r hover:from-orange-100 hover:via-amber-100 hover:to-yellow-100'
+// Top-level items shown above the groups. Each owns its own gradient.
+type TopItem = { href: string; label: string; icon: typeof LayoutDashboard; restingIcon: string; active: string; hover: string }
+const topItems: TopItem[] = [
+  {
+    href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard,
+    restingIcon: 'text-orange-500',
+    active: 'bg-gradient-to-r from-orange-500 via-amber-500 to-yellow-500',
+    hover: 'hover:bg-gradient-to-r hover:from-orange-100 hover:via-amber-100 hover:to-yellow-100',
+  },
+  {
+    href: '/projects', label: 'Projects', icon: FolderKanban,
+    restingIcon: 'text-emerald-500',
+    active: 'bg-gradient-to-r from-sky-500 via-cyan-500 to-emerald-500',
+    hover: 'hover:bg-gradient-to-r hover:from-sky-50 hover:via-cyan-50 hover:to-emerald-50',
+  },
+]
 
 type Group = {
   label: string
@@ -33,7 +45,6 @@ const groups: Group[] = [
       { href: '/enquiries', label: 'Enquiries', icon: MessageSquare },
       { href: '/customers', label: 'Customers', icon: Users },
       { href: '/quotes', label: 'Quotes', icon: FileText },
-      { href: '/projects', label: 'Projects', icon: FolderKanban },
       { href: '/jobs', label: 'Jobs', icon: Briefcase },
       { href: '/jobs/map', label: 'Job Map', icon: Map },
       { href: '/schedule', label: 'Schedule', icon: Calendar },
@@ -76,6 +87,7 @@ function isActive(pathname: string, href: string) {
 
 // Field staff get a focused nav — no sales/financial/procurement/projects pages.
 const STAFF_HREFS = new Set(['/dashboard', '/jobs', '/jobs/map', '/schedule', '/timesheets', '/forms', '/todos', '/settings'])
+const STAFF_TOP_HREFS = new Set(['/dashboard'])
 
 export function Sidebar({ isStaff = false }: { isStaff?: boolean }) {
   const pathname = usePathname()
@@ -120,13 +132,12 @@ export function Sidebar({ isStaff = false }: { isStaff?: boolean }) {
 
       {/* Nav links */}
       <nav className="flex-1 overflow-y-auto py-4 px-2">
-        {/* Dashboard (its own colour) */}
+        {/* Top-level items (each owns its own gradient) */}
         <ul className="space-y-0.5">
-          {(() => {
-            const { href, label, icon: Icon } = home
+          {topItems.filter(t => !isStaff || STAFF_TOP_HREFS.has(t.href)).map(({ href, label, icon: Icon, restingIcon, active: activeClass, hover }) => {
             const active = isActive(pathname, href)
             return (
-              <li>
+              <li key={href}>
                 <Link
                   href={href}
                   title={collapsed ? label : undefined}
@@ -134,16 +145,16 @@ export function Sidebar({ isStaff = false }: { isStaff?: boolean }) {
                     'flex items-center gap-3 rounded-lg text-sm font-medium transition-all',
                     collapsed ? 'justify-center px-0 py-2.5' : 'px-3 py-2',
                     active
-                      ? `${HOME_ACTIVE} text-white shadow-sm`
-                      : `text-gray-700 ${HOME_HOVER} hover:text-gray-900`
+                      ? `${activeClass} text-white shadow-sm`
+                      : `text-gray-700 ${hover} hover:text-gray-900`
                   )}
                 >
-                  <Icon className={cn('h-4 w-4 shrink-0', active ? 'text-white' : 'text-orange-500')} />
+                  <Icon className={cn('h-4 w-4 shrink-0', active ? 'text-white' : restingIcon)} />
                   {!collapsed && label}
                 </Link>
               </li>
             )
-          })()}
+          })}
         </ul>
 
         {visibleGroups.map(group => (

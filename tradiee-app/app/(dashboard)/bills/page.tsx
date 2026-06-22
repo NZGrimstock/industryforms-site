@@ -36,7 +36,7 @@ export default async function BillsPage({ searchParams }: { searchParams: Promis
           </div>
           <div className="flex items-center gap-4">
             <p className="text-sm text-gray-500">Owed: <strong className="text-gray-900">{formatCurrency(outstanding)}</strong></p>
-            <Link href="/bills/new" className="inline-flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
+            <Link href="/bills/new" className="inline-flex items-center gap-2 bg-[var(--accent,#f97316)] hover:bg-[var(--accent-hover,#ea580c)] text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
               <Plus className="h-4 w-4" /> Record bill
             </Link>
           </div>

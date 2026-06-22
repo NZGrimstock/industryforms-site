@@ -75,7 +75,7 @@ export function EnquiryActions({ companyId, profileId, team, mode, initialOpen =
     <>
       <button
         onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+        className="inline-flex items-center gap-2 bg-[var(--accent,#f97316)] hover:bg-[var(--accent-hover,#ea580c)] text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
       >
         <Plus className="h-4 w-4" /> New enquiry
       </button>
@@ -152,7 +152,7 @@ export function EnquiryActions({ companyId, profileId, team, mode, initialOpen =
               </div>
               <div className="flex justify-end gap-2 pt-2">
                 <button onClick={() => setOpen(false)} className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg">Cancel</button>
-                <button onClick={save} disabled={loading || !form.customer_name.trim()} className="px-4 py-2 text-sm bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white rounded-lg">
+                <button onClick={save} disabled={loading || !form.customer_name.trim()} className="px-4 py-2 text-sm bg-[var(--accent,#f97316)] hover:bg-[var(--accent-hover,#ea580c)] disabled:opacity-50 text-white rounded-lg">
                   {loading ? 'Saving…' : 'Save enquiry'}
                 </button>
               </div>

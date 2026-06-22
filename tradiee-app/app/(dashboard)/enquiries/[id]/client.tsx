@@ -221,7 +221,7 @@ export function EnquiryDetailClient({ enquiry, companyId, profileId, team, custo
 
       <button
         onClick={() => setConvertOpen(true)}
-        className="px-4 py-2 text-sm bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-medium"
+        className="px-4 py-2 text-sm bg-[var(--accent,#f97316)] hover:bg-[var(--accent-hover,#ea580c)] text-white rounded-lg font-medium"
       >
         Convert
       </button>
@@ -247,7 +247,7 @@ export function EnquiryDetailClient({ enquiry, companyId, profileId, team, custo
               />
               <div className="flex justify-end gap-2">
                 <button onClick={() => setNotesOpen(false)} className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg">Cancel</button>
-                <button onClick={saveNotes} disabled={loading} className="px-4 py-2 text-sm bg-orange-500 hover:bg-orange-600 text-white rounded-lg disabled:opacity-50">Save</button>
+                <button onClick={saveNotes} disabled={loading} className="px-4 py-2 text-sm bg-[var(--accent,#f97316)] hover:bg-[var(--accent-hover,#ea580c)] text-white rounded-lg disabled:opacity-50">Save</button>
               </div>
             </CardContent>
           </Card>
@@ -336,7 +336,7 @@ export function EnquiryDetailClient({ enquiry, companyId, profileId, team, custo
                         <div className="flex flex-wrap gap-2">
                           <button
                             onClick={() => { setUseExistingCustomer(true); setCustomerId(dupCustomer.id); setDupCustomer(null) }}
-                            className="px-3 py-1.5 rounded-lg bg-orange-500 hover:bg-orange-600 text-white font-medium"
+                            className="px-3 py-1.5 rounded-lg bg-[var(--accent,#f97316)] hover:bg-[var(--accent-hover,#ea580c)] text-white font-medium"
                           >
                             Use existing
                           </button>
@@ -358,7 +358,7 @@ export function EnquiryDetailClient({ enquiry, companyId, profileId, team, custo
                 <button
                   onClick={convertEnquiry}
                   disabled={loading || (useExistingCustomer ? !customerId : !newCustomerName.trim())}
-                  className="px-4 py-2 text-sm bg-orange-500 hover:bg-orange-600 text-white rounded-lg disabled:opacity-50"
+                  className="px-4 py-2 text-sm bg-[var(--accent,#f97316)] hover:bg-[var(--accent-hover,#ea580c)] text-white rounded-lg disabled:opacity-50"
                 >
                   {loading ? 'Converting…' : `Convert to ${convertTo}`}
                 </button>

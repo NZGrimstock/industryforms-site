@@ -116,7 +116,7 @@ export function TodoClient({ todos, companyId, profileId, team, jobs, currentSta
         </div>
         <button
           onClick={() => setNewOpen(true)}
-          className="inline-flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium px-4 py-2 rounded-lg"
+          className="inline-flex items-center gap-2 bg-[var(--accent,#f97316)] hover:bg-[var(--accent-hover,#ea580c)] text-white text-sm font-medium px-4 py-2 rounded-lg"
         >
           <Plus className="h-4 w-4" /> New task
         </button>
@@ -204,7 +204,7 @@ export function TodoClient({ todos, companyId, profileId, team, jobs, currentSta
               </div>
               <div className="flex justify-end gap-2 pt-2">
                 <button onClick={() => setNewOpen(false)} className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg">Cancel</button>
-                <button onClick={createTodo} disabled={loading || !form.title.trim()} className="px-4 py-2 text-sm bg-orange-500 hover:bg-orange-600 text-white rounded-lg disabled:opacity-50">
+                <button onClick={createTodo} disabled={loading || !form.title.trim()} className="px-4 py-2 text-sm bg-[var(--accent,#f97316)] hover:bg-[var(--accent-hover,#ea580c)] text-white rounded-lg disabled:opacity-50">
                   {loading ? 'Saving…' : 'Add task'}
                 </button>
               </div>

@@ -1,12 +1,13 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Briefcase, FileText, Users, MessageSquare } from 'lucide-react'
+import { Plus, Briefcase, FileText, Users, MessageSquare, FolderKanban } from 'lucide-react'
 
 type Item = { label: string; href: string; icon: typeof Plus; staff?: boolean }
 
 const ITEMS: Item[] = [
   { label: 'New job', href: '/jobs?newJob=1', icon: Briefcase, staff: true },
+  { label: 'New project', href: '/projects', icon: FolderKanban },
   { label: 'New quote', href: '/quotes/new', icon: FileText },
   { label: 'New customer', href: '/customers/new', icon: Users },
   { label: 'New enquiry', href: '/enquiries?new=1', icon: MessageSquare },

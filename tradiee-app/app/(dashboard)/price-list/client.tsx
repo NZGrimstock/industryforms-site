@@ -170,7 +170,7 @@ export function PriceListClient({ companyId, items, kits }: Props) {
             {csvRows.length > 0 && (
               <div className="flex justify-end gap-2 px-6 py-4 border-t border-gray-100">
                 <button onClick={() => setCsvRows([])} className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg">Re-upload</button>
-                <button onClick={importCsv} disabled={csvImporting} className="px-4 py-2 text-sm bg-orange-500 hover:bg-orange-600 text-white rounded-lg disabled:opacity-50">
+                <button onClick={importCsv} disabled={csvImporting} className="px-4 py-2 text-sm bg-[var(--accent,#f97316)] hover:bg-[var(--accent-hover,#ea580c)] text-white rounded-lg disabled:opacity-50">
                   {csvImporting ? 'Importing…' : `Import ${csvRows.length} items`}
                 </button>
               </div>
