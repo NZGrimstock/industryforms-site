@@ -8,7 +8,7 @@ import Link from 'next/link'
 import { MessageSquare } from 'lucide-react'
 import { EnquiryActions } from './client'
 
-export default async function EnquiriesPage({ searchParams }: { searchParams: Promise<{ status?: string }> }) {
+export default async function EnquiriesPage({ searchParams }: { searchParams: Promise<{ status?: string; new?: string }> }) {
   const sp = await searchParams
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -36,16 +36,16 @@ export default async function EnquiriesPage({ searchParams }: { searchParams: Pr
       <div className="p-6">
         <div className="flex items-center justify-between mb-4">
           <div className="flex gap-1 overflow-x-auto">
-            <Link href="/enquiries" className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap ${!sp.status ? 'bg-orange-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+            <Link href="/enquiries" className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap ${!sp.status ? 'bg-[var(--accent,#f97316)] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
               All ({enquiries?.length ?? 0})
             </Link>
             {statuses.map((s, i) => (
-              <Link key={s} href={`/enquiries?status=${s}`} className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap capitalize ${sp.status === s ? 'bg-orange-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+              <Link key={s} href={`/enquiries?status=${s}`} className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap capitalize ${sp.status === s ? 'bg-[var(--accent,#f97316)] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
                 {s} ({statusCounts[i]?.count ?? 0})
               </Link>
             ))}
           </div>
-          <EnquiryActions companyId={profile!.company_id} profileId={user!.id} team={team ?? []} mode="new" />
+          <EnquiryActions companyId={profile!.company_id} profileId={user!.id} team={team ?? []} mode="new" initialOpen={sp.new === '1'} />
         </div>
 
         {!enquiries?.length ? (

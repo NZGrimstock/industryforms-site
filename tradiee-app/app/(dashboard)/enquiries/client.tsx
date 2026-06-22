@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Plus, X } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { AIRewriteButton } from '@/components/ui/ai-rewrite-button'
 
 type Profile = { id: string; full_name: string }
 
@@ -12,12 +13,13 @@ interface Props {
   profileId: string
   team: Profile[]
   mode: 'new'
+  initialOpen?: boolean
 }
 
 const SOURCES = ['website', 'phone', 'email', 'referral', 'walk_in', 'other']
 
-export function EnquiryActions({ companyId, profileId, team, mode }: Props) {
-  const [open, setOpen] = useState(false)
+export function EnquiryActions({ companyId, profileId, team, mode, initialOpen = false }: Props) {
+  const [open, setOpen] = useState(initialOpen)
   const [loading, setLoading] = useState(false)
   const router = useRouter()
   const supabase = createClient()
@@ -73,7 +75,7 @@ export function EnquiryActions({ companyId, profileId, team, mode }: Props) {
     <>
       <button
         onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+        className="inline-flex items-center gap-2 bg-[var(--accent,#f97316)] hover:bg-[var(--accent-hover,#ea580c)] text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
       >
         <Plus className="h-4 w-4" /> New enquiry
       </button>
@@ -123,7 +125,10 @@ export function EnquiryActions({ companyId, profileId, team, mode }: Props) {
                 <input className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-orange-400" value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Work description</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-medium text-gray-600">Work description</label>
+                  <AIRewriteButton value={form.description} onChange={v => setForm(f => ({ ...f, description: v }))} />
+                </div>
                 <textarea rows={3} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-orange-400 resize-none" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} />
               </div>
               <div className="grid grid-cols-2 gap-3">
@@ -147,7 +152,7 @@ export function EnquiryActions({ companyId, profileId, team, mode }: Props) {
               </div>
               <div className="flex justify-end gap-2 pt-2">
                 <button onClick={() => setOpen(false)} className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg">Cancel</button>
-                <button onClick={save} disabled={loading || !form.customer_name.trim()} className="px-4 py-2 text-sm bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white rounded-lg">
+                <button onClick={save} disabled={loading || !form.customer_name.trim()} className="px-4 py-2 text-sm bg-[var(--accent,#f97316)] hover:bg-[var(--accent-hover,#ea580c)] disabled:opacity-50 text-white rounded-lg">
                   {loading ? 'Saving…' : 'Save enquiry'}
                 </button>
               </div>

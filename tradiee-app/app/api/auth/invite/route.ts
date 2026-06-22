@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
+import { getPlan, planForSeats } from '@/lib/plans'
 
 export async function POST(request: Request) {
   try {
@@ -7,6 +8,27 @@ export async function POST(request: Request) {
     if (!full_name || !email || !companyId) return NextResponse.json({ error: 'Missing fields' }, { status: 400 })
 
     const supabase = createServiceClient()
+
+    // ── Server-side seat check: don't let the client bypass the plan cap ──
+    const [{ count }, { data: company }] = await Promise.all([
+      supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('company_id', companyId).eq('is_active', true),
+      supabase.from('companies').select('subscription_plan, billing_exempt').eq('id', companyId).single(),
+    ])
+    const exempt = company?.billing_exempt === true
+    if (!exempt) {
+      const plan = getPlan(company?.subscription_plan)
+      const desired = (count ?? 0) + 1
+      const needed = planForSeats(plan, desired)
+      if (needed) {
+        return NextResponse.json({
+          error: `Adding a member would exceed the ${plan.label} seat cap. Upgrade to ${needed.label} ($${needed.monthly}/mo) first.`,
+          requiresUpgradeTo: needed.key,
+          requiresUpgradeMonthly: needed.monthly,
+          currentPlan: plan.key,
+        }, { status: 402 })
+      }
+    }
+
     const tempPassword = Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2)
 
     const { data: authData, error: authError } = await supabase.auth.admin.createUser({

@@ -125,7 +125,7 @@ export function FormPreview({ template, submissions }: Props) {
         <div className="flex items-center gap-3 mb-6">
           <Link
             href={`/forms/${template.id}/edit`}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium rounded-xl transition-colors"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-[var(--accent,#f97316)] hover:bg-[var(--accent-hover,#ea580c)] text-white text-sm font-medium rounded-xl transition-colors"
           >
             <Pencil className="h-4 w-4" /> Edit form
           </Link>

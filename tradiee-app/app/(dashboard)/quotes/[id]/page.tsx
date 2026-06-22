@@ -70,7 +70,7 @@ export default async function QuoteDetailPage({ params }: { params: Promise<{ id
           {sections.length === 0 && quote.status === 'draft' && (
             <div className="px-6 py-10 text-center">
               <p className="text-sm text-gray-500 mb-3">No line items yet.</p>
-              <Link href={`/quotes/${quote.id}/edit`} className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium bg-orange-500 hover:bg-orange-600 text-white rounded-lg">
+              <Link href={`/quotes/${quote.id}/edit`} className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium bg-[var(--accent,#f97316)] hover:bg-[var(--accent-hover,#ea580c)] text-white rounded-lg">
                 Add items to quote →
               </Link>
             </div>

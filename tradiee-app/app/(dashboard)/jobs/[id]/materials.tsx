@@ -190,7 +190,7 @@ export function JobMaterials({ jobId, companyId, profileId, materials, priceItem
             </div>
           </div>
           <div className="flex gap-2">
-            <button onClick={addManual} disabled={loading || !form.description.trim()} className="px-4 py-2 text-sm bg-orange-500 hover:bg-orange-600 text-white rounded-lg disabled:opacity-50">
+            <button onClick={addManual} disabled={loading || !form.description.trim()} className="px-4 py-2 text-sm bg-[var(--accent,#f97316)] hover:bg-[var(--accent-hover,#ea580c)] text-white rounded-lg disabled:opacity-50">
               {loading ? 'Adding…' : 'Add material'}
             </button>
             <button onClick={() => setShowForm(false)} className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg">Cancel</button>

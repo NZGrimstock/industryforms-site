@@ -3,7 +3,7 @@ import { Header } from '@/components/layout/header'
 import { Card } from '@/components/ui/card'
 import { EmptyState } from '@/components/ui/empty-state'
 import { formatDate } from '@/lib/utils'
-import { getJobStatuses, jobStatusBadgeClass } from '@/lib/job-statuses'
+import { getJobStatuses } from '@/lib/job-statuses'
 import Link from 'next/link'
 import { Briefcase, List, LayoutGrid, Map } from 'lucide-react'
 import React from 'react'
@@ -12,6 +12,7 @@ import { JobBoard } from './board'
 import { JobTemplatesPanel, ServiceRemindersPanel } from './panels'
 import { ListSearch } from '@/components/ui/list-search'
 import { SortHeader } from '@/components/ui/sort-header'
+import { InlineStatus } from '@/components/jobs/inline-status'
 import { nextDocNumber } from '@/lib/numbering'
 
 const SORTABLE = ['job_number', 'title', 'status', 'created_at']
@@ -42,7 +43,6 @@ export default async function JobsPage({ searchParams }: { searchParams: Promise
   const { data: jobs } = await query.order(sortCol, { ascending: asc })
 
   const jobStatuses = await getJobStatuses(supabase, profile!.company_id)
-  const statusMap: Record<string, { label: string; color: string }> = Object.fromEntries(jobStatuses.map(s => [s.key, s]))
   const nextJobNumber = await nextDocNumber(supabase, profile!.company_id, 'job')
 
   const viewLinks: Array<{ key: string; icon: React.ComponentType<{className?: string}>; label: string; href?: string }> = [
@@ -59,7 +59,7 @@ export default async function JobsPage({ searchParams }: { searchParams: Promise
         <div className="flex gap-1 mb-4 border-b border-gray-100">
           {([['jobs', 'Jobs'], ['recurring', 'Recurring'], ['templates', 'Templates'], ['reminders', 'Service Reminders']] as const).map(([key, label]) => (
             <Link key={key} href={key === 'jobs' ? '/jobs' : `/jobs?tab=${key}`}
-              className={`px-3 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${tab === key ? 'border-orange-500 text-orange-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
+              className={`px-3 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${tab === key ? 'border-[var(--accent,#f97316)] text-[var(--accent,#f97316)]' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
               {label}
             </Link>
           ))}
@@ -74,9 +74,9 @@ export default async function JobsPage({ searchParams }: { searchParams: Promise
           {/* Status filters (list view only) */}
           {view === 'list' && (
             <div className="flex gap-1 overflow-x-auto">
-              <Link href="/jobs?view=list" className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap ${!sp.status ? 'bg-orange-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>All</Link>
+              <Link href="/jobs?view=list" className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap ${!sp.status ? 'bg-[var(--accent,#f97316)] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>All</Link>
               {jobStatuses.map(s => (
-                <Link key={s.key} href={`/jobs?view=list&status=${s.key}`} className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap ${sp.status === s.key ? 'bg-orange-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+                <Link key={s.key} href={`/jobs?view=list&status=${s.key}`} className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap ${sp.status === s.key ? 'bg-[var(--accent,#f97316)] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
                   {s.label}
                 </Link>
               ))}
@@ -135,7 +135,7 @@ export default async function JobsPage({ searchParams }: { searchParams: Promise
                       <td className="p-0"><Link href={`/jobs/${j.id}`} className="block px-6 py-3 text-gray-700 max-w-[200px] truncate">{j.title}</Link></td>
                       <td className="p-0"><Link href={`/jobs/${j.id}`} className="block px-6 py-3 text-gray-600">{(j.customers as {name: string} | null)?.name ?? '—'}</Link></td>
                       <td className="p-0"><Link href={`/jobs/${j.id}`} className="block px-6 py-3 text-gray-400">{j.reference ?? '—'}</Link></td>
-                      <td className="p-0"><Link href={`/jobs/${j.id}`} className="block px-6 py-3"><span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${jobStatusBadgeClass(statusMap[j.status]?.color ?? 'gray')}`}>{statusMap[j.status]?.label ?? j.status}</span></Link></td>
+                      <td className="px-6 py-3"><InlineStatus jobId={j.id} status={j.status} statuses={jobStatuses} /></td>
                       <td className="p-0"><Link href={`/jobs/${j.id}`} className="block px-6 py-3 text-gray-500">{(j.profiles as {full_name: string} | null)?.full_name ?? '—'}</Link></td>
                       <td className="p-0"><Link href={`/jobs/${j.id}`} className="block px-6 py-3 text-gray-400">{formatDate(j.created_at)}</Link></td>
                     </tr>

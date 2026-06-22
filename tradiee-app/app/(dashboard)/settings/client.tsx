@@ -15,6 +15,7 @@ import { Dialog } from '@/components/ui/dialog'
 import { useToast } from '@/components/ui/toast'
 import { BillingRatesManager, PaymentMethodsManager, TaxRatesManager, EnquiryInboxManager, JobStatusesManager } from '@/components/forms/company-lists'
 import { Upload, Pencil, X, ArrowRightLeft, PenLine, Trash2 } from 'lucide-react'
+import { getPlan, planForSeats } from '@/lib/plans'
 
 interface Props {
   profile: Profile & { companies: Company }
@@ -185,8 +186,7 @@ export function SettingsClient({ profile, company, team: initialTeam, googleConn
     setSignatureB64(null)
   }
 
-  async function inviteTeamMember(e: React.FormEvent) {
-    e.preventDefault()
+  async function performInvite() {
     setLoading(true)
     const res = await fetch('/api/auth/invite', {
       method: 'POST',
@@ -205,7 +205,6 @@ export function SettingsClient({ profile, company, team: initialTeam, googleConn
     toast(`Team member added. Temp password: ${data.tempPassword}`)
     setInviteOpen(false)
     setInviteForm({ email: '', full_name: '', role: 'staff', hourly_bill_rate: '', hourly_cost_rate: '' })
-    // Fetch the newly created profile so they appear immediately without a page reload
     const { data: newProfile } = await supabase
       .from('profiles')
       .select('*')
@@ -214,6 +213,32 @@ export function SettingsClient({ profile, company, team: initialTeam, googleConn
       .single()
     if (newProfile) setTeam(prev => [...prev, newProfile as Profile])
     setLoading(false)
+  }
+
+  async function inviteTeamMember(e: React.FormEvent) {
+    e.preventDefault()
+    // Plan-cap check. Trial/Solo/Team have hard seat caps — bumping into one
+    // requires confirming a plan upgrade BEFORE we create the auth user.
+    const exempt = (company as Company & { billing_exempt?: boolean }).billing_exempt === true
+    const currentPlan = getPlan((company as Company & { subscription_plan?: string }).subscription_plan)
+    const activeCount = team.filter(t => t.is_active !== false).length
+    const upgrade = exempt ? null : planForSeats(currentPlan, activeCount + 1)
+    if (upgrade) {
+      const ok = window.confirm(
+        `You're on ${currentPlan.label}. Adding ${inviteForm.full_name || 'this member'} will take you over the limit and upgrade you to ${upgrade.label} at $${upgrade.monthly}/mo (NZD).\n\nContinue?`
+      )
+      if (!ok) return
+      setLoading(true)
+      const up = await fetch('/api/billing/change-plan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan: upgrade.key }),
+      })
+      const upData = await up.json()
+      if (!up.ok) { toast(upData.error ?? 'Could not upgrade plan', 'error'); setLoading(false); return }
+      toast(`Upgraded to ${upgrade.label}`)
+    }
+    await performInvite()
   }
 
   function openEdit(member: Profile) {

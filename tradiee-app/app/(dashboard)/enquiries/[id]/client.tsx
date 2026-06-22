@@ -2,7 +2,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { ChevronDown, X } from 'lucide-react'
+import { ChevronDown, X, Sparkles } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
 type Profile = { id: string; full_name: string }
@@ -46,6 +46,7 @@ export function EnquiryDetailClient({ enquiry, companyId, profileId, team, custo
   const [useExistingCustomer, setUseExistingCustomer] = useState(false)
   const [dupCustomer, setDupCustomer] = useState<{ id: string; name: string } | null>(null)
   const [forceCreate, setForceCreate] = useState(false)
+  const [aiQuoteBusy, setAiQuoteBusy] = useState(false)
 
   async function findDuplicate(name: string) {
     const { data } = await supabase
@@ -78,6 +79,78 @@ export function EnquiryDetailClient({ enquiry, companyId, profileId, team, custo
     router.refresh()
   }
 
+  // Single quote-creation path used by both the plain "Convert to quote" button
+  // and the "Convert with AI line items" path. When useAi=true we ask the
+  // AI-draft-quote endpoint for a title + summary + line items, then insert them.
+  async function createQuote(targetCustomerId: string, useAi: boolean) {
+    let aiResult: { title: string; summary: string; lines: Array<{ priceListItemId?: string | null; description: string; quantity: number; unit: string; unitPrice: number; type: string }> } | null = null
+    if (useAi) {
+      const res = await fetch('/api/ai/draft-quote', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ description: enquiry.description ?? enquiry.customer_name }),
+      })
+      const json = await res.json()
+      if (!res.ok) { alert(json.error ?? 'AI draft failed'); setLoading(false); setAiQuoteBusy(false); return }
+      aiResult = json
+    }
+    const { data: q } = await supabase.from('quotes').insert({
+      company_id: companyId,
+      customer_id: targetCustomerId,
+      title: (aiResult?.title || enquiry.description?.slice(0, 100)) ?? 'Enquiry quote',
+      quote_number: nextQuoteNumber,
+      status: 'draft',
+      customer_message: aiResult?.summary ?? null,
+    }).select('id').single()
+    if (!q) { setLoading(false); setAiQuoteBusy(false); return }
+    if (aiResult?.lines?.length) {
+      let subtotal = 0
+      const rows = aiResult.lines.map((l, i) => {
+        const lineTotal = l.quantity * l.unitPrice
+        subtotal += lineTotal
+        return {
+          quote_id: q.id,
+          price_list_item_id: l.priceListItemId ?? null,
+          type: l.type,
+          description: l.description,
+          quantity: l.quantity,
+          unit: l.unit,
+          unit_price: l.unitPrice,
+          line_total: lineTotal,
+          sort_order: i,
+        }
+      })
+      await supabase.from('quote_line_items').insert(rows)
+      await supabase.from('quotes').update({ subtotal, total: subtotal }).eq('id', q.id)
+    }
+    await supabase.from('enquiries').update({ status: 'quoted', converted_to_quote_id: q.id }).eq('id', enquiry.id)
+    setConvertOpen(false)
+    setLoading(false)
+    setAiQuoteBusy(false)
+    router.push(`/quotes/${q.id}`)
+  }
+
+  async function aiDraftFromEnquiry() {
+    if (!enquiry.description?.trim()) { alert('Add a work description on the enquiry first.'); return }
+    setAiQuoteBusy(true)
+    // Resolve / create the customer using the same flow as the regular convert
+    let targetCustomerId = customerId
+    if (!useExistingCustomer) {
+      if (!forceCreate) {
+        const existing = await findDuplicate(newCustomerName)
+        if (existing) { setDupCustomer(existing); setAiQuoteBusy(false); return }
+      }
+      const { data: newCust } = await supabase.from('customers').insert({
+        company_id: companyId, name: newCustomerName,
+        email: enquiry.customer_email, phone: enquiry.customer_phone,
+      }).select('id').single()
+      targetCustomerId = newCust?.id ?? ''
+    }
+    if (!targetCustomerId) { setAiQuoteBusy(false); return }
+    setLoading(true)
+    setConvertTo('quote')
+    await createQuote(targetCustomerId, true)
+  }
+
   async function convertEnquiry() {
     let targetCustomerId = customerId
 
@@ -103,20 +176,8 @@ export function EnquiryDetailClient({ enquiry, companyId, profileId, team, custo
     if (!targetCustomerId) { setLoading(false); return }
 
     if (convertTo === 'quote') {
-      const { data: q } = await supabase.from('quotes').insert({
-        company_id: companyId,
-        customer_id: targetCustomerId,
-        title: enquiry.description?.slice(0, 100) ?? 'Enquiry quote',
-        quote_number: nextQuoteNumber,
-        status: 'draft',
-      }).select('id').single()
-      if (q) {
-        await supabase.from('enquiries').update({ status: 'quoted', converted_to_quote_id: q.id }).eq('id', enquiry.id)
-        setConvertOpen(false)
-        setLoading(false)
-        router.push(`/quotes/${q.id}`)
-        return
-      }
+      await createQuote(targetCustomerId, false)
+      return
     } else {
       const { data: j } = await supabase.from('jobs').insert({
         company_id: companyId,
@@ -160,7 +221,7 @@ export function EnquiryDetailClient({ enquiry, companyId, profileId, team, custo
 
       <button
         onClick={() => setConvertOpen(true)}
-        className="px-4 py-2 text-sm bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-medium"
+        className="px-4 py-2 text-sm bg-[var(--accent,#f97316)] hover:bg-[var(--accent-hover,#ea580c)] text-white rounded-lg font-medium"
       >
         Convert
       </button>
@@ -186,7 +247,7 @@ export function EnquiryDetailClient({ enquiry, companyId, profileId, team, custo
               />
               <div className="flex justify-end gap-2">
                 <button onClick={() => setNotesOpen(false)} className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg">Cancel</button>
-                <button onClick={saveNotes} disabled={loading} className="px-4 py-2 text-sm bg-orange-500 hover:bg-orange-600 text-white rounded-lg disabled:opacity-50">Save</button>
+                <button onClick={saveNotes} disabled={loading} className="px-4 py-2 text-sm bg-[var(--accent,#f97316)] hover:bg-[var(--accent-hover,#ea580c)] text-white rounded-lg disabled:opacity-50">Save</button>
               </div>
             </CardContent>
           </Card>
@@ -220,6 +281,17 @@ export function EnquiryDetailClient({ enquiry, companyId, profileId, team, custo
                     Job ({nextJobNumber})
                   </button>
                 </div>
+                {convertTo === 'quote' && enquiry.description && (
+                  <button
+                    type="button"
+                    disabled={aiQuoteBusy}
+                    onClick={aiDraftFromEnquiry}
+                    className="mt-2 w-full inline-flex items-center justify-center gap-2 py-2 text-sm font-medium text-violet-700 bg-violet-50 hover:bg-violet-100 disabled:opacity-50 rounded-lg"
+                  >
+                    <Sparkles className="h-4 w-4" />
+                    {aiQuoteBusy ? 'Drafting with AI…' : 'Draft quote with AI from this enquiry'}
+                  </button>
+                )}
               </div>
 
               <div>
@@ -264,7 +336,7 @@ export function EnquiryDetailClient({ enquiry, companyId, profileId, team, custo
                         <div className="flex flex-wrap gap-2">
                           <button
                             onClick={() => { setUseExistingCustomer(true); setCustomerId(dupCustomer.id); setDupCustomer(null) }}
-                            className="px-3 py-1.5 rounded-lg bg-orange-500 hover:bg-orange-600 text-white font-medium"
+                            className="px-3 py-1.5 rounded-lg bg-[var(--accent,#f97316)] hover:bg-[var(--accent-hover,#ea580c)] text-white font-medium"
                           >
                             Use existing
                           </button>
@@ -286,7 +358,7 @@ export function EnquiryDetailClient({ enquiry, companyId, profileId, team, custo
                 <button
                   onClick={convertEnquiry}
                   disabled={loading || (useExistingCustomer ? !customerId : !newCustomerName.trim())}
-                  className="px-4 py-2 text-sm bg-orange-500 hover:bg-orange-600 text-white rounded-lg disabled:opacity-50"
+                  className="px-4 py-2 text-sm bg-[var(--accent,#f97316)] hover:bg-[var(--accent-hover,#ea580c)] text-white rounded-lg disabled:opacity-50"
                 >
                   {loading ? 'Converting…' : `Convert to ${convertTo}`}
                 </button>

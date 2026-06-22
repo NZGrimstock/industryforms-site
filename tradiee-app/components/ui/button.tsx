@@ -9,9 +9,12 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant = 'default', size = 'md', loading, children, disabled, ...props }, ref) => {
-    const base = 'inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 disabled:opacity-50 disabled:pointer-events-none'
+    // Focus ring + default variant both consume the route-accent CSS vars set
+    // by DashboardShell (with an orange fallback for unscoped pages — login,
+    // public quote/invoice views, etc).
+    const base = 'inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring,#f97316)] disabled:opacity-50 disabled:pointer-events-none'
     const variants = {
-      default: 'bg-orange-500 text-white hover:bg-orange-600',
+      default: 'bg-[var(--accent,#f97316)] text-white hover:bg-[var(--accent-hover,#ea580c)]',
       outline: 'border border-gray-300 bg-white text-gray-700 hover:bg-gray-50',
       ghost: 'text-gray-600 hover:bg-gray-100 hover:text-gray-900',
       destructive: 'bg-red-500 text-white hover:bg-red-600',
