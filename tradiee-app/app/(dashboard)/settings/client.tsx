@@ -291,7 +291,7 @@ export function SettingsClient({ profile, company, team: initialTeam, googleConn
             <div className="flex items-center gap-3 mb-6 p-3 bg-orange-50 rounded-lg border border-orange-100">
               <div>
                 <p className="text-sm font-medium text-orange-800">Current plan: <strong>{planLabel[company.subscription_plan] ?? company.subscription_plan}</strong></p>
-                <p className="text-xs text-orange-600">Status: {company.subscription_status}</p>
+                <p className="text-xs text-[var(--accent,#f97316)]">Status: {company.subscription_status}</p>
               </div>
             </div>
 
@@ -831,7 +831,7 @@ function BillingTab({ company }: { company: Company }) {
               <p className="text-lg font-semibold text-gray-900 capitalize">{company.subscription_plan} plan</p>
               <p className="text-sm text-gray-500 capitalize">Status: {company.subscription_status}</p>
               {trialDaysLeft !== null && trialDaysLeft > 0 && (
-                <p className="text-sm text-orange-600 font-medium mt-1">{trialDaysLeft} days left in trial</p>
+                <p className="text-sm text-[var(--accent,#f97316)] font-medium mt-1">{trialDaysLeft} days left in trial</p>
               )}
               {trialDaysLeft === 0 && company.subscription_plan === 'trial' && (
                 <p className="text-sm text-red-600 font-medium mt-1">Trial expired — subscribe to continue</p>

@@ -189,11 +189,11 @@ export function NewJobButton({ companyId, customers, nextJobNumber, priceItems =
               <Label>Customer <span className="text-red-400">*</span></Label>
               <div className="flex gap-2 mb-2">
                 <button type="button" onClick={() => setCustomerMode('existing')}
-                  className={`flex-1 py-1.5 text-xs rounded-lg border ${customerMode === 'existing' ? 'border-orange-500 bg-orange-50 text-orange-700' : 'border-gray-200 text-gray-500 hover:bg-gray-50'}`}>
+                  className={`flex-1 py-1.5 text-xs rounded-lg border ${customerMode === 'existing' ? 'border-[var(--accent,#f97316)] bg-orange-50 text-[var(--accent,#f97316)]' : 'border-gray-200 text-gray-500 hover:bg-gray-50'}`}>
                   Existing
                 </button>
                 <button type="button" onClick={() => setCustomerMode('new')}
-                  className={`flex-1 py-1.5 text-xs rounded-lg border ${customerMode === 'new' ? 'border-orange-500 bg-orange-50 text-orange-700' : 'border-gray-200 text-gray-500 hover:bg-gray-50'}`}>
+                  className={`flex-1 py-1.5 text-xs rounded-lg border ${customerMode === 'new' ? 'border-[var(--accent,#f97316)] bg-orange-50 text-[var(--accent,#f97316)]' : 'border-gray-200 text-gray-500 hover:bg-gray-50'}`}>
                   + New customer
                 </button>
               </div>

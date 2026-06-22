@@ -30,7 +30,7 @@ export default async function CustomersPage() {
 
         {!customers?.length ? (
           <EmptyState icon={Users} title="No customers yet" description="Add your first customer to get started" action={
-            <Link href="/customers/new" className="inline-flex items-center gap-2 bg-orange-500 text-white text-sm font-medium px-4 py-2 rounded-lg">
+            <Link href="/customers/new" className="inline-flex items-center gap-2 bg-[var(--accent,#f97316)] text-white text-sm font-medium px-4 py-2 rounded-lg">
               <Plus className="h-4 w-4" /> Add customer
             </Link>
           } />

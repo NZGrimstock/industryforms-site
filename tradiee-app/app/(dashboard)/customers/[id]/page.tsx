@@ -41,7 +41,7 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle>Quotes</CardTitle>
-                <Link href={`/quotes/new?customerId=${id}`} className="text-xs text-orange-500 hover:text-orange-600">+ New</Link>
+                <Link href={`/quotes/new?customerId=${id}`} className="text-xs text-orange-500 hover:text-[var(--accent,#f97316)]">+ New</Link>
               </div>
             </CardHeader>
             <CardContent className="p-0">
@@ -70,7 +70,7 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle>Jobs</CardTitle>
-                <Link href={`/jobs/new?customerId=${id}`} className="text-xs text-orange-500 hover:text-orange-600">+ New</Link>
+                <Link href={`/jobs/new?customerId=${id}`} className="text-xs text-orange-500 hover:text-[var(--accent,#f97316)]">+ New</Link>
               </div>
             </CardHeader>
             <CardContent className="p-0">
@@ -99,7 +99,7 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle>Invoices</CardTitle>
-                <Link href={`/invoices/new?customerId=${id}`} className="text-xs text-orange-500 hover:text-orange-600">+ New</Link>
+                <Link href={`/invoices/new?customerId=${id}`} className="text-xs text-orange-500 hover:text-[var(--accent,#f97316)]">+ New</Link>
               </div>
             </CardHeader>
             <CardContent className="p-0">

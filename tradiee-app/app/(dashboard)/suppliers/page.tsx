@@ -30,7 +30,7 @@ export default async function SuppliersPage() {
 
         {!suppliers?.length ? (
           <EmptyState icon={Truck} title="No suppliers yet" description="Add suppliers to raise purchase orders" action={
-            <Link href="/suppliers/new" className="inline-flex items-center gap-2 bg-orange-500 text-white text-sm font-medium px-4 py-2 rounded-lg">
+            <Link href="/suppliers/new" className="inline-flex items-center gap-2 bg-[var(--accent,#f97316)] text-white text-sm font-medium px-4 py-2 rounded-lg">
               <Plus className="h-4 w-4" /> Add supplier
             </Link>
           } />

@@ -154,7 +154,7 @@ export function WebsiteClient({
             <span className={`inline-flex h-2.5 w-2.5 rounded-full ${isPublished ? 'bg-green-500' : 'bg-gray-300'}`} />
             <span className="font-semibold text-gray-900">{isPublished ? 'Published' : 'Draft'}</span>
             {isPublished && (
-              <a href={publicUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-sm text-orange-600 hover:underline">
+              <a href={publicUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-sm text-[var(--accent,#f97316)] hover:underline">
                 View site <ExternalLink className="h-3.5 w-3.5" />
               </a>
             )}
@@ -172,7 +172,7 @@ export function WebsiteClient({
                 {isPublished ? 'Unpublish' : 'Publish'}
               </button>
             ) : (
-              <button onClick={subscribe} className="rounded-lg bg-orange-500 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-600">
+              <button onClick={subscribe} className="rounded-lg bg-[var(--accent,#f97316)] px-4 py-2 text-sm font-semibold text-white hover:bg-[var(--accent-hover,#ea580c)]">
                 Publish — $9/mo
               </button>
             )}
@@ -199,7 +199,7 @@ export function WebsiteClient({
           <div className="flex items-center gap-2 mb-1">
             <Globe className="h-4 w-4 text-gray-400" />
             <label className="text-sm font-medium text-gray-700">Use your own domain</label>
-            <span className="rounded-full bg-orange-50 px-2 py-0.5 text-[11px] font-semibold text-orange-600">Add-on</span>
+            <span className="rounded-full bg-orange-50 px-2 py-0.5 text-[11px] font-semibold text-[var(--accent,#f97316)]">Add-on</span>
             {domainStatus === 'active' && <span className="rounded-full bg-green-50 px-2 py-0.5 text-[11px] font-semibold text-green-600">Live</span>}
             {domainStatus === 'pending' && <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-600">Pending DNS</span>}
           </div>
@@ -234,7 +234,7 @@ export function WebsiteClient({
           )}
 
           {domainStatus === 'pending' && (
-            <button onClick={() => domainCall('PUT')} disabled={domainBusy} className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-orange-600 hover:underline disabled:opacity-50">
+            <button onClick={() => domainCall('PUT')} disabled={domainBusy} className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-[var(--accent,#f97316)] hover:underline disabled:opacity-50">
               <RefreshCw className={`h-3.5 w-3.5 ${domainBusy ? 'animate-spin' : ''}`} /> Verify DNS
             </button>
           )}
@@ -282,7 +282,7 @@ export function WebsiteClient({
 
         {/* Add section */}
         <div className="relative">
-          <button onClick={() => setAddOpen(o => !o)} className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-gray-300 py-3 text-sm font-medium text-gray-500 hover:border-orange-400 hover:text-orange-600">
+          <button onClick={() => setAddOpen(o => !o)} className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-gray-300 py-3 text-sm font-medium text-gray-500 hover:border-orange-400 hover:text-[var(--accent,#f97316)]">
             <Plus className="h-4 w-4" /> Add section
           </button>
           {addOpen && (
@@ -312,7 +312,7 @@ export function WebsiteClient({
             {msg.kind === 'ok' && <Check className="h-4 w-4" />}{msg.text}
           </span>
         )}
-        <button onClick={() => save()} disabled={saving} className="inline-flex items-center gap-2 rounded-lg bg-orange-500 px-5 py-2 text-sm font-semibold text-white hover:bg-orange-600 disabled:opacity-60">
+        <button onClick={() => save()} disabled={saving} className="inline-flex items-center gap-2 rounded-lg bg-[var(--accent,#f97316)] px-5 py-2 text-sm font-semibold text-white hover:bg-[var(--accent-hover,#ea580c)] disabled:opacity-60">
           {saving && <Loader2 className="h-4 w-4 animate-spin" />} Save changes
         </button>
       </div>
@@ -372,7 +372,7 @@ function SectionEditor({
               <input value={it.description} onChange={e => patch(idx, { items: section.items.map((x, k) => k === i ? { ...x, description: e.target.value } : x) })} placeholder="Short description" className={inputCls} />
             </div>
           ))}
-          <button onClick={() => patch(idx, { items: [...section.items, { title: '', description: '' }] })} className="text-sm font-medium text-orange-600 hover:underline">+ Add service</button>
+          <button onClick={() => patch(idx, { items: [...section.items, { title: '', description: '' }] })} className="text-sm font-medium text-[var(--accent,#f97316)] hover:underline">+ Add service</button>
         </div>
       )
     case 'gallery':
@@ -397,7 +397,7 @@ function SectionEditor({
               <input value={it.author} onChange={e => patch(idx, { items: section.items.map((x, k) => k === i ? { ...x, author: e.target.value } : x) })} placeholder="Customer name" className={inputCls} />
             </div>
           ))}
-          <button onClick={() => patch(idx, { items: [...section.items, { quote: '', author: '' }] })} className="text-sm font-medium text-orange-600 hover:underline">+ Add testimonial</button>
+          <button onClick={() => patch(idx, { items: [...section.items, { quote: '', author: '' }] })} className="text-sm font-medium text-[var(--accent,#f97316)] hover:underline">+ Add testimonial</button>
         </div>
       )
     case 'contact':
@@ -429,11 +429,11 @@ function PhotoPicker({ photoUrls, selected, onToggle, single }: { photoUrls: str
       {photoUrls.map(url => {
         const on = selected.includes(url)
         return (
-          <button key={url} type="button" onClick={() => onToggle(url)} className={`relative aspect-square overflow-hidden rounded-lg border-2 ${on ? 'border-orange-500' : 'border-transparent'}`}>
+          <button key={url} type="button" onClick={() => onToggle(url)} className={`relative aspect-square overflow-hidden rounded-lg border-2 ${on ? 'border-[var(--accent,#f97316)]' : 'border-transparent'}`}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={url} alt="" className="h-full w-full object-cover" />
-            {on && <span className="absolute inset-0 flex items-center justify-center bg-orange-500/30"><Check className="h-5 w-5 text-white" /></span>}
-            {single && on && <span className="absolute right-1 top-1 rounded bg-orange-500 px-1 text-[9px] font-bold text-white">BG</span>}
+            {on && <span className="absolute inset-0 flex items-center justify-center bg-[var(--accent,#f97316)]/30"><Check className="h-5 w-5 text-white" /></span>}
+            {single && on && <span className="absolute right-1 top-1 rounded bg-[var(--accent,#f97316)] px-1 text-[9px] font-bold text-white">BG</span>}
           </button>
         )
       })}
