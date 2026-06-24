@@ -6,8 +6,16 @@ import { logCommunication } from '@/lib/comms'
 import { formatCurrency } from '@/lib/utils'
 
 export async function POST(req: NextRequest) {
+  // Cookie-based auth (web) — fall back to Bearer token (mobile)
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  let { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+    const bearer = req.headers.get('authorization')
+    if (bearer?.startsWith('Bearer ')) {
+      const { data } = await createServiceClient().auth.getUser(bearer.slice(7))
+      user = data.user
+    }
+  }
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { quoteId } = await req.json()

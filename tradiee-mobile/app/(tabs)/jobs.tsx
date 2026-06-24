@@ -5,6 +5,7 @@ import {
 } from 'react-native'
 import { router } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import { Feather } from '@expo/vector-icons'
 import { supabase } from '@/lib/supabase'
 import { getJobStatuses, resolveStatus, DEFAULT_JOB_STATUSES, type JobStatus } from '@/lib/job-statuses'
 
@@ -53,11 +54,13 @@ export default function JobsScreen() {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.heading}>Jobs</Text>
-        <Text style={styles.count}>{filtered.length}</Text>
+        <TouchableOpacity onPress={() => router.push('/jobs/new')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <Feather name="plus-circle" size={26} color="#f97316" />
+        </TouchableOpacity>
       </View>
 
       <View style={styles.searchBox}>
-        <Text style={styles.searchIcon}>🔍</Text>
+        <Feather name="search" size={15} color="#9ca3af" />
         <TextInput
           style={styles.searchInput}
           placeholder="Search jobs…"
@@ -93,7 +96,14 @@ export default function JobsScreen() {
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#f97316" />}
           ListEmptyComponent={
             <View style={styles.empty}>
-              <Text style={styles.emptyText}>{search ? 'No jobs match your search' : scope === 'mine' ? 'No jobs assigned to you' : 'No jobs yet'}</Text>
+              <Text style={styles.emptyText}>
+                {search ? 'No jobs match your search' : scope === 'mine' ? 'No jobs assigned to you' : 'No jobs yet'}
+              </Text>
+              {!search && (
+                <TouchableOpacity style={styles.createBtn} onPress={() => router.push('/jobs/new')}>
+                  <Text style={styles.createBtnText}>+ Create first job</Text>
+                </TouchableOpacity>
+              )}
             </View>
           }
           renderItem={({ item: job }) => (
@@ -129,9 +139,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f9fafb' },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: 8, paddingBottom: 4 },
   heading: { fontSize: 24, fontWeight: '700', color: '#111827' },
-  count: { fontSize: 14, color: '#9ca3af', fontWeight: '500' },
-  searchBox: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', marginHorizontal: 16, marginBottom: 4, borderRadius: 12, borderWidth: 1, borderColor: '#e5e7eb', paddingHorizontal: 12, height: 44 },
-  searchIcon: { marginRight: 8, fontSize: 14 },
+  searchBox: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', marginHorizontal: 16, marginBottom: 4, borderRadius: 12, borderWidth: 1, borderColor: '#e5e7eb', paddingHorizontal: 12, height: 44, gap: 8 },
   searchInput: { flex: 1, fontSize: 15, color: '#111827' },
   scopeRow: { flexDirection: 'row', marginHorizontal: 16, marginTop: 4, marginBottom: 4, backgroundColor: '#f3f4f6', borderRadius: 10, padding: 3 },
   scopeBtn: { flex: 1, paddingVertical: 8, alignItems: 'center', borderRadius: 8 },
@@ -145,6 +153,8 @@ const styles = StyleSheet.create({
   statusText: { fontSize: 11, fontWeight: '600' },
   jobTitle: { fontSize: 16, fontWeight: '600', color: '#111827' },
   jobDesc: { fontSize: 13, color: '#6b7280', marginTop: 4, lineHeight: 18 },
-  empty: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 60 },
+  empty: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 60, gap: 14 },
   emptyText: { color: '#9ca3af', fontSize: 15 },
+  createBtn: { backgroundColor: '#fff7ed', borderWidth: 1, borderColor: '#fed7aa', borderRadius: 10, paddingHorizontal: 20, paddingVertical: 10 },
+  createBtnText: { color: '#f97316', fontWeight: '700', fontSize: 14 },
 })

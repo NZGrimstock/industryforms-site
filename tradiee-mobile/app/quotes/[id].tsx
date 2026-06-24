@@ -1,9 +1,13 @@
+import { useState } from 'react'
 import {
-  View, Text, ScrollView, StyleSheet, ActivityIndicator,
+  View, Text, ScrollView, StyleSheet, ActivityIndicator, TouchableOpacity,
+  Alert, TextInput,
 } from 'react-native'
-import { useLocalSearchParams, Stack } from 'expo-router'
+import { useLocalSearchParams, Stack, router } from 'expo-router'
 import { useQuery } from '@powersync/react'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import { Feather } from '@expo/vector-icons'
+import { supabase } from '@/lib/supabase'
 
 const STATUS_COLOR: Record<string, string> = {
   draft:    '#6b7280',
@@ -30,16 +34,14 @@ type Quote = {
   gst_amount: number
   total: number
   customer_name: string | null
+  customer_id: string | null
+  company_id: string | null
   expires_at: string | null
   customer_message: string | null
   notes: string | null
 }
 
-type Section = {
-  id: string
-  title: string
-  sort_order: number
-}
+type Section = { id: string; title: string; sort_order: number }
 
 type LineItem = {
   id: string
@@ -52,21 +54,29 @@ type LineItem = {
   sort_order: number
 }
 
-function formatAmount(amount: number) {
+function fmt(amount: number) {
   return '$' + (amount ?? 0).toLocaleString('en-NZ', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
-function formatDate(iso: string | null) {
+function fmtDate(iso: string | null) {
   if (!iso) return '—'
   return new Date(iso).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
+let _uid = 0
+
 export default function QuoteDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>()
+  const [sending, setSending] = useState(false)
+  const [converting, setConverting] = useState(false)
+  const [showAddItem, setShowAddItem] = useState(false)
+  const [newItem, setNewItem] = useState({ description: '', quantity: '1', unit_price: '' })
+  const [addingItem, setAddingItem] = useState(false)
 
   const { data: quotes, isLoading } = useQuery<Quote>(
     `SELECT q.id, q.quote_number, q.title, q.status, q.subtotal, q.gst_amount, q.total,
             q.expires_at, q.customer_message, q.notes,
+            q.customer_id, q.company_id,
             c.name AS customer_name
      FROM quotes q
      LEFT JOIN customers c ON c.id = q.customer_id
@@ -76,18 +86,87 @@ export default function QuoteDetailScreen() {
   const quote = quotes?.[0]
 
   const { data: sections } = useQuery<Section>(
-    `SELECT id, title, sort_order FROM quote_sections
-     WHERE quote_id = ? ORDER BY sort_order ASC`,
+    `SELECT id, title, sort_order FROM quote_sections WHERE quote_id = ? ORDER BY sort_order ASC`,
     [id]
   )
 
-  const { data: lineItems } = useQuery<LineItem>(
+  const { data: lineItems, refresh: refreshItems } = useQuery<LineItem>(
     `SELECT id, section_id, description, quantity, unit, unit_price, line_total, sort_order
-     FROM quote_line_items
-     WHERE quote_id = ?
-     ORDER BY sort_order ASC`,
+     FROM quote_line_items WHERE quote_id = ? ORDER BY sort_order ASC`,
     [id]
   )
+
+  async function sendByEmail() {
+    setSending(true)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const apiBase = (process.env.EXPO_PUBLIC_API_URL ?? '').replace(/\/$/, '')
+      const res = await fetch(`${apiBase}/api/email/quote`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session?.access_token}`,
+        },
+        body: JSON.stringify({ quoteId: id }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error ?? 'Failed to send')
+      Alert.alert('Sent!', 'Quote emailed to customer.')
+    } catch (e: any) {
+      Alert.alert('Error', e.message ?? 'Could not send email')
+    } finally {
+      setSending(false)
+    }
+  }
+
+  async function convertToJob() {
+    if (!quote) return
+    Alert.alert(
+      'Convert to Job',
+      `Create a new job from "${quote.title}"?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Create Job', onPress: async () => {
+            setConverting(true)
+            const { data: { user } } = await supabase.auth.getUser()
+            const { data, error } = await supabase.from('jobs').insert({
+              title: quote.title,
+              company_id: quote.company_id,
+              customer_id: quote.customer_id,
+              assigned_to: user?.id,
+              status: 'unscheduled',
+            }).select('id').single()
+            setConverting(false)
+            if (error) { Alert.alert('Error', error.message); return }
+            router.push(`/jobs/${data.id}`)
+          },
+        },
+      ]
+    )
+  }
+
+  async function addLineItem() {
+    if (!newItem.description.trim() || !newItem.unit_price || !id) return
+    setAddingItem(true)
+    const qty = parseFloat(newItem.quantity) || 1
+    const price = parseFloat(newItem.unit_price) || 0
+    const { error } = await supabase.from('quote_line_items').insert({
+      quote_id: id,
+      company_id: quote?.company_id,
+      description: newItem.description.trim(),
+      quantity: qty,
+      unit_price: price,
+      line_total: qty * price,
+      unit: 'ea',
+      sort_order: (lineItems?.length ?? 0) + ++_uid,
+    })
+    setAddingItem(false)
+    if (error) { Alert.alert('Error', error.message); return }
+    setNewItem({ description: '', quantity: '1', unit_price: '' })
+    setShowAddItem(false)
+    refreshItems?.()
+  }
 
   if (isLoading) {
     return (
@@ -106,8 +185,9 @@ export default function QuoteDetailScreen() {
   }
 
   const color = STATUS_COLOR[quote.status] ?? '#9ca3af'
+  const isDraft = quote.status === 'draft'
+  const isAccepted = quote.status === 'accepted'
 
-  // Group line items by section
   const sectionMap = new Map<string, LineItem[]>()
   const unsectioned: LineItem[] = []
   for (const item of lineItems ?? []) {
@@ -128,103 +208,162 @@ export default function QuoteDetailScreen() {
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
 
         {/* Info card */}
-        <View style={styles.card}>
-          <View style={styles.cardTop}>
+        <View style={s.card}>
+          <View style={s.cardTop}>
             <View style={{ flex: 1 }}>
-              <Text style={styles.docNumber}>{quote.quote_number}</Text>
-              <Text style={styles.docTitle}>{quote.title}</Text>
+              <Text style={s.docNum}>{quote.quote_number}</Text>
+              <Text style={s.docTitle}>{quote.title}</Text>
             </View>
-            <View style={[styles.statusBadge, { backgroundColor: color + '20' }]}>
-              <Text style={[styles.statusText, { color }]}>
-                {STATUS_LABEL[quote.status] ?? quote.status}
-              </Text>
+            <View style={[s.statusBadge, { backgroundColor: color + '20' }]}>
+              <Text style={[s.statusText, { color }]}>{STATUS_LABEL[quote.status] ?? quote.status}</Text>
             </View>
           </View>
 
           {quote.customer_message && (
-            <Text style={styles.description}>{quote.customer_message}</Text>
+            <Text style={s.desc}>{quote.customer_message}</Text>
           )}
 
-          <View style={styles.metaRow}>
-            <Text style={styles.metaLabel}>Customer</Text>
-            <Text style={styles.metaValue}>{quote.customer_name ?? '—'}</Text>
+          <View style={s.metaRow}>
+            <Text style={s.metaLabel}>Customer</Text>
+            <Text style={s.metaValue}>{quote.customer_name ?? '—'}</Text>
           </View>
-          <View style={styles.metaRow}>
-            <Text style={styles.metaLabel}>Valid Until</Text>
-            <Text style={styles.metaValue}>{formatDate(quote.expires_at)}</Text>
+          <View style={s.metaRow}>
+            <Text style={s.metaLabel}>Valid until</Text>
+            <Text style={s.metaValue}>{fmtDate(quote.expires_at)}</Text>
           </View>
           {quote.notes && (
-            <View style={styles.metaRow}>
-              <Text style={styles.metaLabel}>Notes</Text>
-              <Text style={[styles.metaValue, { flex: 1 }]} numberOfLines={3}>{quote.notes}</Text>
+            <View style={s.metaRow}>
+              <Text style={s.metaLabel}>Notes</Text>
+              <Text style={[s.metaValue, { flex: 1 }]} numberOfLines={3}>{quote.notes}</Text>
+            </View>
+          )}
+
+          {/* Action buttons */}
+          {(isDraft || isAccepted) && (
+            <View style={s.actionRow}>
+              {isDraft && (
+                <TouchableOpacity
+                  style={[s.actionBtn, s.sendBtn, sending && { opacity: 0.6 }]}
+                  onPress={sendByEmail}
+                  disabled={sending}
+                  activeOpacity={0.85}
+                >
+                  {sending
+                    ? <ActivityIndicator color="#fff" size="small" />
+                    : <><Feather name="send" size={14} color="#fff" /><Text style={s.actionBtnText}> Send by email</Text></>
+                  }
+                </TouchableOpacity>
+              )}
+              {isAccepted && (
+                <TouchableOpacity
+                  style={[s.actionBtn, s.convertBtn, converting && { opacity: 0.6 }]}
+                  onPress={convertToJob}
+                  disabled={converting}
+                  activeOpacity={0.85}
+                >
+                  {converting
+                    ? <ActivityIndicator color="#fff" size="small" />
+                    : <><Feather name="briefcase" size={14} color="#fff" /><Text style={s.actionBtnText}> Convert to Job</Text></>
+                  }
+                </TouchableOpacity>
+              )}
             </View>
           )}
         </View>
 
         {/* Line items */}
-        {(lineItems ?? []).length > 0 && (
-          <View style={styles.card}>
-            <Text style={styles.sectionTitle}>Line Items</Text>
+        <View style={s.card}>
+          <View style={s.sectionHead}>
+            <Text style={s.sectionTitle}>Line Items</Text>
+            {isDraft && (
+              <TouchableOpacity onPress={() => setShowAddItem(v => !v)}>
+                <Text style={s.addLink}>+ Add</Text>
+              </TouchableOpacity>
+            )}
+          </View>
 
-            {/* Unsectioned items */}
-            {unsectioned.map(item => (
-              <LineItemRow key={item.id} item={item} />
-            ))}
-
-            {/* Sectioned items */}
-            {(sections ?? []).map(section => {
-              const items = sectionMap.get(section.id) ?? []
-              if (items.length === 0) return null
-              return (
-                <View key={section.id}>
-                  <Text style={styles.sectionHeader}>{section.title}</Text>
-                  {items.map(item => (
-                    <LineItemRow key={item.id} item={item} />
-                  ))}
-                </View>
-              )
-            })}
-
-            {/* Totals */}
-            <View style={styles.totalsBox}>
-              <View style={styles.totalRow}>
-                <Text style={styles.totalLabel}>Subtotal</Text>
-                <Text style={styles.totalValue}>{formatAmount(subtotal)}</Text>
+          {showAddItem && isDraft && (
+            <View style={s.addItemBox}>
+              <TextInput style={[s.input, { marginBottom: 8 }]} value={newItem.description} onChangeText={v => setNewItem(p => ({ ...p, description: v }))} placeholder="Description" placeholderTextColor="#9ca3af" autoFocus />
+              <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
+                <TextInput style={[s.input, { flex: 1 }]} value={newItem.quantity} onChangeText={v => setNewItem(p => ({ ...p, quantity: v }))} placeholder="Qty" keyboardType="decimal-pad" placeholderTextColor="#9ca3af" />
+                <TextInput style={[s.input, { flex: 2 }]} value={newItem.unit_price} onChangeText={v => setNewItem(p => ({ ...p, unit_price: v }))} placeholder="Unit price ($)" keyboardType="decimal-pad" placeholderTextColor="#9ca3af" />
               </View>
-              <View style={[styles.totalRow, styles.totalRowFinal]}>
-                <Text style={styles.totalLabelBold}>Total</Text>
-                <Text style={styles.totalValueBold}>{formatAmount(quote.total ?? 0)}</Text>
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                <TouchableOpacity style={[s.miniBtn, s.miniBtnOrange, addingItem && { opacity: 0.5 }]} onPress={addLineItem} disabled={addingItem}>
+                  {addingItem ? <ActivityIndicator color="#fff" size="small" /> : <Text style={s.miniBtnTextWhite}>Add</Text>}
+                </TouchableOpacity>
+                <TouchableOpacity style={[s.miniBtn, s.miniBtnGhost]} onPress={() => setShowAddItem(false)}>
+                  <Text style={s.miniBtnTextGray}>Cancel</Text>
+                </TouchableOpacity>
               </View>
             </View>
-          </View>
-        )}
+          )}
+
+          {(lineItems ?? []).length === 0 && !showAddItem ? (
+            <Text style={s.empty}>No line items</Text>
+          ) : (
+            <>
+              {unsectioned.map(item => <LineRow key={item.id} item={item} />)}
+              {(sections ?? []).map(section => {
+                const items = sectionMap.get(section.id) ?? []
+                if (items.length === 0) return null
+                return (
+                  <View key={section.id}>
+                    <Text style={s.sectionHeader}>{section.title}</Text>
+                    {items.map(item => <LineRow key={item.id} item={item} />)}
+                  </View>
+                )
+              })}
+              <View style={s.totalsBox}>
+                <View style={s.totalRow}>
+                  <Text style={s.totalLabel}>Subtotal</Text>
+                  <Text style={s.totalValue}>{fmt(subtotal)}</Text>
+                </View>
+                <View style={[s.totalRow, s.totalRowFinal]}>
+                  <Text style={s.totalLabelBold}>Total</Text>
+                  <Text style={s.totalValueBold}>{fmt(quote.total ?? 0)}</Text>
+                </View>
+              </View>
+            </>
+          )}
+        </View>
       </ScrollView>
     </View>
   )
 }
 
-function LineItemRow({ item }: { item: LineItem }) {
+function LineRow({ item }: { item: LineItem }) {
   return (
-    <View style={styles.lineRow}>
-      <Text style={styles.lineDesc} numberOfLines={2}>{item.description}</Text>
-      <Text style={styles.lineQty}>{item.quantity} {item.unit}</Text>
-      <Text style={styles.lineTotal}>{formatAmount(item.line_total ?? 0)}</Text>
+    <View style={s.lineRow}>
+      <Text style={s.lineDesc} numberOfLines={2}>{item.description}</Text>
+      <Text style={s.lineQty}>{item.quantity} {item.unit}</Text>
+      <Text style={s.lineTotal}>{fmt(item.line_total ?? 0)}</Text>
     </View>
   )
 }
 
-const styles = StyleSheet.create({
+const s = StyleSheet.create({
   card: { backgroundColor: '#fff', borderRadius: 16, padding: 16, marginBottom: 14, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
   cardTop: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 10 },
-  docNumber: { fontSize: 12, color: '#9ca3af', fontWeight: '600', letterSpacing: 0.5, marginBottom: 2 },
+  docNum: { fontSize: 12, color: '#9ca3af', fontWeight: '600', letterSpacing: 0.5, marginBottom: 2 },
   docTitle: { fontSize: 20, fontWeight: '700', color: '#111827' },
   statusBadge: { borderRadius: 100, paddingHorizontal: 10, paddingVertical: 5, alignSelf: 'flex-start' },
   statusText: { fontSize: 12, fontWeight: '700' },
-  description: { fontSize: 14, color: '#6b7280', lineHeight: 20, marginBottom: 12 },
+  desc: { fontSize: 14, color: '#6b7280', lineHeight: 20, marginBottom: 12 },
   metaRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 6, borderTopWidth: 1, borderTopColor: '#f9fafb', gap: 8 },
   metaLabel: { fontSize: 13, color: '#9ca3af', fontWeight: '500' },
   metaValue: { fontSize: 13, color: '#374151', fontWeight: '500', textAlign: 'right' },
+  actionRow: { flexDirection: 'row', gap: 10, marginTop: 14, paddingTop: 14, borderTopWidth: 1, borderTopColor: '#f3f4f6' },
+  actionBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', borderRadius: 12, paddingVertical: 13 },
+  sendBtn: { backgroundColor: '#3b82f6' },
+  convertBtn: { backgroundColor: '#22c55e' },
+  actionBtnText: { color: '#fff', fontWeight: '700', fontSize: 14 },
+  sectionHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   sectionTitle: { fontSize: 13, fontWeight: '700', color: '#374151', textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 10 },
+  addLink: { fontSize: 14, color: '#f97316', fontWeight: '600', marginBottom: 10 },
+  addItemBox: { backgroundColor: '#fff7ed', borderRadius: 12, padding: 12, marginBottom: 12, borderWidth: 1, borderColor: '#fed7aa' },
+  input: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, color: '#111827' },
   sectionHeader: { fontSize: 13, fontWeight: '700', color: '#f97316', marginTop: 10, marginBottom: 4 },
   lineRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 7, borderTopWidth: 1, borderTopColor: '#f9fafb', gap: 8 },
   lineDesc: { flex: 1, fontSize: 14, color: '#374151' },
@@ -237,4 +376,10 @@ const styles = StyleSheet.create({
   totalValue: { fontSize: 13, color: '#374151' },
   totalLabelBold: { fontSize: 15, fontWeight: '700', color: '#111827' },
   totalValueBold: { fontSize: 15, fontWeight: '700', color: '#111827' },
+  empty: { color: '#d1d5db', fontSize: 14, textAlign: 'center', paddingVertical: 8 },
+  miniBtn: { flex: 1, borderRadius: 10, paddingVertical: 10, alignItems: 'center' },
+  miniBtnOrange: { backgroundColor: '#f97316' },
+  miniBtnGhost: { backgroundColor: '#f3f4f6' },
+  miniBtnTextWhite: { color: '#fff', fontWeight: '700', fontSize: 14 },
+  miniBtnTextGray: { color: '#6b7280', fontWeight: '600', fontSize: 14 },
 })

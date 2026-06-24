@@ -1,13 +1,5 @@
 'use client'
-import { useEffect, useRef, useState, useCallback } from 'react'
-
-declare global {
-  interface Window {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    google?: any
-    initGooglePlaces?: () => void
-  }
-}
+import { useEffect, useRef, useState } from 'react'
 
 interface Props {
   value: string
@@ -18,59 +10,67 @@ interface Props {
   id?: string
 }
 
-const API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
+const API_KEY = process.env.NEXT_PUBLIC_LOCATIONIQ_KEY
 
-let scriptLoaded = false
-let scriptLoading = false
-const onLoadCallbacks: (() => void)[] = []
+type Suggestion = { place_id: string; display_name: string }
 
-function loadGoogleScript(cb: () => void) {
-  if (scriptLoaded) { cb(); return }
-  onLoadCallbacks.push(cb)
-  if (scriptLoading) return
-  scriptLoading = true
-  window.initGooglePlaces = () => {
-    scriptLoaded = true
-    onLoadCallbacks.forEach(fn => fn())
-    onLoadCallbacks.length = 0
-  }
-  const s = document.createElement('script')
-  s.src = `https://maps.googleapis.com/maps/api/js?key=${API_KEY}&libraries=places&callback=initGooglePlaces`
-  s.async = true; s.defer = true
-  document.head.appendChild(s)
-}
-
-export function AddressAutocomplete({ value, onChange, placeholder = 'Start typing an address…', required, className, id }: Props) {
-  const inputRef = useRef<HTMLInputElement>(null)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const autocompleteRef = useRef<any>(null)
-  const [ready, setReady] = useState(false)
-
-  const initAutocomplete = useCallback(() => {
-    if (!inputRef.current || autocompleteRef.current) return
-    const ac = new window.google!.maps.places.Autocomplete(inputRef.current, {
-      types: ['address'],
-      componentRestrictions: { country: ['nz', 'au'] },
-      fields: ['formatted_address'],
-    })
-    ac.addListener('place_changed', () => {
-      const place = ac.getPlace()
-      if (place.formatted_address) onChange(place.formatted_address)
-    })
-    autocompleteRef.current = ac
-    setReady(true)
-  }, [onChange])
+export function AddressAutocomplete({
+  value,
+  onChange,
+  placeholder = 'Start typing an address…',
+  required,
+  className,
+  id,
+}: Props) {
+  const [query, setQuery] = useState(value)
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([])
+  const [open, setOpen] = useState(false)
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const wrapRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    if (!API_KEY) return
-    loadGoogleScript(() => {
-      initAutocomplete()
-    })
-  }, [initAutocomplete])
+    function handleClick(e: MouseEvent) {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) {
+        setOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [])
+
+  function handleChange(text: string) {
+    setQuery(text)
+    onChange(text)
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    if (!text.trim() || !API_KEY) {
+      setSuggestions([])
+      setOpen(false)
+      return
+    }
+    debounceRef.current = setTimeout(async () => {
+      try {
+        const res = await fetch(
+          `https://api.locationiq.com/v1/autocomplete?key=${API_KEY}&q=${encodeURIComponent(text)}&limit=5&countrycodes=nz,au&dedupe=1&format=json`
+        )
+        if (!res.ok) return
+        const data: Suggestion[] = await res.json()
+        setSuggestions(data)
+        setOpen(data.length > 0)
+      } catch {
+        // silently ignore network errors
+      }
+    }, 350)
+  }
+
+  function select(s: Suggestion) {
+    setQuery(s.display_name)
+    onChange(s.display_name)
+    setSuggestions([])
+    setOpen(false)
+  }
 
   const baseClass = `w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent,#f97316)] ${className ?? ''}`
 
-  // Fallback: plain text input when no API key configured
   if (!API_KEY) {
     return (
       <input
@@ -86,16 +86,32 @@ export function AddressAutocomplete({ value, onChange, placeholder = 'Start typi
   }
 
   return (
-    <input
-      ref={inputRef}
-      id={id}
-      type="text"
-      defaultValue={value}
-      onBlur={e => onChange(e.target.value)}
-      onKeyDown={e => { if (e.key === 'Enter') e.preventDefault() }}
-      placeholder={ready ? placeholder : 'Loading address lookup…'}
-      required={required}
-      className={baseClass}
-    />
+    <div ref={wrapRef} className="relative">
+      <input
+        id={id}
+        type="text"
+        value={query}
+        onChange={e => handleChange(e.target.value)}
+        onKeyDown={e => { if (e.key === 'Escape') setOpen(false) }}
+        placeholder={placeholder}
+        required={required}
+        className={baseClass}
+        autoComplete="off"
+      />
+      {open && suggestions.length > 0 && (
+        <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
+          {suggestions.map((s, i) => (
+            <button
+              key={s.place_id}
+              type="button"
+              onClick={() => select(s)}
+              className={`w-full text-left px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors ${i < suggestions.length - 1 ? 'border-b border-gray-100' : ''}`}
+            >
+              {s.display_name}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
   )
 }

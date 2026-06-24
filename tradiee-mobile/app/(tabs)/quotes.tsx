@@ -5,6 +5,7 @@ import {
 } from 'react-native'
 import { router } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import { Feather } from '@expo/vector-icons'
 import { supabase } from '@/lib/supabase'
 
 const STATUS_COLOR: Record<string, string> = {
@@ -85,11 +86,13 @@ export default function QuotesScreen() {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.heading}>Quotes</Text>
-        <Text style={styles.count}>{filtered.length}</Text>
+        <TouchableOpacity onPress={() => router.push('/quotes/new')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <Feather name="plus-circle" size={26} color="#f97316" />
+        </TouchableOpacity>
       </View>
 
       <View style={styles.searchBox}>
-        <Text style={styles.searchIcon}>🔍</Text>
+        <Feather name="search" size={15} color="#9ca3af" />
         <TextInput
           style={styles.searchInput}
           placeholder="Search quotes…"
@@ -111,6 +114,11 @@ export default function QuotesScreen() {
           ListEmptyComponent={
             <View style={styles.empty}>
               <Text style={styles.emptyText}>{search ? 'No quotes match your search' : 'No quotes yet'}</Text>
+              {!search && (
+                <TouchableOpacity style={styles.createBtn} onPress={() => router.push('/quotes/new')}>
+                  <Text style={styles.createBtnText}>+ Create first quote</Text>
+                </TouchableOpacity>
+              )}
             </View>
           }
           renderItem={({ item: quote }) => {
@@ -149,9 +157,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f9fafb' },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: 8, paddingBottom: 4 },
   heading: { fontSize: 24, fontWeight: '700', color: '#111827' },
-  count: { fontSize: 14, color: '#9ca3af', fontWeight: '500' },
-  searchBox: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', marginHorizontal: 16, marginBottom: 4, borderRadius: 12, borderWidth: 1, borderColor: '#e5e7eb', paddingHorizontal: 12, height: 44 },
-  searchIcon: { marginRight: 8, fontSize: 14 },
+  searchBox: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', marginHorizontal: 16, marginBottom: 4, borderRadius: 12, borderWidth: 1, borderColor: '#e5e7eb', paddingHorizontal: 12, height: 44, gap: 8 },
   searchInput: { flex: 1, fontSize: 15, color: '#111827' },
   card: { backgroundColor: '#fff', borderRadius: 14, padding: 16, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, elevation: 2 },
   cardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 },
@@ -162,6 +168,8 @@ const styles = StyleSheet.create({
   cardFooter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   customer: { flex: 1, fontSize: 13, color: '#6b7280', marginRight: 8 },
   amount: { fontSize: 15, fontWeight: '700', color: '#111827' },
-  empty: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 60 },
+  empty: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 60, gap: 14 },
   emptyText: { color: '#9ca3af', fontSize: 15 },
+  createBtn: { backgroundColor: '#fff7ed', borderWidth: 1, borderColor: '#fed7aa', borderRadius: 10, paddingHorizontal: 20, paddingVertical: 10 },
+  createBtnText: { color: '#f97316', fontWeight: '700', fontSize: 14 },
 })
