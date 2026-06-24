@@ -7,13 +7,20 @@
 // Auth: any authenticated user (owner/admin/staff who can take a payment in
 // the field). The token is scoped only to Terminal SDK operations.
 
-import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { NextRequest, NextResponse } from 'next/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { getStripe } from '@/lib/stripe'
 
-export async function POST() {
+export async function POST(req: NextRequest) {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  let { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+    const bearer = req.headers.get('authorization')
+    if (bearer?.startsWith('Bearer ')) {
+      const { data } = await createServiceClient().auth.getUser(bearer.slice(7))
+      user = data.user
+    }
+  }
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const stripe = getStripe()
