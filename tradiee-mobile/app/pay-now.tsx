@@ -37,6 +37,7 @@ function fmt(amount: number) {
 }
 
 const STATUS_COLOR: Record<string, string> = {
+  draft:          '#6b7280',
   sent:           '#3b82f6',
   partially_paid: '#f97316',
   overdue:        '#ef4444',
@@ -65,37 +66,63 @@ export default function PayNowScreen() {
     if (!user) return
     const { data: prof } = await supabase.from('profiles').select('company_id').eq('id', user.id).single()
     if (!prof) return
+
+    // If navigating from a specific invoice, fetch it directly (bypasses status filter)
+    if (preselectedId) {
+      const { data: inv } = await supabase
+        .from('invoices')
+        .select('id, invoice_number, status, total, amount_paid, customers(name), jobs(title)')
+        .eq('id', preselectedId)
+        .eq('company_id', prof.company_id)
+        .single()
+      if (inv) {
+        const total = Number(inv.total)
+        const paid = Number(inv.amount_paid)
+        const cust = (Array.isArray(inv.customers) ? inv.customers[0] : inv.customers) as { name: string } | null
+        const job  = (Array.isArray(inv.jobs) ? inv.jobs[0] : inv.jobs) as { title: string } | null
+        const row: InvoiceSummary = {
+          id: inv.id,
+          invoice_number: inv.invoice_number,
+          customer_name: cust?.name ?? null,
+          job_title: job?.title ?? null,
+          total,
+          amount_paid: paid,
+          outstanding: total - paid,
+          status: inv.status,
+        }
+        setSelected(row)
+        setInvoices([row])
+        return
+      }
+    }
+
     const { data } = await supabase
       .from('invoices')
       .select('id, invoice_number, status, total, amount_paid, customers(name), jobs(title)')
       .eq('company_id', prof.company_id)
-      .in('status', ['sent', 'partially_paid', 'overdue'])
+      .not('status', 'eq', 'paid')
       .order('created_at', { ascending: false })
       .limit(100)
 
-    const rows: InvoiceSummary[] = (data ?? []).map(i => {
-      const total = Number(i.total)
-      const paid = Number(i.amount_paid)
-      const cust = (Array.isArray(i.customers) ? i.customers[0] : i.customers) as { name: string } | null
-      const job  = (Array.isArray(i.jobs) ? i.jobs[0] : i.jobs) as { title: string } | null
-      return {
-        id: i.id,
-        invoice_number: i.invoice_number,
-        customer_name: cust?.name ?? null,
-        job_title: job?.title ?? null,
-        total,
-        amount_paid: paid,
-        outstanding: total - paid,
-        status: i.status,
-      }
-    })
+    const rows: InvoiceSummary[] = (data ?? [])
+      .map(i => {
+        const total = Number(i.total)
+        const paid = Number(i.amount_paid)
+        const cust = (Array.isArray(i.customers) ? i.customers[0] : i.customers) as { name: string } | null
+        const job  = (Array.isArray(i.jobs) ? i.jobs[0] : i.jobs) as { title: string } | null
+        return {
+          id: i.id,
+          invoice_number: i.invoice_number,
+          customer_name: cust?.name ?? null,
+          job_title: job?.title ?? null,
+          total,
+          amount_paid: paid,
+          outstanding: total - paid,
+          status: i.status,
+        }
+      })
+      .filter(r => r.outstanding > 0)
     setInvoices(rows)
-
-    // pre-select if navigated from invoice detail
-    if (preselectedId) {
-      const pre = rows.find(r => r.id === preselectedId)
-      if (pre) setSelected(pre)
-    }
   }, [preselectedId])
 
   useEffect(() => {
@@ -178,7 +205,7 @@ export default function PayNowScreen() {
   if (stage === 'success') {
     return (
       <SafeAreaView style={s.container}>
-        <Stack.Screen options={{ title: 'Pay Now', headerTintColor: '#f97316' }} />
+        <Stack.Screen options={{ title: 'Tap to Pay', headerTintColor: '#f97316' }} />
         <View style={s.centred}>
           <View style={s.successCircle}>
             <Feather name="check" size={48} color="#22c55e" />
@@ -202,7 +229,7 @@ export default function PayNowScreen() {
   if (stage === 'error') {
     return (
       <SafeAreaView style={s.container}>
-        <Stack.Screen options={{ title: 'Pay Now', headerTintColor: '#f97316' }} />
+        <Stack.Screen options={{ title: 'Tap to Pay', headerTintColor: '#f97316' }} />
         <View style={s.centred}>
           <View style={s.errorCircle}>
             <Feather name="x" size={40} color="#ef4444" />
@@ -230,7 +257,7 @@ export default function PayNowScreen() {
 
     return (
       <SafeAreaView style={s.container}>
-        <Stack.Screen options={{ title: 'Pay Now', headerTintColor: '#f97316' }} />
+        <Stack.Screen options={{ title: 'Tap to Pay', headerTintColor: '#f97316' }} />
         <View style={s.centred}>
           {stage === 'collecting' ? (
             <View style={s.tapCircle}>
@@ -260,7 +287,7 @@ export default function PayNowScreen() {
   if (stage === 'confirm' && selected) {
     return (
       <SafeAreaView style={s.container}>
-        <Stack.Screen options={{ title: 'Pay Now', headerTintColor: '#f97316' }} />
+        <Stack.Screen options={{ title: 'Tap to Pay', headerTintColor: '#f97316' }} />
         <View style={{ flex: 1, padding: 20 }}>
 
           <TouchableOpacity style={s.backRow} onPress={() => setStage('select')}>
@@ -309,7 +336,7 @@ export default function PayNowScreen() {
   // ─── Select state (invoice list) ─────────────────────────────────
   return (
     <SafeAreaView style={s.container}>
-      <Stack.Screen options={{ title: 'Pay Now', headerTintColor: '#f97316' }} />
+      <Stack.Screen options={{ title: 'Tap to Pay', headerTintColor: '#f97316' }} />
 
       {loading ? (
         <ActivityIndicator style={{ marginTop: 60 }} color="#f97316" />

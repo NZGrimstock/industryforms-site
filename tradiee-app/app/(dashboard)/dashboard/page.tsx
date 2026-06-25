@@ -2,11 +2,12 @@ import { createClient } from '@/lib/supabase/server'
 import { Header } from '@/components/layout/header'
 import { Card, CardContent } from '@/components/ui/card'
 import { formatCurrency } from '@/lib/utils'
-import { FileText, Briefcase, Receipt, Clock } from 'lucide-react'
+import { CheckSquare, Briefcase, Receipt, Clock } from 'lucide-react'
 import Link from 'next/link'
 import { getProfitabilityStatus } from '@/components/ui/profitability-badge'
 import { OnboardingChecklist } from '@/components/ui/onboarding-checklist'
 import { DashboardGreeting } from '@/components/ui/dashboard-greeting'
+import { TodoWidget } from '@/components/dashboard/todo-widget'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -16,7 +17,7 @@ export default async function DashboardPage() {
   const { data: profile } = await supabase.from('profiles').select('*, companies(*)').eq('id', user.id).single()
 
   // Parallel data fetches for stats
-  const [quotesRes, jobsRes, invoicesRes, timesheetsRes, activeJobsRes] = await Promise.all([
+  const [quotesRes, jobsRes, invoicesRes, timesheetsRes, activeJobsRes, todosRes] = await Promise.all([
     supabase.from('quotes').select('id, status, total').eq('company_id', profile?.company_id),
     supabase.from('jobs').select('id, job_number, title, status').eq('company_id', profile?.company_id),
     supabase.from('invoices').select('id, status, total, amount_paid').eq('company_id', profile?.company_id),
@@ -28,6 +29,13 @@ export default async function DashboardPage() {
       .in('status', ['scheduled', 'in_progress'])
       .order('created_at', { ascending: false })
       .limit(10),
+    supabase.from('todos')
+      .select('id, title, status, priority, due_date, job_id, jobs(job_number, title)')
+      .eq('company_id', profile?.company_id)
+      .eq('assigned_to', user.id)
+      .in('status', ['pending', 'in_progress'])
+      .order('due_date', { ascending: true, nullsFirst: false })
+      .limit(20),
   ])
 
   const quotes = quotesRes.data ?? []
@@ -50,8 +58,8 @@ export default async function DashboardPage() {
     { label: 'Invite a staff member', done: (staffCount ?? 0) > 1, href: '/settings' },
   ]
 
-  const openQuotes = quotes.filter(q => ['draft', 'sent'].includes(q.status)).length
-  const activeJobs = jobs.filter(j => ['scheduled', 'in_progress'].includes(j.status)).length
+  const acceptedQuotes = quotes.filter(q => q.status === 'accepted').length
+  const scheduledJobs = jobs.filter(j => j.status === 'scheduled').length
   const outstanding = invoices
     .filter(i => ['sent', 'partially_paid', 'overdue'].includes(i.status))
     .reduce((sum, i) => sum + (i.total - i.amount_paid), 0)
@@ -61,11 +69,18 @@ export default async function DashboardPage() {
     return sum + Math.max(0, ms / 3600000 - t.break_minutes / 60)
   }, 0)
 
+  const todos = (todosRes.data ?? []).map(t => ({
+    ...t,
+    jobs: t.jobs
+      ? (Array.isArray(t.jobs) ? t.jobs[0] : t.jobs) as { job_number: string; title: string } | null
+      : null,
+  }))
+
   const stats = [
-    { label: 'Open quotes', value: openQuotes, icon: FileText, href: '/quotes', color: 'text-blue-600 bg-blue-50', ring: 'group-hover:ring-blue-200' },
-    { label: 'Active jobs', value: activeJobs, icon: Briefcase, href: '/jobs', color: 'text-[var(--accent,#f97316)] bg-orange-50', ring: 'group-hover:ring-orange-200' },
+    { label: 'Accepted quotes', value: acceptedQuotes, icon: CheckSquare, href: '/quotes?status=accepted', color: 'text-blue-600 bg-blue-50', ring: 'group-hover:ring-blue-200' },
+    { label: 'Scheduled jobs', value: scheduledJobs, icon: Briefcase, href: '/jobs?status=scheduled', color: 'text-[var(--accent,#f97316)] bg-orange-50', ring: 'group-hover:ring-orange-200' },
     { label: 'Outstanding', value: formatCurrency(outstanding), icon: Receipt, href: '/invoices', color: 'text-green-600 bg-green-50', ring: 'group-hover:ring-green-200' },
-    { label: 'Hours this week', value: recentHours.toFixed(1) + 'h', icon: Clock, href: '/timesheets', color: 'text-purple-600 bg-purple-50', ring: 'group-hover:ring-purple-200' },
+    { label: 'Hours this week', value: recentHours.toFixed(1) + 'h', icon: Clock, href: '/time-logs', color: 'text-purple-600 bg-purple-50', ring: 'group-hover:ring-purple-200' },
   ]
 
   const recentJobs = jobs.slice(0, 5)
@@ -131,6 +146,9 @@ export default async function DashboardPage() {
             </Link>
           ))}
         </div>
+
+        {/* To-Do list */}
+        <TodoWidget todos={todos} userId={user.id} companyId={profile?.company_id} />
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Recent jobs */}

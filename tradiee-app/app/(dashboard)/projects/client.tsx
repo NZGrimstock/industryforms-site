@@ -19,7 +19,7 @@ interface Props {
 
 // Default stage template used to bootstrap a new project — small enough to be
 // helpful, generic enough to suit most renovation / build / fitout flows.
-const DEFAULT_STAGES = ['Planning & design', 'Materials & ordering', 'Site prep', 'Construction', 'Finishing & sign-off']
+const SYSTEM_DEFAULT_STAGES = ['Planning & design', 'Materials & ordering', 'Site prep', 'Construction', 'Finishing & sign-off']
 
 export function NewProjectButton({ companyId, customers: initialCustomers, team }: Props) {
   const [open, setOpen] = useState(false)
@@ -71,10 +71,15 @@ export function NewProjectButton({ companyId, customers: initialCustomers, team 
       status: 'planning',
     }).select('id').single()
     if (error || !project) { toast(error?.message ?? 'Could not create project', 'error'); setLoading(false); return }
-    // Seed with the default stages so the user lands on a useful page, not a blank slate.
-    await supabase.from('project_stages').insert(
-      DEFAULT_STAGES.map((name, i) => ({ project_id: project.id, name, sort_order: i, status: 'pending' }))
-    )
+    // Seed with default stages: use company-configured ones if set, else fall back to system defaults.
+    const { data: co } = await supabase.from('companies').select('default_project_stages').eq('id', companyId).single()
+    const stageNames: string[] | null = (co as unknown as { default_project_stages: string[] | null } | null)?.default_project_stages ?? null
+    const stages = stageNames ?? SYSTEM_DEFAULT_STAGES
+    if (stages.length > 0) {
+      await supabase.from('project_stages').insert(
+        stages.map((name, i) => ({ project_id: project.id, name, sort_order: i, status: 'pending' }))
+      )
+    }
     toast('Project created')
     setOpen(false)
     router.push(`/projects/${project.id}`)

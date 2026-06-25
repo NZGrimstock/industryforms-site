@@ -6,7 +6,8 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Download, MapPin, Clock, Route, Car } from 'lucide-react'
+import { Download, MapPin, Clock, Route, Car, CheckCircle2, Circle } from 'lucide-react'
+import { createClient } from '@/lib/supabase/client'
 
 type Log = {
   id: string
@@ -22,6 +23,7 @@ type Log = {
   job_id: string | null
   notes: string | null
   is_auto: boolean | null
+  verified_at: string | null
   jobs: { job_number: string; title: string } | null
 }
 
@@ -96,10 +98,22 @@ interface Props {
 
 export function LogbookClient({ logs, team, fromDate, toDate, selectedProfileId, companyId }: Props) {
   const router = useRouter()
+  const supabase = createClient()
   const [localFrom, setLocalFrom] = useState(fromDate)
   const [localTo, setLocalTo] = useState(toDate)
   const [localProfile, setLocalProfile] = useState(selectedProfileId)
   const [tab, setTab] = useState<'gps' | 'logbook'>('gps')
+  const [verifiedIds, setVerifiedIds] = useState<Set<string>>(
+    new Set(logs.filter(l => l.verified_at).map(l => l.id))
+  )
+  const [verifying, setVerifying] = useState<string | null>(null)
+
+  async function verifyTrip(logId: string) {
+    setVerifying(logId)
+    const { error } = await supabase.from('travel_logs').update({ verified_at: new Date().toISOString() }).eq('id', logId)
+    setVerifying(null)
+    if (!error) setVerifiedIds(prev => new Set([...prev, logId]))
+  }
 
   function applyFilters() {
     const params = new URLSearchParams({ from: localFrom, to: localTo })
@@ -238,7 +252,15 @@ export function LogbookClient({ logs, team, fromDate, toDate, selectedProfileId,
                               <span className="text-xs text-blue-600">{l.jobs.job_number}</span>
                             )}
                             {l.is_auto && (
-                              <span className="text-xs text-gray-300">auto</span>
+                              verifiedIds.has(l.id)
+                                ? <span className="inline-flex items-center gap-1 text-xs text-green-600"><CheckCircle2 className="h-3 w-3" />Verified</span>
+                                : <button
+                                    onClick={() => verifyTrip(l.id)}
+                                    disabled={verifying === l.id}
+                                    className="inline-flex items-center gap-1 text-xs text-orange-500 hover:text-orange-700"
+                                  >
+                                    <Circle className="h-3 w-3" />{verifying === l.id ? 'Verifying…' : 'Verify'}
+                                  </button>
                             )}
                           </div>
                           <p className="text-sm text-gray-700">

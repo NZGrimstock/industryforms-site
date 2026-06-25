@@ -4,8 +4,24 @@ import {
   TextInput, Alert, ActivityIndicator, Modal, ScrollView, Switch, RefreshControl,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import { useFocusEffect } from 'expo-router'
+import AsyncStorage from '@react-native-async-storage/async-storage'
+import { Feather } from '@expo/vector-icons'
 import { supabase } from '@/lib/supabase'
 import { startTracking, stopTracking, isTracking, requestPermissions } from '@/lib/location/tracking'
+
+const TRADING_HOURS_KEY = 'TRADIEE_TRADING_HOURS'
+type TradingHours = { enabled: boolean; startHour: number; endHour: number; days: number[] }
+const DEFAULT_TRADING_HOURS: TradingHours = { enabled: false, startHour: 7, endHour: 18, days: [1, 2, 3, 4, 5] }
+const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+
+function isInTradingHours(hours: TradingHours): boolean {
+  if (!hours.enabled) return false
+  const now = new Date()
+  const day = now.getDay()
+  const hour = now.getHours()
+  return hours.days.includes(day) && hour >= hours.startHour && hour < hours.endHour
+}
 
 type TimeEntry = {
   id: string; job_id: string; job_number: string; job_title: string
@@ -41,6 +57,9 @@ export default function TimesheetsScreen() {
   const [tab, setTab] = useState<'time' | 'travel'>(TAB_TIME)
   const [tracking, setTracking] = useState(false)
   const [showLogModal, setShowLogModal] = useState(false)
+  const [showTradingHours, setShowTradingHours] = useState(false)
+  const [tradingHours, setTradingHours] = useState<TradingHours>(DEFAULT_TRADING_HOURS)
+  const [savingTradingHours, setSavingTradingHours] = useState(false)
   const [showAllocModal, setShowAllocModal] = useState(false)
   const [allocLog, setAllocLog] = useState<TravelLog | null>(null)
   const [allocJob, setAllocJob] = useState<Job | null>(null)
@@ -61,7 +80,25 @@ export default function TimesheetsScreen() {
 
   useEffect(() => {
     isTracking().then(setTracking)
+    AsyncStorage.getItem(TRADING_HOURS_KEY).then(raw => {
+      if (raw) setTradingHours(JSON.parse(raw))
+    })
   }, [])
+
+  useFocusEffect(useCallback(() => {
+    AsyncStorage.getItem(TRADING_HOURS_KEY).then(async raw => {
+      const hours: TradingHours = raw ? JSON.parse(raw) : DEFAULT_TRADING_HOURS
+      if (!hours.enabled) return
+      const shouldTrack = isInTradingHours(hours)
+      const currently = await isTracking()
+      if (shouldTrack && !currently) {
+        const ok = await requestPermissions()
+        if (ok) { await startTracking(); setTracking(true) }
+      } else if (!shouldTrack && currently) {
+        await stopTracking(); setTracking(false)
+      }
+    })
+  }, []))
 
   const fetchAll = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser()
@@ -133,6 +170,14 @@ export default function TimesheetsScreen() {
     }
   }
 
+  async function saveTradingHours(hours: TradingHours) {
+    setSavingTradingHours(true)
+    await AsyncStorage.setItem(TRADING_HOURS_KEY, JSON.stringify(hours))
+    setTradingHours(hours)
+    setSavingTradingHours(false)
+    setShowTradingHours(false)
+  }
+
   async function logTime() {
     if (!selectedJob) { Alert.alert('Select a job'); return }
     setSaving(true)
@@ -177,13 +222,18 @@ export default function TimesheetsScreen() {
       <View style={styles.header}>
         <Text style={styles.heading}>Time</Text>
         <View style={styles.trackingRow}>
-          <Text style={styles.trackingLabel}>{tracking ? 'Auto-track on' : 'Auto-track'}</Text>
+          <Text style={styles.trackingLabel}>
+            {tracking ? 'Auto-track on' : tradingHours.enabled ? 'Auto-track (scheduled)' : 'Auto-track'}
+          </Text>
           <Switch
             value={tracking}
             onValueChange={toggleTracking}
             trackColor={{ false: '#e5e7eb', true: '#fdba74' }}
             thumbColor={tracking ? '#f97316' : '#9ca3af'}
           />
+          <TouchableOpacity onPress={() => setShowTradingHours(true)} style={{ padding: 4 }}>
+            <Feather name="settings" size={15} color={tradingHours.enabled ? '#f97316' : '#9ca3af'} />
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -281,8 +331,91 @@ export default function TimesheetsScreen() {
         </>
       )}
 
+      {/* Trading hours modal */}
+      <Modal visible={showTradingHours} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setShowTradingHours(false)}>
+        <SafeAreaView style={styles.modal}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Auto-track schedule</Text>
+            <TouchableOpacity onPress={() => setShowTradingHours(false)}><Text style={styles.cancelText}>Cancel</Text></TouchableOpacity>
+          </View>
+          <ScrollView contentContainerStyle={{ padding: 20, gap: 16 }}>
+            <Text style={{ fontSize: 13, color: '#6b7280', marginBottom: 8 }}>
+              Set trading hours to automatically start and stop GPS tracking. The app must be opened within the window for the schedule to take effect.
+            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Text style={{ fontSize: 15, fontWeight: '600', color: '#111827' }}>Enable schedule</Text>
+              <Switch
+                value={tradingHours.enabled}
+                onValueChange={v => setTradingHours(h => ({ ...h, enabled: v }))}
+                trackColor={{ false: '#e5e7eb', true: '#fdba74' }}
+                thumbColor={tradingHours.enabled ? '#f97316' : '#9ca3af'}
+              />
+            </View>
+            {tradingHours.enabled && (
+              <>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.fieldLabel}>Start hour</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={String(tradingHours.startHour)}
+                      onChangeText={v => { const n = parseInt(v); if (!isNaN(n) && n >= 0 && n <= 23) setTradingHours(h => ({ ...h, startHour: n })) }}
+                      keyboardType="number-pad"
+                      maxLength={2}
+                    />
+                    <Text style={{ fontSize: 11, color: '#9ca3af', marginTop: 2 }}>{tradingHours.startHour}:00</Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.fieldLabel}>End hour</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={String(tradingHours.endHour)}
+                      onChangeText={v => { const n = parseInt(v); if (!isNaN(n) && n >= 0 && n <= 23) setTradingHours(h => ({ ...h, endHour: n })) }}
+                      keyboardType="number-pad"
+                      maxLength={2}
+                    />
+                    <Text style={{ fontSize: 11, color: '#9ca3af', marginTop: 2 }}>{tradingHours.endHour}:00</Text>
+                  </View>
+                </View>
+                <View>
+                  <Text style={[styles.fieldLabel, { marginBottom: 8 }]}>Days</Text>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                    {DAY_LABELS.map((label, i) => {
+                      const active = tradingHours.days.includes(i)
+                      return (
+                        <TouchableOpacity
+                          key={i}
+                          onPress={() => setTradingHours(h => ({
+                            ...h,
+                            days: active ? h.days.filter(d => d !== i) : [...h.days, i].sort()
+                          }))}
+                          style={{
+                            paddingHorizontal: 14, paddingVertical: 8, borderRadius: 100,
+                            backgroundColor: active ? '#f97316' : '#f3f4f6',
+                          }}
+                        >
+                          <Text style={{ fontSize: 13, fontWeight: '600', color: active ? '#fff' : '#6b7280' }}>{label}</Text>
+                        </TouchableOpacity>
+                      )
+                    })}
+                  </View>
+                </View>
+              </>
+            )}
+            <TouchableOpacity
+              style={[styles.logBtn, savingTradingHours && { opacity: 0.5 }]}
+              onPress={() => saveTradingHours(tradingHours)}
+              disabled={savingTradingHours}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.logBtnText}>{savingTradingHours ? 'Saving…' : 'Save schedule'}</Text>
+            </TouchableOpacity>
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
+
       {/* Log time modal */}
-      <Modal visible={showLogModal} animationType="slide" presentationStyle="pageSheet">
+      <Modal visible={showLogModal} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setShowLogModal(false)}>
         <SafeAreaView style={styles.modal}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Log Time</Text>
@@ -427,6 +560,8 @@ const styles = StyleSheet.create({
   jobRowTitle: { flex: 1, fontSize: 14, color: '#111827' },
   saveBtn: { backgroundColor: '#f97316', borderRadius: 12, padding: 16, alignItems: 'center', marginTop: 24 },
   saveBtnText: { color: '#fff', fontWeight: '700', fontSize: 16 },
+  logBtn: { backgroundColor: '#f97316', borderRadius: 12, padding: 16, alignItems: 'center', marginTop: 8 },
+  logBtnText: { color: '#fff', fontWeight: '700', fontSize: 16 },
   allocOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.4)' },
   allocSheet: { backgroundColor: '#fff', borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 24, paddingBottom: 40 },
   allocTitle: { fontSize: 18, fontWeight: '700', color: '#111827', marginBottom: 4 },

@@ -2,7 +2,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { Plus, X, Check, Circle, Clock, AlertTriangle, ChevronDown } from 'lucide-react'
+import { Plus, X, Check, Circle, Clock, AlertTriangle, Pencil } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatDate } from '@/lib/utils'
 import Link from 'next/link'
@@ -54,6 +54,9 @@ export function TodoClient({ todos, companyId, profileId, team, jobs, currentSta
   const supabase = createClient()
   const [newOpen, setNewOpen] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [editingTodo, setEditingTodo] = useState<Todo | null>(null)
+  const [editForm, setEditForm] = useState({ title: '', description: '', priority: 'medium', due_date: '', job_id: '', assigned_to: '' })
+  const [saving, setSaving] = useState(false)
   const [form, setForm] = useState({
     title: '',
     description: '',
@@ -96,6 +99,34 @@ export function TodoClient({ todos, companyId, profileId, team, jobs, currentSta
     router.refresh()
   }
 
+  function openEdit(todo: Todo) {
+    setEditingTodo(todo)
+    setEditForm({
+      title: todo.title,
+      description: todo.description ?? '',
+      priority: todo.priority,
+      due_date: todo.due_date ?? '',
+      job_id: todo.job_id ?? '',
+      assigned_to: todo.assigned_to ?? '',
+    })
+  }
+
+  async function saveTodo() {
+    if (!editingTodo) return
+    setSaving(true)
+    await supabase.from('todos').update({
+      title: editForm.title.trim(),
+      description: editForm.description.trim() || null,
+      priority: editForm.priority,
+      due_date: editForm.due_date || null,
+      job_id: editForm.job_id || null,
+      assigned_to: editForm.assigned_to || null,
+    }).eq('id', editingTodo.id)
+    setSaving(false)
+    setEditingTodo(null)
+    router.refresh()
+  }
+
   const grouped = {
     urgent: todos.filter(t => t.priority === 'urgent' && t.status !== 'done'),
     high: todos.filter(t => t.priority === 'high' && t.status !== 'done'),
@@ -123,7 +154,7 @@ export function TodoClient({ todos, companyId, profileId, team, jobs, currentSta
       </div>
 
       {isShowingDone ? (
-        <TodoList todos={todos} onToggle={toggleStatus} onDelete={deleteTodo} showDone />
+        <TodoList todos={todos} onToggle={toggleStatus} onDelete={deleteTodo} onEdit={openEdit} showDone />
       ) : (
         <div className="space-y-6">
           {(['urgent', 'high', 'medium', 'low'] as const).map(p => {
@@ -136,7 +167,7 @@ export function TodoClient({ todos, companyId, profileId, team, jobs, currentSta
                   <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide capitalize">{p}</span>
                   <span className="text-xs text-gray-400">({items.length})</span>
                 </div>
-                <TodoList todos={items} onToggle={toggleStatus} onDelete={deleteTodo} />
+                <TodoList todos={items} onToggle={toggleStatus} onDelete={deleteTodo} onEdit={openEdit} />
               </div>
             )
           })}
@@ -212,14 +243,78 @@ export function TodoClient({ todos, companyId, profileId, team, jobs, currentSta
           </Card>
         </div>
       )}
+
+      {editingTodo && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <Card className="w-full max-w-md">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle>Edit task</CardTitle>
+                <button onClick={() => setEditingTodo(null)}><X className="h-4 w-4 text-gray-400" /></button>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Task *</label>
+                <input
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-orange-400"
+                  value={editForm.title}
+                  onChange={e => setEditForm(f => ({ ...f, title: e.target.value }))}
+                  autoFocus
+                  onKeyDown={e => e.key === 'Enter' && saveTodo()}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Description</label>
+                <textarea rows={2} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-orange-400 resize-none" value={editForm.description} onChange={e => setEditForm(f => ({ ...f, description: e.target.value }))} />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Priority</label>
+                  <select className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:border-orange-400 capitalize" value={editForm.priority} onChange={e => setEditForm(f => ({ ...f, priority: e.target.value }))}>
+                    {PRIORITIES.map(p => <option key={p} value={p} className="capitalize">{p}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Due date</label>
+                  <input type="date" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-orange-400" value={editForm.due_date} onChange={e => setEditForm(f => ({ ...f, due_date: e.target.value }))} />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Assign to</label>
+                  <select className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:border-orange-400" value={editForm.assigned_to} onChange={e => setEditForm(f => ({ ...f, assigned_to: e.target.value }))}>
+                    <option value="">Unassigned</option>
+                    {team.map(t => <option key={t.id} value={t.id}>{t.full_name}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Linked job</label>
+                  <select className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:border-orange-400" value={editForm.job_id} onChange={e => setEditForm(f => ({ ...f, job_id: e.target.value }))}>
+                    <option value="">None</option>
+                    {jobs.map(j => <option key={j.id} value={j.id}>{j.job_number} — {j.title}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <button onClick={() => setEditingTodo(null)} className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg">Cancel</button>
+                <button onClick={saveTodo} disabled={saving || !editForm.title.trim()} className="px-4 py-2 text-sm bg-[var(--accent,#f97316)] hover:bg-[var(--accent-hover,#ea580c)] text-white rounded-lg disabled:opacity-50">
+                  {saving ? 'Saving…' : 'Save'}
+                </button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   )
 }
 
-function TodoList({ todos, onToggle, onDelete, showDone }: {
+function TodoList({ todos, onToggle, onDelete, onEdit, showDone }: {
   todos: Todo[]
   onToggle: (t: Todo) => void
   onDelete: (id: string) => void
+  onEdit: (t: Todo) => void
   showDone?: boolean
 }) {
   return (
@@ -235,7 +330,7 @@ function TodoList({ todos, onToggle, onDelete, showDone }: {
               {todo.status === 'done' && <Check className="h-3 w-3 text-white" />}
               {todo.status === 'in_progress' && <div className="w-2 h-2 rounded-full bg-orange-400" />}
             </button>
-            <div className="flex-1 min-w-0">
+            <div className="flex-1 min-w-0 cursor-pointer" onClick={() => onEdit(todo)}>
               <p className={cn('text-sm text-gray-800', todo.status === 'done' && 'line-through text-gray-400')}>{todo.title}</p>
               {todo.description && <p className="text-xs text-gray-400 mt-0.5">{todo.description}</p>}
               <div className="flex items-center gap-2 mt-1">
@@ -247,18 +342,20 @@ function TodoList({ todos, onToggle, onDelete, showDone }: {
                 )}
                 {todo.profiles && <span className="text-xs text-gray-400">{todo.profiles.full_name}</span>}
                 {todo.jobs && (
-                  <Link href={`/jobs/${todo.job_id}`} className="text-xs text-orange-500 hover:underline">
+                  <Link href={`/jobs/${todo.job_id}`} className="text-xs text-orange-500 hover:underline" onClick={e => e.stopPropagation()}>
                     {todo.jobs.job_number}
                   </Link>
                 )}
               </div>
             </div>
-            <button
-              onClick={() => onDelete(todo.id)}
-              className="opacity-0 group-hover:opacity-100 text-gray-300 hover:text-red-400 transition-opacity"
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
+            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              <button onClick={() => onEdit(todo)} className="text-gray-300 hover:text-blue-400">
+                <Pencil className="h-3.5 w-3.5" />
+              </button>
+              <button onClick={() => onDelete(todo.id)} className="text-gray-300 hover:text-red-400">
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
           </div>
         )
       })}

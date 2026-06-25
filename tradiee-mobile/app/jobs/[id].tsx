@@ -343,6 +343,70 @@ export default function JobDetailScreen() {
     }
   }
 
+  function promptCompleteWithSignoff() {
+    if ((photos ?? []).length === 0) {
+      Alert.alert(
+        'No photos yet',
+        'Would you like to add photos before completing?',
+        [
+          { text: 'Add photos', onPress: promptPhotoSource },
+          { text: 'Skip & continue', onPress: () => setShowComplete(true) },
+          { text: 'Cancel', style: 'cancel' },
+        ]
+      )
+    } else {
+      setShowComplete(true)
+    }
+  }
+
+  function promptCompleteAndInvoice() {
+    if ((photos ?? []).length === 0) {
+      Alert.alert(
+        'No photos yet',
+        'Would you like to add photos before completing?',
+        [
+          { text: 'Add photos', onPress: promptPhotoSource },
+          { text: 'Skip & continue', onPress: () => completeAndInvoice() },
+          { text: 'Cancel', style: 'cancel' },
+        ]
+      )
+    } else {
+      completeAndInvoice()
+    }
+  }
+
+  async function completeAndInvoice() {
+    setCompleting(true)
+    try {
+      const doneKey = (statuses.find(s => s.is_terminal && s.key !== 'cancelled') ?? statuses.find(s => s.key === 'completed'))?.key
+      if (doneKey) {
+        const { error } = await supabase.from('jobs').update({ status: doneKey }).eq('id', id)
+        if (error) throw new Error(error.message)
+      }
+      if (activeJob) await stopJob()
+
+      // Create draft invoice via API
+      const { data: { session } } = await supabase.auth.getSession()
+      const apiBase = (process.env.EXPO_PUBLIC_API_URL ?? '').replace(/\/$/, '')
+      const res = await fetch(`${apiBase}/api/invoices`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
+        body: JSON.stringify({ job_id: id }),
+      })
+      const inv = await res.json()
+      if (!res.ok) throw new Error(inv.error ?? 'Could not create invoice')
+
+      Alert.alert('Invoice created', `Draft invoice ${inv.invoice_number} created.`, [
+        { text: 'View invoice', onPress: () => router.push(`/invoices/${inv.id}`) },
+        { text: 'OK' },
+      ])
+    } catch (e: any) {
+      Alert.alert('Error', e.message ?? 'Could not complete job')
+    } finally {
+      setCompleting(false)
+    }
+  }
+
   if (isLoading) {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
@@ -415,9 +479,18 @@ export default function JobDetailScreen() {
           </View>
 
           {doneStatus && !isDone && (
-            <TouchableOpacity style={styles.completeBtn} onPress={() => setShowComplete(true)} activeOpacity={0.85}>
-              <Text style={styles.completeBtnText}>✓ Complete job &amp; get sign-off</Text>
-            </TouchableOpacity>
+            <View style={{ gap: 8, marginTop: 12 }}>
+              <TouchableOpacity style={styles.completeBtn} onPress={promptCompleteWithSignoff} activeOpacity={0.85}>
+                <Text style={styles.completeBtnText}>✓ Complete &amp; get sign-off</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.completeBtn, { backgroundColor: '#f97316' }]}
+                onPress={promptCompleteAndInvoice}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.completeBtnText}>✓ Complete &amp; Invoice</Text>
+              </TouchableOpacity>
+            </View>
           )}
         </View>
 
@@ -548,7 +621,7 @@ export default function JobDetailScreen() {
                 <Text style={styles.bigTimerIcon}>{activeJob ? '⏹' : '▶'}</Text>
                 <View>
                   <Text style={styles.bigTimerLabel}>
-                    {activeJob ? 'Stop Job' : 'Start Job'}
+                    {activeJob ? 'Stop Job Timer' : 'Start Job Timer'}
                   </Text>
                   {activeJob && elapsed ? (
                     <Text style={styles.bigTimerElapsed}>{elapsed} elapsed</Text>
@@ -570,6 +643,7 @@ export default function JobDetailScreen() {
               </TouchableOpacity>
             </View>
             <Text style={styles.completeHint}>Ask the customer to sign below to confirm the work is complete. Leave blank to complete without a signature.</Text>
+            <Text style={styles.signatureLabel}>Customer Signature</Text>
             <View style={styles.signatureBox}>
               <WebView
                 originWhitelist={['*']}
@@ -590,7 +664,7 @@ export default function JobDetailScreen() {
       </Modal>
 
       {/* Status picker modal */}
-      <Modal visible={showStatusPicker} transparent animationType="fade">
+      <Modal visible={showStatusPicker} transparent animationType="fade" onRequestClose={() => setShowStatusPicker(false)}>
         <TouchableOpacity style={styles.overlay} onPress={() => setShowStatusPicker(false)} activeOpacity={1}>
           <View style={styles.picker}>
             <Text style={styles.pickerTitle}>Update Status</Text>
@@ -664,6 +738,7 @@ const styles = StyleSheet.create({
   completeTitle: { fontSize: 18, fontWeight: '800', color: '#111827' },
   completeClose: { fontSize: 15, color: '#9ca3af', fontWeight: '600' },
   completeHint: { fontSize: 13, color: '#6b7280', lineHeight: 18, marginBottom: 12 },
+  signatureLabel: { fontSize: 13, fontWeight: '700', color: '#374151', textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 8 },
   signatureBox: { flex: 1, borderRadius: 14, overflow: 'hidden', borderWidth: 1, borderColor: '#e5e7eb', backgroundColor: '#fff', marginBottom: 12 },
   completeBusy: { position: 'absolute', left: 0, right: 0, bottom: 28, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   completeBusyText: { color: '#22c55e', fontWeight: '700' },

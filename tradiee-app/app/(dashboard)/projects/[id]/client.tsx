@@ -21,7 +21,7 @@ type Stage  = { id: string; name: string; description: string | null; sort_order
 type Job    = { id: string; job_number: string; title: string; status: string; project_stage_id: string | null }
 type Invoice = { id: string; invoice_number: string; status: string; total: number; amount_paid: number; project_stage_id: string | null }
 type Contact = { id: string; name: string; role: string | null; phone: string | null; email: string | null; is_primary: boolean }
-type Sub     = { id: string; name: string; trade: string | null; phone: string | null; email: string | null; notes: string | null }
+type Sub     = { id: string; name: string; company: string | null; trade: string | null; phone: string | null; email: string | null; notes: string | null }
 type Profile = { id: string; full_name: string }
 type Customer = { id: string; name: string }
 type Project = { id: string; name: string; status: string; project_manager_id: string | null; customer_id: string | null; total_budget: number | null; target_end_date: string | null; description: string | null }
@@ -220,7 +220,7 @@ export function ProjectDetailClient({ project, stages: initialStages, jobs, invo
                 {subs.map(s => (
                   <li key={s.id} className="px-6 py-3 flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="text-sm font-medium text-gray-900">{s.name}{s.trade && <span className="ml-2 text-xs text-gray-500">· {s.trade}</span>}</p>
+                      <p className="text-sm font-medium text-gray-900">{s.name}{s.company && <span className="ml-1 text-gray-500">· {s.company}</span>}{s.trade && <span className="ml-1 text-xs text-gray-400">({s.trade})</span>}</p>
                       <div className="flex flex-wrap items-center gap-3 mt-1 text-xs text-gray-500">
                         {s.phone && <a href={`tel:${s.phone}`} className="inline-flex items-center gap-1 hover:text-sky-600"><Phone className="h-3 w-3" />{s.phone}</a>}
                         {s.email && <a href={`mailto:${s.email}`} className="inline-flex items-center gap-1 hover:text-sky-600"><Mail className="h-3 w-3" />{s.email}</a>}
@@ -390,7 +390,7 @@ function ContactDialog({ value, projectId, onClose, onSaved }: { value: Contact 
 function SubDialog({ value, projectId, onClose, onSaved }: { value: Sub | 'new' | null; projectId: string; onClose: () => void; onSaved: (s: Sub, isNew: boolean) => void }) {
   const supabase = createClient()
   const isNew = value === 'new'
-  const initial = (isNew || !value) ? { name: '', trade: '', phone: '', email: '', notes: '' } : { name: value.name, trade: value.trade ?? '', phone: value.phone ?? '', email: value.email ?? '', notes: value.notes ?? '' }
+  const initial = (isNew || !value) ? { name: '', company: '', trade: '', phone: '', email: '', notes: '' } : { name: value.name, company: value.company ?? '', trade: value.trade ?? '', phone: value.phone ?? '', email: value.email ?? '', notes: value.notes ?? '' }
   const [form, setForm] = useState(initial)
   const [busy, setBusy] = useState(false)
   if (!value) return null
@@ -398,11 +398,11 @@ function SubDialog({ value, projectId, onClose, onSaved }: { value: Sub | 'new' 
     e.preventDefault()
     setBusy(true)
     if (isNew) {
-      const { data, error } = await supabase.from('project_subcontractors').insert({ project_id: projectId, name: form.name, trade: form.trade || null, phone: form.phone || null, email: form.email || null, notes: form.notes || null }).select('*').single()
+      const { data, error } = await supabase.from('project_subcontractors').insert({ project_id: projectId, name: form.name, company: form.company || null, trade: form.trade || null, phone: form.phone, email: form.email, notes: form.notes || null }).select('*').single()
       setBusy(false); if (error || !data) return; onSaved(data as Sub, true)
     } else {
       const id = (value as Sub).id
-      const { data, error } = await supabase.from('project_subcontractors').update({ name: form.name, trade: form.trade || null, phone: form.phone || null, email: form.email || null, notes: form.notes || null }).eq('id', id).select('*').single()
+      const { data, error } = await supabase.from('project_subcontractors').update({ name: form.name, company: form.company || null, trade: form.trade || null, phone: form.phone, email: form.email, notes: form.notes || null }).eq('id', id).select('*').single()
       setBusy(false); if (error || !data) return; onSaved(data as Sub, false)
     }
   }
@@ -410,10 +410,11 @@ function SubDialog({ value, projectId, onClose, onSaved }: { value: Sub | 'new' 
     <Dialog open onClose={onClose} title={isNew ? 'Add subcontractor' : 'Edit subcontractor'}>
       <form onSubmit={save} className="space-y-3">
         <div><Label>Name <span className="text-red-400">*</span></Label><Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} required autoFocus /></div>
+        <div><Label>Company <span className="text-red-400">*</span></Label><Input value={form.company} onChange={e => setForm(f => ({ ...f, company: e.target.value }))} placeholder="e.g. Smith Electrical Ltd" required /></div>
         <div><Label>Trade</Label><Input value={form.trade} onChange={e => setForm(f => ({ ...f, trade: e.target.value }))} placeholder="e.g. Electrical, Plumbing, Tiling" /></div>
         <div className="grid grid-cols-2 gap-3">
-          <div><Label>Phone</Label><Input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} /></div>
-          <div><Label>Email</Label><Input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} /></div>
+          <div><Label>Phone <span className="text-red-400">*</span></Label><Input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} required /></div>
+          <div><Label>Email <span className="text-red-400">*</span></Label><Input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} required /></div>
         </div>
         <div><Label>Notes</Label><Textarea rows={2} value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} /></div>
         <div className="flex justify-end gap-2 pt-2">

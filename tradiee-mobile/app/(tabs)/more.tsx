@@ -50,8 +50,8 @@ export default function MoreScreen() {
   const workItems: MenuItem[] = [
     { icon: 'users',       label: 'Customers',   route: '/(tabs)/customers' },
     { icon: 'credit-card', label: 'Invoices',     route: '/(tabs)/invoices' },
-    { icon: 'zap',         label: 'Pay Now',      route: '/pay-now' },
-    { icon: 'clock',       label: 'Timesheets',   route: '/(tabs)/timesheets' },
+    { icon: 'zap',         label: 'Tap to Pay',   route: '/pay-now' },
+    { icon: 'clock',       label: 'Time Logs',    route: '/(tabs)/timesheets' },
     { icon: 'map',         label: 'Job Map',      route: '/(tabs)/map' },
     { icon: 'check-square',label: 'To-do List',   route: '/todos' },
     { icon: 'inbox',       label: 'Enquiries',    route: '/enquiries' },

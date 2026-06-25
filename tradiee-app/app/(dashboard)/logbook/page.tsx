@@ -22,7 +22,7 @@ export default async function LogbookPage({ searchParams }: { searchParams: Prom
       .eq('is_active', true)
       .order('full_name'),
     supabase.from('travel_logs')
-      .select('id, profile_id, started_at, ended_at, start_lat, start_lng, end_lat, end_lng, distance_km, purpose, job_id, notes, is_auto, jobs!job_id(job_number, title)')
+      .select('id, profile_id, started_at, ended_at, start_lat, start_lng, end_lat, end_lng, distance_km, purpose, job_id, notes, is_auto, verified_at, jobs!job_id(job_number, title)')
       .eq('company_id', profile.company_id)
       .gte('started_at', `${fromDate}T00:00:00`)
       .lte('started_at', `${toDate}T23:59:59`)

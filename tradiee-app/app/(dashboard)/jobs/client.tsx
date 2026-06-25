@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
@@ -13,6 +13,8 @@ import { VoiceInput } from '@/components/ui/voice-input'
 import { SmartWriteButton } from '@/components/ui/smart-write'
 import { Plus, Trash2, ChevronRight } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
+
+type Site = { id: string; label: string | null; address: string }
 
 interface PriceItem { id: string; name: string; unit: string; sell_price: number; cost_price: number }
 
@@ -51,11 +53,41 @@ export function NewJobButton({ companyId, customers, nextJobNumber, priceItems =
   const supabase = createClient()
   const router = useRouter()
   const { toast } = useToast()
-  const [form, setForm] = useState({ customerId: initialCustomerId, title: initialTitle, description: initialDescription, status: 'unscheduled', reference: '' })
+  const [form, setForm] = useState({ customerId: initialCustomerId, title: initialTitle, description: initialDescription, status: 'unscheduled', reference: '', siteId: '' })
   const [customerMode, setCustomerMode] = useState<'existing' | 'new'>('existing')
-  const [newCust, setNewCust] = useState({ name: '', phone: '' })
+  const [newCust, setNewCust] = useState({ name: '', phone: '', addAsSite: false, siteAddress: '' })
+  const [sites, setSites] = useState<Site[]>([])
+  const [showAddSite, setShowAddSite] = useState(false)
+  const [newSite, setNewSite] = useState({ label: '', address: '' })
+  const [addingSite, setAddingSite] = useState(false)
 
   function set(k: string, v: string) { setForm(f => ({ ...f, [k]: v })) }
+
+  useEffect(() => {
+    if (!form.customerId) { setSites([]); return }
+    supabase.from('customer_sites').select('id, label, address')
+      .eq('customer_id', form.customerId).order('created_at')
+      .then(({ data }) => {
+        setSites((data ?? []) as Site[])
+        set('siteId', data?.[0]?.id ?? '')
+      })
+  }, [form.customerId]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function addSiteInline() {
+    if (!newSite.address.trim() || !form.customerId) return
+    setAddingSite(true)
+    const { data, error } = await supabase.from('customer_sites').insert({
+      customer_id: form.customerId,
+      label: newSite.label.trim() || null,
+      address: newSite.address.trim(),
+    }).select('id, label, address').single()
+    setAddingSite(false)
+    if (error) { toast(error.message, 'error'); return }
+    setSites(prev => [...prev, data as Site])
+    set('siteId', (data as Site).id)
+    setShowAddSite(false)
+    setNewSite({ label: '', address: '' })
+  }
 
   function applyVoice(data: Record<string, string>) {
     if (data.title) set('title', data.title)
@@ -64,9 +96,12 @@ export function NewJobButton({ companyId, customers, nextJobNumber, priceItems =
   }
 
   function reset() {
-    setForm({ customerId: '', title: '', description: '', status: 'unscheduled', reference: '' })
+    setForm({ customerId: '', title: '', description: '', status: 'unscheduled', reference: '', siteId: '' })
     setCustomerMode('existing')
-    setNewCust({ name: '', phone: '' })
+    setNewCust({ name: '', phone: '', addAsSite: false, siteAddress: '' })
+    setSites([])
+    setShowAddSite(false)
+    setNewSite({ label: '', address: '' })
     setLines([emptyLine()])
     setSearchTerms({})
     setStep(1)
@@ -126,6 +161,16 @@ export function NewJobButton({ companyId, customers, nextJobNumber, priceItems =
       toast('Select a customer', 'error'); setLoading(false); return
     }
 
+    // If creating a new customer with "Add as job site" checked, create the site too
+    let siteId: string | null = form.siteId || null
+    if (customerMode === 'new' && newCust.addAsSite && newCust.siteAddress.trim() && customerId) {
+      const { data: site } = await supabase.from('customer_sites').insert({
+        customer_id: customerId,
+        address: newCust.siteAddress.trim(),
+      }).select('id').single()
+      if (site) siteId = site.id
+    }
+
     const { data: job, error } = await supabase.from('jobs').insert({
       company_id: companyId,
       customer_id: customerId,
@@ -134,6 +179,7 @@ export function NewJobButton({ companyId, customers, nextJobNumber, priceItems =
       description: form.description || null,
       status: form.status,
       reference: form.reference || null,
+      site_id: siteId,
     }).select('id').single()
     setLoading(false)
     if (error) { toast(error.message, 'error'); return }
@@ -198,15 +244,52 @@ export function NewJobButton({ companyId, customers, nextJobNumber, priceItems =
                 </button>
               </div>
               {customerMode === 'existing' ? (
-                <Select value={form.customerId} onChange={e => set('customerId', e.target.value)}
+                <Select value={form.customerId} onChange={e => { set('customerId', e.target.value); set('siteId', '') }}
                   placeholder="Select customer..." options={customers.map(c => ({ value: c.id, label: c.name }))} />
               ) : (
                 <div className="space-y-2">
                   <Input value={newCust.name} onChange={e => setNewCust(c => ({ ...c, name: e.target.value }))} placeholder="Customer name *" />
                   <Input value={newCust.phone} onChange={e => setNewCust(c => ({ ...c, phone: e.target.value }))} placeholder="Phone (optional)" />
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" checked={newCust.addAsSite} onChange={e => setNewCust(c => ({ ...c, addAsSite: e.target.checked }))} className="rounded" />
+                    <span className="text-sm text-gray-600">Add as job site</span>
+                  </label>
+                  {newCust.addAsSite && (
+                    <Input value={newCust.siteAddress} onChange={e => setNewCust(c => ({ ...c, siteAddress: e.target.value }))} placeholder="Site address *" />
+                  )}
                 </div>
               )}
             </div>
+            {/* Job site — only shown for existing customers */}
+            {customerMode === 'existing' && form.customerId && (
+              <div>
+                <Label>Job site <span className="text-red-400">*</span></Label>
+                {showAddSite ? (
+                  <div className="space-y-2 border border-orange-200 rounded-xl p-3 bg-orange-50/40">
+                    <Input value={newSite.label} onChange={e => setNewSite(s => ({ ...s, label: e.target.value }))} placeholder="Label (e.g. Main house)" />
+                    <Input value={newSite.address} onChange={e => setNewSite(s => ({ ...s, address: e.target.value }))} placeholder="Full address *" autoFocus />
+                    <div className="flex gap-2">
+                      <Button type="button" size="sm" loading={addingSite} onClick={addSiteInline} disabled={!newSite.address.trim()}>Add site</Button>
+                      <Button type="button" size="sm" variant="outline" onClick={() => { setShowAddSite(false); setNewSite({ label: '', address: '' }) }}>Cancel</Button>
+                    </div>
+                  </div>
+                ) : sites.length === 0 ? (
+                  <div className="text-sm text-gray-400 py-2">
+                    No sites for this customer. <button type="button" className="text-[var(--accent,#f97316)] underline" onClick={() => setShowAddSite(true)}>Add job site</button>
+                  </div>
+                ) : (
+                  <div className="flex gap-2 items-start">
+                    <div className="flex-1">
+                      <Select value={form.siteId} onChange={e => set('siteId', e.target.value)} options={[
+                        ...sites.map(s => ({ value: s.id, label: s.label ? `${s.label} — ${s.address}` : s.address })),
+                      ]} placeholder="Select site..." required />
+                    </div>
+                    <button type="button" onClick={() => setShowAddSite(true)} className="mt-1 text-xs text-[var(--accent,#f97316)] hover:underline whitespace-nowrap">+ Add site</button>
+                  </div>
+                )}
+              </div>
+            )}
+
             <div>
               <Label>Title <span className="text-red-400">*</span></Label>
               <Input value={form.title} onChange={e => set('title', e.target.value)} required placeholder="e.g. Install heat pump" />

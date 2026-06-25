@@ -151,6 +151,7 @@ export function QuoteBuilder({ companyId, profileId, quoteNumber, gstRate, custo
   const { toast } = useToast()
   const [saving, setSaving] = useState(false)
   const [addItemOpen, setAddItemOpen] = useState<string | null>(null)
+  const [priceSearch, setPriceSearch] = useState('')
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['main']))
 
   const [meta, setMeta] = useState({
@@ -578,9 +579,16 @@ export function QuoteBuilder({ companyId, profileId, quoteNumber, gstRate, custo
       </div>
 
       {/* Price list dialog */}
-      <Dialog open={!!addItemOpen} onClose={() => setAddItemOpen(null)} title="Add from price list" className="max-w-2xl">
+      <Dialog open={!!addItemOpen} onClose={() => { setAddItemOpen(null); setPriceSearch('') }} title="Add from price list" className="max-w-2xl">
         <div className="space-y-4">
-          {kits.length > 0 && (
+          <input
+            autoFocus
+            value={priceSearch}
+            onChange={e => setPriceSearch(e.target.value)}
+            placeholder="Search items…"
+            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-orange-400"
+          />
+          {kits.length > 0 && !priceSearch && (
             <div>
               <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Kits</p>
               <div className="grid grid-cols-2 gap-2">
@@ -595,10 +603,10 @@ export function QuoteBuilder({ companyId, profileId, quoteNumber, gstRate, custo
             </div>
           )}
           <div>
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Items</p>
+            {!priceSearch && <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Items</p>}
             <div className="space-y-1 max-h-96 overflow-y-auto">
-              {priceItems.map(item => (
-                <button key={item.id} onClick={() => addFromPriceList(addItemOpen!, item)}
+              {priceItems.filter(i => !priceSearch || i.name.toLowerCase().includes(priceSearch.toLowerCase())).map(item => (
+                <button key={item.id} onClick={() => { addFromPriceList(addItemOpen!, item); setPriceSearch('') }}
                   className="w-full text-left px-3 py-2 rounded-lg hover:bg-gray-50 flex items-center justify-between">
                   <div>
                     <p className="text-sm text-gray-800">{item.name}</p>

@@ -106,7 +106,7 @@ export default function HomeScreen() {
       supabase.from('quotes')
         .select('id', { count: 'exact', head: true })
         .eq('company_id', prof.company_id)
-        .eq('status', 'draft'),
+        .eq('status', 'accepted'),
       supabase.from('todos')
         .select('id', { count: 'exact', head: true })
         .eq('assigned_to', user.id)
@@ -132,7 +132,7 @@ export default function HomeScreen() {
     setTodos((todosRes.data ?? []) as Todo[])
     setStats({
       openJobs: openJobsRes.count ?? 0,
-      draftQuotes: draftQuotesRes.count ?? 0,
+      draftQuotes: draftQuotesRes.count ?? 0, // now "accepted quotes"
       pendingTodos: pendingTodosRes.count ?? 0,
     })
   }, [])
@@ -198,7 +198,7 @@ export default function HomeScreen() {
           </TouchableOpacity>
           <TouchableOpacity style={s.statCard} onPress={() => router.push('/(tabs)/quotes')} activeOpacity={0.7}>
             <Text style={s.statNum}>{stats.draftQuotes}</Text>
-            <Text style={s.statLbl}>Draft quotes</Text>
+            <Text style={s.statLbl}>Accepted quotes</Text>
           </TouchableOpacity>
           <TouchableOpacity style={s.statCard} onPress={() => router.push('/todos')} activeOpacity={0.7}>
             <Text style={[s.statNum, stats.pendingTodos > 0 && { color: '#f97316' }]}>{stats.pendingTodos}</Text>

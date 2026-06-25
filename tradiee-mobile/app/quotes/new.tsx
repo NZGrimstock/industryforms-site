@@ -30,6 +30,9 @@ export default function NewQuoteScreen() {
   const [userId, setUserId] = useState<string | null>(null)
   const [gstRate, setGstRate] = useState(0.15)
   const [saving, setSaving] = useState(false)
+  const [showNewCustomer, setShowNewCustomer] = useState(false)
+  const [newCust, setNewCust] = useState({ name: '', email: '', phone: '' })
+  const [creatingCust, setCreatingCust] = useState(false)
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -64,6 +67,29 @@ export default function NewQuoteScreen() {
   const subtotal = lineItems.reduce((s, i) => s + (parseFloat(i.quantity) || 0) * (parseFloat(i.unit_price) || 0), 0)
   const gst = subtotal * gstRate
   const total = subtotal + gst
+
+  async function createCustomer() {
+    if (!newCust.name.trim() || !companyId) return
+    setCreatingCust(true)
+    const { data, error } = await supabase.from('customers').insert({
+      name: newCust.name.trim(),
+      email: newCust.email.trim() || null,
+      phone: newCust.phone.trim() || null,
+      company_id: companyId,
+    }).select('id, name, phone, email').single()
+    setCreatingCust(false)
+    if (error) { Alert.alert('Error', error.message); return }
+    if (data) {
+      setCustomers(prev => [data, ...prev].sort((a, b) => a.name.localeCompare(b.name)))
+      setCustomerId(data.id)
+      setCustomerName(data.name)
+      setCustomerEmail(data.email)
+      setNewCust({ name: '', email: '', phone: '' })
+      setShowNewCustomer(false)
+      setShowPicker(false)
+      setSearch('')
+    }
+  }
 
   async function save(andSend: boolean) {
     if (!title.trim()) { Alert.alert('Title required'); return }
@@ -226,36 +252,69 @@ export default function NewQuoteScreen() {
       </ScrollView>
 
       {/* Customer picker */}
-      <Modal visible={showPicker} animationType="slide" presentationStyle="pageSheet">
+      <Modal visible={showPicker} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => { setShowPicker(false); setSearch(''); setShowNewCustomer(false) }}>
         <SafeAreaView style={{ flex: 1, backgroundColor: '#f9fafb' }}>
           <View style={s.modalHeader}>
             <Text style={s.modalTitle}>Select Customer</Text>
-            <TouchableOpacity onPress={() => { setShowPicker(false); setSearch('') }}>
+            <TouchableOpacity onPress={() => { setShowPicker(false); setSearch(''); setShowNewCustomer(false) }}>
               <Text style={s.modalClose}>Done</Text>
             </TouchableOpacity>
           </View>
-          <View style={s.searchBox}>
-            <Feather name="search" size={15} color="#9ca3af" />
-            <TextInput style={s.searchInput} value={search} onChangeText={setSearch} placeholder="Search customers…" placeholderTextColor="#9ca3af" autoFocus />
-          </View>
-          <FlatList
-            data={filteredCustomers}
-            keyExtractor={c => c.id}
-            contentContainerStyle={{ padding: 12 }}
-            renderItem={({ item }) => (
-              <TouchableOpacity style={s.custRow} onPress={() => {
-                setCustomerId(item.id)
-                setCustomerName(item.name)
-                setCustomerEmail(item.email)
-                setShowPicker(false)
-                setSearch('')
-              }} activeOpacity={0.6}>
-                <Text style={s.custName}>{item.name}</Text>
-                {item.email && <Text style={s.custSub}>{item.email}</Text>}
+          {!showNewCustomer ? (
+            <>
+              <View style={s.searchBox}>
+                <Feather name="search" size={15} color="#9ca3af" />
+                <TextInput style={s.searchInput} value={search} onChangeText={setSearch} placeholder="Search customers…" placeholderTextColor="#9ca3af" autoFocus />
+              </View>
+              <FlatList
+                data={filteredCustomers}
+                keyExtractor={c => c.id}
+                contentContainerStyle={{ padding: 12 }}
+                ListHeaderComponent={
+                  <TouchableOpacity
+                    style={[s.custRow, { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#fff7ed', borderRadius: 12, marginBottom: 8 }]}
+                    onPress={() => setShowNewCustomer(true)}
+                  >
+                    <Feather name="plus-circle" size={16} color="#f97316" />
+                    <Text style={{ color: '#f97316', fontWeight: '700', fontSize: 15 }}>New customer</Text>
+                  </TouchableOpacity>
+                }
+                renderItem={({ item }) => (
+                  <TouchableOpacity style={s.custRow} onPress={() => {
+                    setCustomerId(item.id)
+                    setCustomerName(item.name)
+                    setCustomerEmail(item.email)
+                    setShowPicker(false)
+                    setSearch('')
+                  }} activeOpacity={0.6}>
+                    <Text style={s.custName}>{item.name}</Text>
+                    {item.email && <Text style={s.custSub}>{item.email}</Text>}
+                  </TouchableOpacity>
+                )}
+                ListEmptyComponent={<Text style={{ color: '#9ca3af', textAlign: 'center', padding: 24 }}>No customers found</Text>}
+              />
+            </>
+          ) : (
+            <ScrollView contentContainerStyle={{ padding: 20 }}>
+              <TouchableOpacity onPress={() => setShowNewCustomer(false)} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 20 }}>
+                <Feather name="chevron-left" size={16} color="#f97316" />
+                <Text style={{ color: '#f97316', fontWeight: '600' }}>Back to search</Text>
               </TouchableOpacity>
-            )}
-            ListEmptyComponent={<Text style={{ color: '#9ca3af', textAlign: 'center', padding: 24 }}>No customers found</Text>}
-          />
+              <Text style={s.label}>Name *</Text>
+              <TextInput style={[s.input, { marginBottom: 14 }]} value={newCust.name} onChangeText={v => setNewCust(p => ({ ...p, name: v }))} placeholder="Customer name" placeholderTextColor="#9ca3af" autoFocus />
+              <Text style={s.label}>Email</Text>
+              <TextInput style={[s.input, { marginBottom: 14 }]} value={newCust.email} onChangeText={v => setNewCust(p => ({ ...p, email: v }))} placeholder="customer@email.com" placeholderTextColor="#9ca3af" keyboardType="email-address" autoCapitalize="none" />
+              <Text style={s.label}>Phone</Text>
+              <TextInput style={[s.input, { marginBottom: 24 }]} value={newCust.phone} onChangeText={v => setNewCust(p => ({ ...p, phone: v }))} placeholder="+64 21 000 0000" placeholderTextColor="#9ca3af" keyboardType="phone-pad" />
+              <TouchableOpacity
+                style={[s.btn, (!newCust.name.trim() || creatingCust) && { opacity: 0.5 }]}
+                onPress={createCustomer}
+                disabled={!newCust.name.trim() || creatingCust}
+              >
+                {creatingCust ? <ActivityIndicator color="#fff" /> : <Text style={s.btnText}>Create customer</Text>}
+              </TouchableOpacity>
+            </ScrollView>
+          )}
         </SafeAreaView>
       </Modal>
     </KeyboardAvoidingView>

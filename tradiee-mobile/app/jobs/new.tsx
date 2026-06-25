@@ -7,8 +7,11 @@ import { router, Stack } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Feather } from '@expo/vector-icons'
 import { supabase } from '@/lib/supabase'
+import Constants from 'expo-constants'
 
 type Customer = { id: string; name: string; phone: string | null }
+
+const API_BASE = Constants.expoConfig?.extra?.apiUrl ?? 'http://localhost:3000'
 
 export default function NewJobScreen() {
   const [title, setTitle] = useState('')
@@ -21,6 +24,9 @@ export default function NewJobScreen() {
   const [companyId, setCompanyId] = useState<string | null>(null)
   const [userId, setUserId] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+  const [showNewCustomer, setShowNewCustomer] = useState(false)
+  const [newCust, setNewCust] = useState({ name: '', phone: '' })
+  const [creatingCust, setCreatingCust] = useState(false)
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -45,21 +51,54 @@ export default function NewJobScreen() {
     c.name.toLowerCase().includes(customerSearch.toLowerCase())
   )
 
+  async function createCustomer() {
+    if (!newCust.name.trim()) { Alert.alert('Name required'); return }
+    if (!companyId) return
+    setCreatingCust(true)
+    const { data, error } = await supabase.from('customers').insert({
+      name: newCust.name.trim(),
+      phone: newCust.phone.trim() || null,
+      company_id: companyId,
+      is_active: true,
+    }).select('id, name, phone').single()
+    setCreatingCust(false)
+    if (error) { Alert.alert('Error', error.message); return }
+    setCustomers(prev => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)))
+    setCustomerId(data.id)
+    setCustomerName(data.name)
+    setShowNewCustomer(false)
+    setShowPicker(false)
+    setCustomerSearch('')
+    setNewCust({ name: '', phone: '' })
+  }
+
   async function save() {
     if (!title.trim()) { Alert.alert('Title required', 'Please enter a job title.'); return }
     if (!companyId || !userId) return
     setSaving(true)
-    const { data, error } = await supabase.from('jobs').insert({
-      title: title.trim(),
-      description: description.trim() || null,
-      company_id: companyId,
-      customer_id: customerId,
-      assigned_to: userId,
-      status: 'unscheduled',
-    }).select('id').single()
+    const { data: { session } } = await supabase.auth.getSession()
+    const token = session?.access_token
+    const res = await fetch(`${API_BASE}/api/jobs`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify({
+        title: title.trim(),
+        description: description.trim() || null,
+        customer_id: customerId,
+        status: 'unscheduled',
+      }),
+    })
     setSaving(false)
-    if (error) { Alert.alert('Error', error.message); return }
-    router.replace(`/jobs/${data.id}`)
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      Alert.alert('Error', (err as { error?: string }).error ?? 'Failed to create job')
+      return
+    }
+    const job = await res.json() as { id: string; job_number: string }
+    router.replace(`/jobs/${job.id}`)
   }
 
   return (
@@ -121,48 +160,96 @@ export default function NewJobScreen() {
         </TouchableOpacity>
       </ScrollView>
 
-      <Modal visible={showPicker} animationType="slide" presentationStyle="pageSheet">
+      <Modal visible={showPicker} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => { setShowPicker(false); setCustomerSearch(''); setShowNewCustomer(false) }}>
         <SafeAreaView style={{ flex: 1, backgroundColor: '#f9fafb' }}>
           <View style={s.modalHeader}>
-            <Text style={s.modalTitle}>Select Customer</Text>
-            <TouchableOpacity onPress={() => { setShowPicker(false); setCustomerSearch('') }}>
-              <Text style={s.modalClose}>Done</Text>
+            <Text style={s.modalTitle}>{showNewCustomer ? 'New Customer' : 'Select Customer'}</Text>
+            <TouchableOpacity onPress={() => {
+              if (showNewCustomer) { setShowNewCustomer(false); setNewCust({ name: '', phone: '' }) }
+              else { setShowPicker(false); setCustomerSearch('') }
+            }}>
+              <Text style={s.modalClose}>{showNewCustomer ? '← Back' : 'Done'}</Text>
             </TouchableOpacity>
           </View>
-          <View style={s.searchBox}>
-            <Feather name="search" size={15} color="#9ca3af" />
-            <TextInput
-              style={s.searchInput}
-              value={customerSearch}
-              onChangeText={setCustomerSearch}
-              placeholder="Search customers…"
-              placeholderTextColor="#9ca3af"
-              autoFocus
-            />
-          </View>
-          <FlatList
-            data={filteredCustomers}
-            keyExtractor={c => c.id}
-            contentContainerStyle={{ padding: 12 }}
-            renderItem={({ item }) => (
+
+          {showNewCustomer ? (
+            <View style={{ padding: 16, gap: 12 }}>
+              <TextInput
+                style={s.input}
+                value={newCust.name}
+                onChangeText={v => setNewCust(p => ({ ...p, name: v }))}
+                placeholder="Full name *"
+                placeholderTextColor="#9ca3af"
+                autoFocus
+              />
+              <TextInput
+                style={s.input}
+                value={newCust.phone}
+                onChangeText={v => setNewCust(p => ({ ...p, phone: v }))}
+                placeholder="Phone number"
+                placeholderTextColor="#9ca3af"
+                keyboardType="phone-pad"
+              />
               <TouchableOpacity
-                style={s.custRow}
-                onPress={() => {
-                  setCustomerId(item.id)
-                  setCustomerName(item.name)
-                  setShowPicker(false)
-                  setCustomerSearch('')
-                }}
-                activeOpacity={0.6}
+                style={[s.btn, (!newCust.name.trim() || creatingCust) && { opacity: 0.5 }]}
+                onPress={createCustomer}
+                disabled={!newCust.name.trim() || creatingCust}
+                activeOpacity={0.85}
               >
-                <Text style={s.custName}>{item.name}</Text>
-                {item.phone && <Text style={s.custSub}>{item.phone}</Text>}
+                {creatingCust
+                  ? <ActivityIndicator color="#fff" />
+                  : <Text style={s.btnText}>Create customer</Text>
+                }
               </TouchableOpacity>
-            )}
-            ListEmptyComponent={
-              <Text style={{ color: '#9ca3af', textAlign: 'center', padding: 24 }}>No customers found</Text>
-            }
-          />
+            </View>
+          ) : (
+            <>
+              <View style={s.searchBox}>
+                <Feather name="search" size={15} color="#9ca3af" />
+                <TextInput
+                  style={s.searchInput}
+                  value={customerSearch}
+                  onChangeText={setCustomerSearch}
+                  placeholder="Search customers…"
+                  placeholderTextColor="#9ca3af"
+                  autoFocus
+                />
+              </View>
+              <FlatList
+                data={filteredCustomers}
+                keyExtractor={c => c.id}
+                contentContainerStyle={{ padding: 12 }}
+                ListHeaderComponent={
+                  <TouchableOpacity
+                    style={[s.custRow, { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#fff7ed', marginBottom: 8 }]}
+                    onPress={() => { setShowNewCustomer(true); setCustomerSearch('') }}
+                    activeOpacity={0.7}
+                  >
+                    <Feather name="plus-circle" size={16} color="#f97316" />
+                    <Text style={[s.custName, { color: '#f97316' }]}>New customer</Text>
+                  </TouchableOpacity>
+                }
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    style={s.custRow}
+                    onPress={() => {
+                      setCustomerId(item.id)
+                      setCustomerName(item.name)
+                      setShowPicker(false)
+                      setCustomerSearch('')
+                    }}
+                    activeOpacity={0.6}
+                  >
+                    <Text style={s.custName}>{item.name}</Text>
+                    {item.phone && <Text style={s.custSub}>{item.phone}</Text>}
+                  </TouchableOpacity>
+                )}
+                ListEmptyComponent={
+                  <Text style={{ color: '#9ca3af', textAlign: 'center', padding: 24 }}>No customers found</Text>
+                }
+              />
+            </>
+          )}
         </SafeAreaView>
       </Modal>
     </KeyboardAvoidingView>

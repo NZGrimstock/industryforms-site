@@ -49,6 +49,12 @@ export function SettingsClient({ profile, company, team: initialTeam, googleConn
   const [googleSyncing, setGoogleSyncing] = useState(false)
   const [googleDisconnecting, setGoogleDisconnecting] = useState(false)
 
+  const SYSTEM_DEFAULT_STAGES = ['Planning & design', 'Materials & ordering', 'Site prep', 'Construction', 'Finishing & sign-off']
+  const [projectStages, setProjectStages] = useState<string[]>(company.default_project_stages ?? SYSTEM_DEFAULT_STAGES)
+  const [autoAddStages, setAutoAddStages] = useState(true)
+  const [newStage, setNewStage] = useState('')
+  const [savingStages, setSavingStages] = useState(false)
+
   const [companyForm, setCompanyForm] = useState({
     name: company.name ?? '',
     trade_type: company.trade_type ?? '',
@@ -185,6 +191,15 @@ export function SettingsClient({ profile, company, team: initialTeam, googleConn
     if (error) toast(error.message, 'error')
     else { toast('Company settings saved'); router.refresh() }
     setLoading(false)
+  }
+
+  async function saveProjectStages() {
+    setSavingStages(true)
+    const value = autoAddStages ? (projectStages.length > 0 ? projectStages : []) : []
+    const { error } = await supabase.from('companies').update({ default_project_stages: value }).eq('id', company.id)
+    setSavingStages(false)
+    if (error) toast(error.message, 'error')
+    else toast('Default stages saved')
   }
 
   async function saveProfile(e: React.FormEvent) {
@@ -502,6 +517,46 @@ export function SettingsClient({ profile, company, team: initialTeam, googleConn
             <CardContent>
               <p className="text-xs text-gray-500 mb-3">Forward customer enquiries to this address — they land as enquiries automatically.</p>
               <EnquiryInboxManager companyId={company.id} initialToken={(company as Company & { inbound_email_token?: string | null }).inbound_email_token ?? null} />
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader><CardTitle>Default project stages</CardTitle></CardHeader>
+            <CardContent>
+              <p className="text-xs text-gray-500 mb-4">These stages are automatically added whenever a new project is created. Drag to reorder is not yet supported — delete and re-add to change order.</p>
+              <label className="flex items-center gap-2 mb-4 cursor-pointer">
+                <input type="checkbox" checked={autoAddStages} onChange={e => setAutoAddStages(e.target.checked)} className="rounded" />
+                <span className="text-sm text-gray-700">Auto-add stages to new projects</span>
+              </label>
+              {autoAddStages && (
+                <div className="space-y-3">
+                  <ul className="space-y-2">
+                    {projectStages.map((name, i) => (
+                      <li key={i} className="flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-2">
+                        <span className="flex-1 text-sm text-gray-800">{name}</span>
+                        <button type="button" onClick={() => setProjectStages(s => s.filter((_, idx) => idx !== i))} className="text-gray-300 hover:text-red-400">
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={newStage}
+                      onChange={e => setNewStage(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter' && newStage.trim()) { setProjectStages(s => [...s, newStage.trim()]); setNewStage('') } }}
+                      placeholder="Add a stage name…"
+                      className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[var(--accent,#f97316)]"
+                    />
+                    <Button type="button" size="sm" variant="outline" onClick={() => { if (newStage.trim()) { setProjectStages(s => [...s, newStage.trim()]); setNewStage('') } }}>
+                      Add
+                    </Button>
+                  </div>
+                </div>
+              )}
+              <div className="mt-4">
+                <Button onClick={saveProjectStages} loading={savingStages} size="sm">Save stages</Button>
+              </div>
             </CardContent>
           </Card>
         </div>

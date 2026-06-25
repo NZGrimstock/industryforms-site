@@ -30,6 +30,7 @@ export interface Company {
   xero_access_token: string | null
   xero_refresh_token: string | null
   xero_token_expires_at: string | null
+  default_project_stages: string[] | null
   created_at: string
   updated_at: string
 }

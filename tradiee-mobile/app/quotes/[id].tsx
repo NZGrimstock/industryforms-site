@@ -68,6 +68,7 @@ let _uid = 0
 export default function QuoteDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>()
   const [sending, setSending] = useState(false)
+  const [accepting, setAccepting] = useState(false)
   const [converting, setConverting] = useState(false)
   const [showAddItem, setShowAddItem] = useState(false)
   const [newItem, setNewItem] = useState({ description: '', quantity: '1', unit_price: '' })
@@ -122,6 +123,46 @@ export default function QuoteDetailScreen() {
     }
   }
 
+  async function acceptQuote() {
+    if (!quote) return
+    Alert.alert(
+      'Accept Quote',
+      `Accept "${quote.title}" and auto-create a job?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Accept & Create Job', onPress: async () => {
+            setAccepting(true)
+            try {
+              // Mark quote as accepted
+              await supabase.from('quotes').update({ status: 'accepted', accepted_at: new Date().toISOString() }).eq('id', id!)
+              // Create job via API
+              const { data: { session } } = await supabase.auth.getSession()
+              const apiBase = (process.env.EXPO_PUBLIC_API_URL ?? '').replace(/\/$/, '')
+              const res = await fetch(`${apiBase}/api/jobs`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
+                body: JSON.stringify({
+                  title: quote.title,
+                  description: quote.customer_message ?? undefined,
+                  customer_id: quote.customer_id ?? undefined,
+                  quote_id: id,
+                }),
+              })
+              const json = await res.json()
+              if (!res.ok) throw new Error(json.error ?? 'Could not create job')
+              router.push(`/jobs/${json.id}`)
+            } catch (e: any) {
+              Alert.alert('Error', e.message ?? 'Could not accept quote')
+            } finally {
+              setAccepting(false)
+            }
+          },
+        },
+      ]
+    )
+  }
+
   async function convertToJob() {
     if (!quote) return
     Alert.alert(
@@ -132,17 +173,30 @@ export default function QuoteDetailScreen() {
         {
           text: 'Create Job', onPress: async () => {
             setConverting(true)
-            const { data: { user } } = await supabase.auth.getUser()
-            const { data, error } = await supabase.from('jobs').insert({
-              title: quote.title,
-              company_id: quote.company_id,
-              customer_id: quote.customer_id,
-              assigned_to: user?.id,
-              status: 'unscheduled',
-            }).select('id').single()
-            setConverting(false)
-            if (error) { Alert.alert('Error', error.message); return }
-            router.push(`/jobs/${data.id}`)
+            try {
+              const { data: { session } } = await supabase.auth.getSession()
+              const apiBase = (process.env.EXPO_PUBLIC_API_URL ?? '').replace(/\/$/, '')
+              const res = await fetch(`${apiBase}/api/jobs`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  Authorization: `Bearer ${session?.access_token}`,
+                },
+                body: JSON.stringify({
+                  title: quote.title,
+                  description: quote.customer_message ?? undefined,
+                  customer_id: quote.customer_id ?? undefined,
+                  quote_id: id,
+                }),
+              })
+              const json = await res.json()
+              if (!res.ok) throw new Error(json.error ?? 'Could not create job')
+              router.push(`/jobs/${json.id}`)
+            } catch (e: any) {
+              Alert.alert('Error', e.message ?? 'Could not create job')
+            } finally {
+              setConverting(false)
+            }
           },
         },
       ]
@@ -227,6 +281,7 @@ export default function QuoteDetailScreen() {
 
   const color = STATUS_COLOR[quote.status] ?? '#9ca3af'
   const isDraft = quote.status === 'draft'
+  const isSent = quote.status === 'sent'
   const isAccepted = quote.status === 'accepted'
 
   const sectionMap = new Map<string, LineItem[]>()
@@ -280,8 +335,21 @@ export default function QuoteDetailScreen() {
           )}
 
           {/* Action buttons */}
-          {(isDraft || isAccepted) && (
+          {(isDraft || isSent || isAccepted) && (
             <View style={s.actionRow}>
+              {isSent && (
+                <TouchableOpacity
+                  style={[s.actionBtn, { backgroundColor: '#22c55e' }, accepting && { opacity: 0.6 }]}
+                  onPress={acceptQuote}
+                  disabled={accepting}
+                  activeOpacity={0.85}
+                >
+                  {accepting
+                    ? <ActivityIndicator color="#fff" size="small" />
+                    : <><Feather name="check-circle" size={14} color="#fff" /><Text style={s.actionBtnText}> Accept &amp; Create Job</Text></>
+                  }
+                </TouchableOpacity>
+              )}
               {isDraft && (
                 <TouchableOpacity
                   style={[s.actionBtn, s.sendBtn, sending && { opacity: 0.6 }]}

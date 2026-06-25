@@ -48,7 +48,7 @@ const groups: Group[] = [
       { href: '/jobs', label: 'Jobs', icon: Briefcase },
       { href: '/jobs/map', label: 'Job Map', icon: Map },
       { href: '/schedule', label: 'Schedule', icon: Calendar },
-      { href: '/timesheets', label: 'Timesheets', icon: Clock },
+      { href: '/time-logs', label: 'Time Logs', icon: Clock },
       { href: '/logbook', label: 'Vehicle Logbook', icon: Truck },
       { href: '/invoices', label: 'Invoices', icon: Receipt },
       { href: '/forms', label: 'Forms', icon: ClipboardList },
@@ -87,7 +87,7 @@ function isActive(pathname: string, href: string) {
 }
 
 // Field staff get a focused nav — no sales/financial/procurement/projects pages.
-const STAFF_HREFS = new Set(['/dashboard', '/jobs', '/jobs/map', '/schedule', '/timesheets', '/forms', '/todos', '/settings'])
+const STAFF_HREFS = new Set(['/dashboard', '/jobs', '/jobs/map', '/schedule', '/time-logs', '/forms', '/todos', '/settings'])
 const STAFF_TOP_HREFS = new Set(['/dashboard'])
 
 export function Sidebar({ isStaff = false }: { isStaff?: boolean }) {
