@@ -20,6 +20,7 @@ import { ProgressClaims } from '@/components/ui/progress-claims'
 import { ComplianceDocs } from '@/components/compliance/ComplianceDocs'
 import { InviteSubcontractorModal } from '@/components/jobs/InviteSubcontractorModal'
 import { SubcontractorStatus } from '@/components/jobs/SubcontractorStatus'
+import { JobAssigneesCard } from './assignees'
 import Link from 'next/link'
 import { MapPin } from 'lucide-react'
 
@@ -67,6 +68,11 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
         })
     )
   }
+
+  const { data: jobAssignees } = await supabase
+    .from('job_assignees')
+    .select('id, profile_id, profiles(full_name, job_title)')
+    .eq('job_id', id)
 
   const profileHasSignature = !!((profile as Record<string, unknown>).signature_base64)
 
@@ -295,6 +301,14 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
             )}
           </CardContent>
         </Card>
+
+        {/* Secondary workers */}
+        <JobAssigneesCard
+          jobId={job.id}
+          companyId={profile!.company_id}
+          assignees={(jobAssignees ?? []) as Parameters<typeof JobAssigneesCard>[0]['assignees']}
+          team={teamRes.data ?? []}
+        />
 
         {/* Subcontractors — renders nothing when no invitations exist */}
         <SubcontractorStatus contractorJobId={id} companyId={profile!.company_id} />

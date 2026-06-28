@@ -6,6 +6,7 @@ import { formatDate } from '@/lib/utils'
 import { getJobStatuses } from '@/lib/job-statuses'
 import Link from 'next/link'
 import { Briefcase, List, LayoutGrid, Map } from 'lucide-react'
+import { DeleteConfirmButton } from '@/components/ui/delete-confirm-button'
 import React from 'react'
 import { NewJobButton } from './client'
 import { JobBoard } from './board'
@@ -126,6 +127,7 @@ export default async function JobsPage({ searchParams }: { searchParams: Promise
                     <th className="text-left px-6 py-3 font-medium text-gray-500"><SortHeader label="Status" column="status" basePath="/jobs" params={sortParams} sort={sp.sort} dir={sp.dir} /></th>
                     <th className="text-left px-6 py-3 font-medium text-gray-500">Assigned to</th>
                     <th className="text-left px-6 py-3 font-medium text-gray-500"><SortHeader label="Created" column="created_at" basePath="/jobs" params={sortParams} sort={sp.sort} dir={sp.dir} /></th>
+                    <th className="w-10 px-3"></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
@@ -138,6 +140,7 @@ export default async function JobsPage({ searchParams }: { searchParams: Promise
                       <td className="px-6 py-3"><InlineStatus jobId={j.id} status={j.status} statuses={jobStatuses} /></td>
                       <td className="p-0"><Link href={`/jobs/${j.id}`} className="block px-6 py-3 text-gray-500">{(j.profiles as {full_name: string} | null)?.full_name ?? '—'}</Link></td>
                       <td className="p-0"><Link href={`/jobs/${j.id}`} className="block px-6 py-3 text-gray-400">{formatDate(j.created_at)}</Link></td>
+                      <td className="px-3"><DeleteConfirmButton id={j.id} table="jobs" label="job" /></td>
                     </tr>
                   ))}
                 </tbody>

@@ -7,6 +7,7 @@ import { formatDate } from '@/lib/utils'
 import Link from 'next/link'
 import { MessageSquare } from 'lucide-react'
 import { EnquiryActions } from './client'
+import { DeleteConfirmButton } from '@/components/ui/delete-confirm-button'
 
 export default async function EnquiriesPage({ searchParams }: { searchParams: Promise<{ status?: string; new?: string }> }) {
   const sp = await searchParams
@@ -66,6 +67,7 @@ export default async function EnquiriesPage({ searchParams }: { searchParams: Pr
                   <th className="text-left px-6 py-3 font-medium text-gray-500">Status</th>
                   <th className="text-left px-6 py-3 font-medium text-gray-500">Assigned to</th>
                   <th className="text-left px-6 py-3 font-medium text-gray-500">Received</th>
+                  <th className="w-10 px-3"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
@@ -95,6 +97,7 @@ export default async function EnquiriesPage({ searchParams }: { searchParams: Pr
                     <td className="p-0">
                       <Link href={`/enquiries/${e.id}`} className="block px-6 py-3 text-gray-400">{formatDate(e.created_at)}</Link>
                     </td>
+                    <td className="px-3"><DeleteConfirmButton id={e.id} table="enquiries" label="enquiry" /></td>
                   </tr>
                 ))}
               </tbody>

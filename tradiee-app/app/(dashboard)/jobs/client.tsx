@@ -24,7 +24,7 @@ interface QuickLine {
   unit: string
   unit_cost: string
   sell_price: string
-  price_item_id: string | null
+  price_list_item_id: string | null
   type: 'material' | 'labour'
 }
 
@@ -40,7 +40,7 @@ interface Props {
 }
 
 const emptyLine = (): QuickLine => ({
-  description: '', quantity: '1', unit: 'each', unit_cost: '', sell_price: '', price_item_id: null, type: 'material',
+  description: '', quantity: '1', unit: 'each', unit_cost: '', sell_price: '', price_list_item_id: null, type: 'material',
 })
 
 export function NewJobButton({ companyId, customers, nextJobNumber, priceItems = [], initialOpen = false, initialTitle = '', initialDescription = '', initialCustomerId = '' }: Props) {
@@ -121,7 +121,7 @@ export function NewJobButton({ companyId, customers, nextJobNumber, priceItems =
       unit: item.unit,
       unit_cost: item.cost_price.toString(),
       sell_price: item.sell_price.toString(),
-      price_item_id: item.id,
+      price_list_item_id: item.id,
     } : l))
     setSearchTerms(prev => ({ ...prev, [i]: '' }))
   }
@@ -202,7 +202,7 @@ export function NewJobButton({ companyId, customers, nextJobNumber, priceItems =
           unit: l.unit,
           unit_cost: parseFloat(l.unit_cost) || 0,
           unit_price: parseFloat(l.sell_price) || parseFloat(l.unit_cost) || 0,
-          price_item_id: l.price_item_id,
+          price_list_item_id: l.price_list_item_id,
         }))
         const { error } = await supabase.from('job_materials').insert(rows)
         setLoading(false)
@@ -235,11 +235,11 @@ export function NewJobButton({ companyId, customers, nextJobNumber, priceItems =
               <Label>Customer <span className="text-red-400">*</span></Label>
               <div className="flex gap-2 mb-2">
                 <button type="button" onClick={() => setCustomerMode('existing')}
-                  className={`flex-1 py-1.5 text-xs rounded-lg border ${customerMode === 'existing' ? 'border-[var(--accent,#f97316)] bg-orange-50 text-[var(--accent,#f97316)]' : 'border-gray-200 text-gray-500 hover:bg-gray-50'}`}>
+                  className={`flex-1 py-1.5 text-xs rounded-lg border ${customerMode === 'existing' ? 'border-[var(--accent,#f97316)] bg-orange-50 text-[var(--accent,#f97316)]' : 'border-gray-200 text-gray-700 hover:bg-gray-50'}`}>
                   Existing
                 </button>
                 <button type="button" onClick={() => setCustomerMode('new')}
-                  className={`flex-1 py-1.5 text-xs rounded-lg border ${customerMode === 'new' ? 'border-[var(--accent,#f97316)] bg-orange-50 text-[var(--accent,#f97316)]' : 'border-gray-200 text-gray-500 hover:bg-gray-50'}`}>
+                  className={`flex-1 py-1.5 text-xs rounded-lg border ${customerMode === 'new' ? 'border-[var(--accent,#f97316)] bg-orange-50 text-[var(--accent,#f97316)]' : 'border-gray-200 text-gray-700 hover:bg-gray-50'}`}>
                   + New customer
                 </button>
               </div>
@@ -338,7 +338,7 @@ export function NewJobButton({ companyId, customers, nextJobNumber, priceItems =
                 return (
                   <div key={i} className={`border rounded-xl p-3 ${line.type === 'labour' ? 'border-blue-100 bg-blue-50/30' : 'border-gray-100 bg-gray-50/50'}`}>
                     <div className="flex items-center gap-2 mb-2">
-                      <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${line.type === 'labour' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'}`}>
+                      <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${line.type === 'labour' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'}`}>
                         {line.type === 'labour' ? 'Labour' : 'Material'}
                       </span>
                       {total > 0 && <span className="text-xs text-gray-400 ml-auto">{formatCurrency(total)}</span>}

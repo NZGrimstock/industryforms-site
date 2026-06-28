@@ -97,7 +97,7 @@ export function SettingsClient({ profile, company, team: initialTeam, googleConn
   })
 
   const [editForm, setEditForm] = useState({
-    role: 'staff', hourly_bill_rate: '', hourly_cost_rate: '', is_active: true, vehicle_registration: '',
+    role: 'staff', hourly_bill_rate: '', hourly_cost_rate: '', is_active: true, vehicle_registration: '', job_title: '',
   })
 
   function setC(k: string, v: string) { setCompanyForm(f => ({ ...f, [k]: v })) }
@@ -284,6 +284,7 @@ export function SettingsClient({ profile, company, team: initialTeam, googleConn
     setEditForm({
       role: member.role ?? 'staff',
       vehicle_registration: (member as unknown as { vehicle_registration?: string }).vehicle_registration ?? '',
+      job_title: (member as unknown as { job_title?: string }).job_title ?? '',
       hourly_bill_rate: member.hourly_bill_rate?.toString() ?? '',
       hourly_cost_rate: member.hourly_cost_rate?.toString() ?? '',
       is_active: member.is_active ?? true,
@@ -300,6 +301,7 @@ export function SettingsClient({ profile, company, team: initialTeam, googleConn
       hourly_cost_rate: editForm.hourly_cost_rate ? parseFloat(editForm.hourly_cost_rate) : null,
       is_active: editForm.is_active,
       vehicle_registration: editForm.vehicle_registration || null,
+      job_title: editForm.job_title || null,
     }).eq('id', editMember.id)
     if (error) { toast(error.message, 'error'); setLoading(false); return }
     setTeam(prev => prev.map(m => m.id === editMember.id
@@ -882,6 +884,10 @@ export function SettingsClient({ profile, company, team: initialTeam, googleConn
                   <Input type="number" step="0.01" value={editForm.hourly_cost_rate} onChange={e => setEditForm(f => ({ ...f, hourly_cost_rate: e.target.value }))} placeholder="e.g. 45.00" />
                   <p className="text-xs text-gray-400 mt-1">Used for job profitability</p>
                 </div>
+              </div>
+              <div>
+                <Label>Job title</Label>
+                <Input value={editForm.job_title} onChange={e => setEditForm(f => ({ ...f, job_title: e.target.value }))} placeholder="e.g. Project Manager, Site Manager" />
               </div>
               <div>
                 <Label>Vehicle registration</Label>

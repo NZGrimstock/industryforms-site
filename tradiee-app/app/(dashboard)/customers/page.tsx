@@ -6,6 +6,7 @@ import { EmptyState } from '@/components/ui/empty-state'
 import Link from 'next/link'
 import { Users, Plus, FileText, Briefcase } from 'lucide-react'
 import { RowActions } from '@/components/ui/row-actions'
+import { DeleteConfirmButton } from '@/components/ui/delete-confirm-button'
 
 export default async function CustomersPage() {
   const supabase = await createClient()
@@ -64,7 +65,8 @@ export default async function CustomersPage() {
                     <td className="p-0"><Link href={`/customers/${c.id}`} className="block px-6 py-3 text-gray-600">{c.email ?? '—'}</Link></td>
                     <td className="p-0"><Link href={`/customers/${c.id}`} className="block px-6 py-3 text-gray-600">{c.phone ?? '—'}</Link></td>
                     <td className="p-0"><Link href={`/customers/${c.id}`} className="block px-6 py-3 text-gray-500">{(c.customer_sites as unknown as [{count: number}])?.[0]?.count ?? 0}</Link></td>
-                    <td className="px-3 text-right">
+                    <td className="px-3 text-right flex items-center justify-end gap-0.5">
+                      <DeleteConfirmButton id={c.id} table="customers" label="customer" redirectTo="/customers" />
                       <RowActions actions={[
                         { label: 'New quote', href: `/quotes/new?customerId=${c.id}`,    icon: <FileText /> },
                         { label: 'New job',   href: `/jobs?newJob=1&customerId=${c.id}`, icon: <Briefcase /> },

@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label'
 import { Select } from '@/components/ui/select'
 import { useToast } from '@/components/ui/toast'
 import { lineNet, computeTaxedTotals, type DiscountType } from '@/lib/pricing'
-import { Plus, Send, DollarSign, Trash2, Mail, RefreshCw, MessageSquare, Tag } from 'lucide-react'
+import { Plus, Send, DollarSign, Trash2, Mail, RefreshCw, MessageSquare, Tag, Printer } from 'lucide-react'
 
 interface Props {
   invoice: {
@@ -206,6 +206,7 @@ export function InvoiceDetailClient({ invoice, companyId, gstRate, pricesInclude
       {xeroConnected && <Button variant="outline" size="sm" loading={loading} onClick={syncToXero}><RefreshCw className="h-4 w-4" />{invoice.external_id ? 'Re-sync Xero' : 'Sync to Xero'}</Button>}
       {isDraft && <Button variant="outline" size="sm" onClick={markSent}><Send className="h-4 w-4" /> Mark sent</Button>}
       {canPay && <Button size="sm" onClick={() => setActiveDialog('payment')}><DollarSign className="h-4 w-4" /> Record payment</Button>}
+      <Button variant="outline" size="sm" onClick={() => window.print()}><Printer className="h-4 w-4" /> Print / PDF</Button>
       <Button variant="ghost" size="sm" onClick={deleteInvoice}><Trash2 className="h-4 w-4 text-red-400" /></Button>
 
       <Dialog open={activeDialog === 'line'} onClose={() => setActiveDialog(null)} title="Add line item">

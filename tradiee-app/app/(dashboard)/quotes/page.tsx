@@ -9,6 +9,7 @@ import { TemplateMenu } from './template-menu'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import Link from 'next/link'
 import { FileText, Plus } from 'lucide-react'
+import { DeleteConfirmButton } from '@/components/ui/delete-confirm-button'
 
 const statuses = ['draft', 'sent', 'accepted', 'declined', 'expired']
 const SORTABLE = ['quote_number', 'status', 'total', 'created_at']
@@ -70,6 +71,7 @@ export default async function QuotesPage({ searchParams }: { searchParams: Promi
                   <th className="text-left px-6 py-3 font-medium text-gray-500"><SortHeader label="Status" column="status" basePath="/quotes" params={params} sort={sp.sort} dir={sp.dir} /></th>
                   <th className="text-right px-6 py-3 font-medium text-gray-500"><SortHeader label="Total" column="total" basePath="/quotes" params={params} sort={sp.sort} dir={sp.dir} align="right" /></th>
                   <th className="text-left px-6 py-3 font-medium text-gray-500"><SortHeader label="Date" column="created_at" basePath="/quotes" params={params} sort={sp.sort} dir={sp.dir} /></th>
+                  <th className="w-10 px-3"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
@@ -82,6 +84,7 @@ export default async function QuotesPage({ searchParams }: { searchParams: Promi
                     <td className="p-0"><Link href={`/quotes/${q.id}`} className="block px-6 py-3"><StatusBadge status={q.status} /></Link></td>
                     <td className="p-0"><Link href={`/quotes/${q.id}`} className="block px-6 py-3 text-right font-medium text-gray-900">{formatCurrency(q.total)}</Link></td>
                     <td className="p-0"><Link href={`/quotes/${q.id}`} className="block px-6 py-3 text-gray-500">{formatDate(q.created_at)}</Link></td>
+                    <td className="px-3"><DeleteConfirmButton id={q.id} table="quotes" label="quote" /></td>
                   </tr>
                 ))}
               </tbody>
