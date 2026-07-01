@@ -27,6 +27,10 @@ bucket_definitions:
           JOIN jobs ON jobs.id = job_visits.job_id
          WHERE jobs.company_id = bucket.company_id
 
+      - SELECT id, company_id, job_id, profile_id, added_at
+          FROM job_assignees
+         WHERE company_id = bucket.company_id
+
       - SELECT id, job_id, author_id, body, created_at
           FROM job_notes
           JOIN jobs ON jobs.id = job_notes.job_id
@@ -38,7 +42,7 @@ bucket_definitions:
          WHERE company_id = bucket.company_id
 
       - SELECT id, company_id, job_id, description, quantity, unit,
-               unit_cost, sell_price, price_item_id, supplier, supplier_invoice_number, created_at
+               unit_cost, unit_price, price_list_item_id, supplier, supplier_invoice_number, created_at
           FROM job_materials
          WHERE company_id = bucket.company_id
 

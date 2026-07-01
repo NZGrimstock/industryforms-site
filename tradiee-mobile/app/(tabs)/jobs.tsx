@@ -29,7 +29,16 @@ export default function JobsScreen() {
       .from('jobs')
       .select('id, job_number, title, status, description')
       .eq('company_id', profile.company_id)
-    if (scope === 'mine') q = q.eq('assigned_to', user.id)
+    if (scope === 'mine') {
+      const { data: assignments } = await supabase
+        .from('job_assignees')
+        .select('job_id')
+        .eq('profile_id', user.id)
+      const secondaryJobIds = [...new Set((assignments ?? []).map(a => a.job_id as string).filter(Boolean))]
+      q = secondaryJobIds.length > 0
+        ? q.or(`assigned_to.eq.${user.id},id.in.(${secondaryJobIds.join(',')})`)
+        : q.eq('assigned_to', user.id)
+    }
     const { data } = await q.order('created_at', { ascending: false }).limit(200)
     setJobs(data ?? [])
   }, [scope])

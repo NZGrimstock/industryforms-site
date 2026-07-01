@@ -67,7 +67,16 @@ export default function MapScreen() {
       .select('id, job_number, title, status, assigned_to, customer_sites!site_id(lat, lng, address), customers(name, phone)')
       .eq('company_id', profile.company_id)
       .in('status', activeKeys)
-    if (mine) q = q.eq('assigned_to', user.id)
+    if (mine) {
+      const { data: assignments } = await supabase
+        .from('job_assignees')
+        .select('job_id')
+        .eq('profile_id', user.id)
+      const secondaryJobIds = [...new Set((assignments ?? []).map(a => a.job_id as string).filter(Boolean))]
+      q = secondaryJobIds.length > 0
+        ? q.or(`assigned_to.eq.${user.id},id.in.(${secondaryJobIds.join(',')})`)
+        : q.eq('assigned_to', user.id)
+    }
     const { data } = await q.limit(200)
 
     const all: MapJob[] = (data ?? []).map(j => {

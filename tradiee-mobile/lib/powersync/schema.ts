@@ -44,6 +44,13 @@ const job_visits = new Table({
   notes: column.text,
 })
 
+const job_assignees = new Table({
+  company_id: column.text,
+  job_id: column.text,
+  profile_id: column.text,
+  added_at: column.text,
+})
+
 const job_notes = new Table({
   job_id: column.text,
   author_id: column.text,
@@ -214,6 +221,7 @@ export const AppSchema = new Schema({
   customers,
   customer_sites,
   job_visits,
+  job_assignees,
   job_notes,
   timesheets,
   job_materials,

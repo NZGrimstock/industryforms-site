@@ -35,11 +35,18 @@ import {
 
 interface Visit {
   id: string
+  assigned_to: string | null
   scheduled_start: string
   scheduled_end: string
   status: string
   notes: string | null
-  jobs: { id: string; job_number: string; title: string; customers: { name: string } | null } | null
+  jobs: {
+    id: string
+    job_number: string
+    title: string
+    customers: { name: string } | null
+    job_assignees?: Array<{ profile_id: string; profiles: { full_name: string } | { full_name: string }[] | null }>
+  } | null
   profiles: { id: string; full_name: string } | null
 }
 
@@ -57,15 +64,27 @@ function getWeekDays(weekStart: Date): Date[] {
   })
 }
 
+function profileName(profile: { full_name: string } | { full_name: string }[] | null | undefined) {
+  return Array.isArray(profile) ? profile[0]?.full_name : profile?.full_name
+}
+
 function VisitCard({ visit, colorIdx = 5, isDragging = false }: { visit: Visit; colorIdx?: number; isDragging?: boolean }) {
   const c = STAFF_COLORS[colorIdx % STAFF_COLORS.length]
+  const extraNames = visit.jobs?.job_assignees
+    ?.map(a => profileName(a.profiles))
+    .filter(Boolean)
+    .join(', ')
   return (
     <div className={`${c.bg} border ${c.border} rounded-lg p-2 ${isDragging ? 'opacity-50' : ''} transition-colors cursor-grab active:cursor-grabbing`}>
       <p className={`text-xs font-medium ${c.text} truncate`}>{visit.jobs?.title ?? '—'}</p>
       <p className={`text-xs ${c.sub}`}>
         {new Date(visit.scheduled_start).toLocaleTimeString('en-NZ', { hour: 'numeric', minute: '2-digit', hour12: true })}
       </p>
-      {visit.profiles && <p className={`text-xs ${c.sub} truncate opacity-70`}>{visit.profiles.full_name}</p>}
+      {(visit.profiles || extraNames) && (
+        <p className={`text-xs ${c.sub} truncate opacity-70`}>
+          {[visit.profiles?.full_name, extraNames].filter(Boolean).join(' + ')}
+        </p>
+      )}
     </div>
   )
 }
@@ -158,9 +177,19 @@ export function ScheduleClient({ visits: initialVisits, team = [] }: { visits: V
     setSelectedStaff(prev => prev.includes(id) ? prev.filter(s => s !== id) : [...prev, id])
   }
 
+  function visitIncludesStaff(v: Visit, staffId: string) {
+    return v.assigned_to === staffId || (v.jobs?.job_assignees ?? []).some(a => a.profile_id === staffId)
+  }
+
+  function workerNames(v: Visit) {
+    return [v.profiles?.full_name, ...(v.jobs?.job_assignees ?? []).map(a => profileName(a.profiles))]
+      .filter(Boolean)
+      .join(' + ') || 'Unassigned'
+  }
+
   const filteredVisits = selectedStaff.length === 0
     ? visits
-    : visits.filter(v => v.profiles && selectedStaff.includes(v.profiles.id))
+    : visits.filter(v => selectedStaff.some(staffId => visitIncludesStaff(v, staffId)))
 
   const today = new Date()
   const [weekStart, setWeekStart] = useState(() => {
@@ -283,7 +312,7 @@ export function ScheduleClient({ visits: initialVisits, team = [] }: { visits: V
                   <DroppableDay day={day}>
                     <div className="space-y-1.5">
                       {dayVisits.map(v => (
-                        <DraggableVisit key={v.id} visit={v} colorIdx={v.profiles ? (staffColorMap[v.profiles.id] ?? 5) : 5} onEdit={openEdit} />
+                        <DraggableVisit key={v.id} visit={v} colorIdx={v.assigned_to ? (staffColorMap[v.assigned_to] ?? 5) : 5} onEdit={openEdit} />
                       ))}
                     </div>
                   </DroppableDay>
@@ -295,7 +324,7 @@ export function ScheduleClient({ visits: initialVisits, team = [] }: { visits: V
           <DragOverlay>
             {activeVisit && (
               <div className="w-32 rotate-2 shadow-lg">
-                <VisitCard visit={activeVisit} colorIdx={activeVisit.profiles ? (staffColorMap[activeVisit.profiles.id] ?? 5) : 5} />
+                <VisitCard visit={activeVisit} colorIdx={activeVisit.assigned_to ? (staffColorMap[activeVisit.assigned_to] ?? 5) : 5} />
               </div>
             )}
           </DragOverlay>
@@ -319,7 +348,7 @@ export function ScheduleClient({ visits: initialVisits, team = [] }: { visits: V
                     <div>
                       <p className="text-sm font-medium text-gray-900">{v.jobs?.title ?? '—'}</p>
                       <p className="text-xs text-gray-400 mt-0.5">
-                        {formatDateTime(v.scheduled_start)} · {v.jobs?.customers?.name} · {v.profiles?.full_name ?? 'Unassigned'}
+                        {formatDateTime(v.scheduled_start)} · {v.jobs?.customers?.name} · {workerNames(v)}
                       </p>
                     </div>
                     <StatusBadge status={v.status} />

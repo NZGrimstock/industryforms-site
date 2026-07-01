@@ -83,15 +83,24 @@ export default function HomeScreen() {
     setFirstName(prof.full_name?.split(' ')[0] ?? '')
 
     const today = new Date().toISOString().slice(0, 10)
+    const { data: assignments } = await supabase
+      .from('job_assignees')
+      .select('job_id')
+      .eq('profile_id', user.id)
+    const secondaryJobIds = [...new Set((assignments ?? []).map(a => a.job_id as string).filter(Boolean))]
+
+    let visitsQuery = supabase.from('job_visits')
+      .select('id, scheduled_start, scheduled_end, status, job_id, jobs!job_id(job_number, title, customers(name))')
+      .gte('scheduled_start', `${today}T00:00:00.000Z`)
+      .lte('scheduled_start', `${today}T23:59:59.999Z`)
+      .neq('status', 'cancelled')
+      .order('scheduled_start')
+    visitsQuery = secondaryJobIds.length > 0
+      ? visitsQuery.or(`assigned_to.eq.${user.id},job_id.in.(${secondaryJobIds.join(',')})`)
+      : visitsQuery.eq('assigned_to', user.id)
 
     const [visitsRes, todosRes, openJobsRes, draftQuotesRes, pendingTodosRes] = await Promise.all([
-      supabase.from('job_visits')
-        .select('id, scheduled_start, scheduled_end, status, job_id, jobs!job_id(job_number, title, customers(name))')
-        .gte('scheduled_start', `${today}T00:00:00.000Z`)
-        .lte('scheduled_start', `${today}T23:59:59.999Z`)
-        .eq('assigned_to', user.id)
-        .neq('status', 'cancelled')
-        .order('scheduled_start'),
+      visitsQuery,
       supabase.from('todos')
         .select('id, title, priority, job_id')
         .eq('assigned_to', user.id)

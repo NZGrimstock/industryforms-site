@@ -38,6 +38,13 @@ const job_visits = new Table({
   notes: column.text,
 })
 
+const job_assignees = new Table({
+  company_id: column.text,
+  job_id: column.text,
+  profile_id: column.text,
+  added_at: column.text,
+})
+
 const job_notes = new Table({
   job_id: column.text,
   author_id: column.text,
@@ -64,8 +71,8 @@ const job_materials = new Table({
   quantity: column.real,
   unit: column.text,
   unit_cost: column.real,
-  sell_price: column.real,
-  price_item_id: column.text,
+  unit_price: column.real,
+  price_list_item_id: column.text,
   supplier: column.text,
   supplier_invoice_number: column.text,
   created_at: column.text,
@@ -102,6 +109,7 @@ export const AppSchema = new Schema({
   customers,
   customer_sites,
   job_visits,
+  job_assignees,
   job_notes,
   timesheets,
   job_materials,

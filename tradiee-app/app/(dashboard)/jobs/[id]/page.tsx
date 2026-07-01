@@ -8,7 +8,7 @@ import { JobTasksCard } from './tasks-card'
 import { Header } from '@/components/layout/header'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { StatusBadge } from '@/components/ui/badge'
-import { formatDate, formatDateTime, formatCurrency } from '@/lib/utils'
+import { formatDateTime, formatCurrency } from '@/lib/utils'
 import { JobDetailClient } from './client'
 import { JobMaterials } from './materials'
 import { PrintJobSheet } from '@/components/pdf/print-job-sheet'
@@ -73,6 +73,17 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
     .from('job_assignees')
     .select('id, profile_id, profiles(full_name, job_title)')
     .eq('job_id', id)
+  const normalizedJobAssignees = (jobAssignees ?? []).map(a => {
+    const assigneeProfile = Array.isArray(a.profiles) ? a.profiles[0] : a.profiles
+    return {
+      id: a.id,
+      profile_id: a.profile_id,
+      profiles: {
+        full_name: assigneeProfile?.full_name ?? 'Unknown worker',
+        job_title: assigneeProfile?.job_title ?? null,
+      },
+    }
+  })
 
   const profileHasSignature = !!((profile as Record<string, unknown>).signature_base64)
 
@@ -306,7 +317,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
         <JobAssigneesCard
           jobId={job.id}
           companyId={profile!.company_id}
-          assignees={(jobAssignees ?? []) as Parameters<typeof JobAssigneesCard>[0]['assignees']}
+          assignees={normalizedJobAssignees}
           team={teamRes.data ?? []}
         />
 

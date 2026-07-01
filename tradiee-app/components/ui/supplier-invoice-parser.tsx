@@ -102,8 +102,8 @@ export function SupplierInvoiceParser({ jobId, companyId, priceItems, onSaved }:
       quantity: item.quantity,
       unit: item.unit,
       unit_cost: item.unit_cost,
-      sell_price: item.unit_cost,
-      price_item_id: item.matched_price_item_id,
+      unit_price: item.unit_cost,
+      price_list_item_id: item.matched_price_item_id,
       supplier: parsed?.supplier ?? null,
       supplier_invoice_number: parsed?.invoice_number ?? null,
     }))

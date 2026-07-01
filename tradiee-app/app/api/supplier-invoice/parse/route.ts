@@ -4,11 +4,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 
 export async function POST(req: NextRequest) {
-  if (!process.env.ANTHROPIC_API_KEY) {
+  const apiKey = process.env.ANTHROPIC_API_KEY
+  if (!apiKey) {
     return NextResponse.json({ error: 'AI parsing not configured — set ANTHROPIC_API_KEY in Vercel environment variables' }, { status: 503 })
   }
   try {
-    const client = new Anthropic()
+    const client = new Anthropic({ apiKey })
     const formData = await req.formData()
     const file = formData.get('file') as File | null
     if (!file) return NextResponse.json({ error: 'No file provided' }, { status: 400 })

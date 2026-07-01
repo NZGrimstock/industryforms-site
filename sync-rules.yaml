@@ -3,7 +3,7 @@
 #
 # Role-aware (mirrors web RLS from migration 031):
 #   • owner/admin  → full company dataset
-#   • staff        → company reference data + only their assigned jobs
+#   • staff        → company reference data + only their primary or secondary jobs
 #                    and own time/travel. Never quotes/invoices.
 #
 # auth.user_id() is the Supabase JWT `sub`. Streams require JOINs to use
@@ -22,6 +22,7 @@ streams:
       - SELECT customers.*          FROM customers          INNER JOIN profiles ON profiles.company_id = customers.company_id          WHERE profiles.id = auth.user_id() AND (profiles.role = 'owner' OR profiles.role = 'admin')
       - SELECT customer_sites.*     FROM customer_sites     INNER JOIN profiles ON profiles.company_id = customer_sites.company_id     WHERE profiles.id = auth.user_id() AND (profiles.role = 'owner' OR profiles.role = 'admin')
       - SELECT job_visits.*         FROM job_visits         INNER JOIN profiles ON profiles.company_id = job_visits.company_id         WHERE profiles.id = auth.user_id() AND (profiles.role = 'owner' OR profiles.role = 'admin')
+      - SELECT job_assignees.*      FROM job_assignees      INNER JOIN profiles ON profiles.company_id = job_assignees.company_id      WHERE profiles.id = auth.user_id() AND (profiles.role = 'owner' OR profiles.role = 'admin')
       - SELECT job_notes.*          FROM job_notes          INNER JOIN profiles ON profiles.company_id = job_notes.company_id          WHERE profiles.id = auth.user_id() AND (profiles.role = 'owner' OR profiles.role = 'admin')
       - SELECT timesheets.*         FROM timesheets         INNER JOIN profiles ON profiles.company_id = timesheets.company_id         WHERE profiles.id = auth.user_id() AND (profiles.role = 'owner' OR profiles.role = 'admin')
       - SELECT job_materials.*      FROM job_materials      INNER JOIN profiles ON profiles.company_id = job_materials.company_id      WHERE profiles.id = auth.user_id() AND (profiles.role = 'owner' OR profiles.role = 'admin')
@@ -50,11 +51,18 @@ streams:
     auto_subscribe: true
     queries:
       - SELECT * FROM jobs WHERE assigned_to = auth.user_id()
+      - SELECT jobs.* FROM jobs INNER JOIN job_assignees ON job_assignees.job_id = jobs.id WHERE job_assignees.profile_id = auth.user_id()
       - SELECT job_visits.*       FROM job_visits       INNER JOIN jobs ON jobs.id = job_visits.job_id       WHERE jobs.assigned_to = auth.user_id()
+      - SELECT job_visits.*       FROM job_visits       INNER JOIN job_assignees ON job_assignees.job_id = job_visits.job_id WHERE job_assignees.profile_id = auth.user_id()
+      - SELECT job_assignees.*    FROM job_assignees    WHERE job_assignees.profile_id = auth.user_id()
       - SELECT job_notes.*        FROM job_notes        INNER JOIN jobs ON jobs.id = job_notes.job_id        WHERE jobs.assigned_to = auth.user_id()
+      - SELECT job_notes.*        FROM job_notes        INNER JOIN job_assignees ON job_assignees.job_id = job_notes.job_id WHERE job_assignees.profile_id = auth.user_id()
       - SELECT job_materials.*    FROM job_materials    INNER JOIN jobs ON jobs.id = job_materials.job_id    WHERE jobs.assigned_to = auth.user_id()
+      - SELECT job_materials.*    FROM job_materials    INNER JOIN job_assignees ON job_assignees.job_id = job_materials.job_id WHERE job_assignees.profile_id = auth.user_id()
       - SELECT job_photos.*       FROM job_photos       INNER JOIN jobs ON jobs.id = job_photos.job_id       WHERE jobs.assigned_to = auth.user_id()
+      - SELECT job_photos.*       FROM job_photos       INNER JOIN job_assignees ON job_assignees.job_id = job_photos.job_id WHERE job_assignees.profile_id = auth.user_id()
       - SELECT form_submissions.* FROM form_submissions INNER JOIN jobs ON jobs.id = form_submissions.job_id WHERE jobs.assigned_to = auth.user_id()
+      - SELECT form_submissions.* FROM form_submissions INNER JOIN job_assignees ON job_assignees.job_id = form_submissions.job_id WHERE job_assignees.profile_id = auth.user_id()
 
   # ── Staff: own time only ────────────────────────────────────────────────
   staff_self:

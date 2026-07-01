@@ -7,13 +7,18 @@ export default async function SchedulePage() {
   const { data: { user } } = await supabase.auth.getUser()
   const { data: profile } = await supabase.from('profiles').select('company_id, full_name, role').eq('id', user!.id).single()
 
-  const from = new Date(Date.now() - 30 * 86400000).toISOString()
-  const to = new Date(Date.now() + 60 * 86400000).toISOString()
+  const now = new Date()
+  const fromDate = new Date(now)
+  fromDate.setDate(fromDate.getDate() - 30)
+  const toDate = new Date(now)
+  toDate.setDate(toDate.getDate() + 60)
+  const from = fromDate.toISOString()
+  const to = toDate.toISOString()
 
   const [visitsRes, teamRes] = await Promise.all([
     supabase
       .from('job_visits')
-      .select('*, jobs(id, job_number, title, customer_id, customers(name)), profiles(id, full_name)')
+      .select('*, jobs(id, job_number, title, customer_id, customers(name), job_assignees(profile_id, profiles(full_name))), profiles(id, full_name)')
       .gte('scheduled_start', from)
       .lte('scheduled_start', to)
       .order('scheduled_start'),
