@@ -8,6 +8,12 @@
       "cwd": "tradiee-app",
       "port": 3000,
       "autoPort": true
+    },
+    {
+      "name": "marketing-site",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "http.server", "8088"],
+      "port": 8088
     }
   ]
 }

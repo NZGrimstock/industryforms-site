@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Terms of Service — Industry Forms</title>
+<meta name="description" content="Terms of Service for Industry Forms, a job management platform for trade businesses.">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@300;400;500;600;700;800;900&family=Sora:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      colors: {
+        paper: '#F6F2EC',
+        'paper-dark': '#EDE8E0',
+        brand: '#E8722A',
+        'brand-dark': '#C95D1A',
+        'brand-light': '#F08040',
+        teal: '#0D9488',
+        'teal-light': '#14B8A6',
+        grape: '#7C3AED',
+        'grape-light': '#8B5CF6',
+        ink: '#1C1C2E',
+        'ink-light': '#2D2D44',
+        'ink-faint': '#F0EEF8',
+      },
+      fontFamily: {
+        sans: ['Figtree', 'sans-serif'],
+        display: ['Sora', 'sans-serif'],
+      }
+    }
+  }
+}
+</script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { font-family: 'Figtree', sans-serif; background: #F6F2EC; color: #1C1C2E; }
+  .nav-blur {
+    backdrop-filter: blur(24px) saturate(1.4);
+    -webkit-backdrop-filter: blur(24px) saturate(1.4);
+    background: rgba(246,242,236,0.82);
+  }
+  .btn-brand {
+    position: relative; overflow: hidden;
+    transition: transform 0.25s cubic-bezier(0.16,1,0.3,1), box-shadow 0.25s ease;
+  }
+  .btn-brand:hover { transform: translateY(-2px); box-shadow: 0 10px 36px -6px rgba(232,114,42,0.45); }
+  .legal-prose h2 { font-family: 'Sora', sans-serif; font-weight: 700; font-size: 1.15rem; margin: 2rem 0 0.75rem; color: #1C1C2E; }
+  .legal-prose h3 { font-weight: 600; font-size: 1rem; margin: 1.25rem 0 0.5rem; color: #1C1C2E; }
+  .legal-prose p { margin-bottom: 1rem; line-height: 1.75; color: rgba(28,28,46,0.7); }
+  .legal-prose ul { list-style: disc; padding-left: 1.25rem; margin-bottom: 1rem; }
+  .legal-prose li { margin-bottom: 0.5rem; line-height: 1.7; color: rgba(28,28,46,0.7); }
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: #F6F2EC; }
+  ::-webkit-scrollbar-thumb { background: #C8C0B4; border-radius: 10px; }
+</style>
+</head>
+<body>
+
+<!-- ============================================================ NAV -->
+<nav class="fixed top-0 left-0 right-0 z-50 nav-blur border-b border-black/[0.05]" role="navigation">
+  <div class="max-w-7xl mx-auto px-6 h-[72px] flex items-center justify-between">
+    <a href="index.html" class="flex items-center gap-2.5 group" aria-label="Industry Forms home">
+      <img src="Logo/Industry Forms Logo Transparent.png" alt="Industry Forms" class="h-9 w-auto transition-transform duration-300 group-hover:scale-105">
+    </a>
+    <div class="hidden md:flex items-center gap-8">
+      <a href="index.html#features" class="text-sm font-medium text-ink/55 hover:text-ink transition-colors duration-150">Features</a>
+      <a href="index.html#pricing" class="text-sm font-medium text-ink/55 hover:text-ink transition-colors duration-150">Pricing</a>
+      <a href="blog.html" class="text-sm font-medium text-ink/55 hover:text-ink transition-colors duration-150">Blog</a>
+      <a href="index.html#cta" class="btn-brand bg-brand text-white text-sm font-semibold px-5 py-2.5 rounded-full inline-flex items-center gap-1.5">
+        Start Free Trial <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+      </a>
+    </div>
+    <button id="mobileMenuBtn" class="md:hidden p-2 rounded-xl hover:bg-black/[0.06] transition-colors" aria-label="Menu">
+      <i data-lucide="menu" class="w-5 h-5 text-ink"></i>
+    </button>
+  </div>
+  <div id="mobileMenu" class="hidden md:hidden border-t border-black/[0.05] bg-paper/96 backdrop-blur-2xl">
+    <div class="px-6 py-5 flex flex-col gap-1">
+      <a href="index.html#features" class="text-sm font-medium text-ink/70 py-2.5 px-3 rounded-lg hover:bg-black/[0.04]">Features</a>
+      <a href="index.html#pricing" class="text-sm font-medium text-ink/70 py-2.5 px-3 rounded-lg hover:bg-black/[0.04]">Pricing</a>
+      <a href="blog.html" class="text-sm font-medium text-ink/70 py-2.5 px-3 rounded-lg hover:bg-black/[0.04]">Blog</a>
+      <a href="index.html#cta" class="btn-brand bg-brand text-white text-sm font-semibold px-5 py-3 rounded-full text-center mt-3">Start Free Trial</a>
+    </div>
+  </div>
+</nav>
+
+<!-- ============================================================ CONTENT -->
+<main class="max-w-3xl mx-auto px-6 pt-40 pb-24">
+  <h1 class="font-display font-bold text-4xl text-ink mb-2">Terms of Service</h1>
+  <p class="text-sm text-ink/40 mb-10">Last updated: June 2026</p>
+
+  <div class="legal-prose">
+    <p>These Terms of Service ("Terms") govern your use of Industry Forms, a job management platform for trade businesses operated by Industry Forms Limited ("we", "us", or "our"). By accessing or using the Service, you agree to be bound by these Terms. If you do not agree, you must not use the Service.</p>
+
+    <h2>1. The Service</h2>
+    <p>Industry Forms provides a cloud-based job management system including a web admin portal, mobile application for field staff, and related integrations (collectively, the "Service"). The Service is intended for use by trade businesses including electricians, plumbers, builders, HVAC technicians, and similar trades in New Zealand and Australia.</p>
+
+    <h2>2. Accounts</h2>
+    <h3>2.1 Registration</h3>
+    <p>To use the Service you must create an account. You agree to provide accurate and complete information and to keep it up to date. You are responsible for maintaining the security of your account credentials and for all activity that occurs under your account.</p>
+    <h3>2.2 Authorised Users</h3>
+    <p>You may invite team members (technicians and administrators) to use the Service under your account. You are responsible for ensuring that all authorised users comply with these Terms.</p>
+    <h3>2.3 Account Suspension</h3>
+    <p>We reserve the right to suspend or terminate accounts that violate these Terms, are used fraudulently, or where subscription fees remain unpaid.</p>
+
+    <h2>3. Subscriptions and Billing</h2>
+    <h3>3.1 Free Trial</h3>
+    <p>New accounts are entitled to a 28-day free trial. No credit card is required to start a trial. At the end of the trial period, continued access requires a paid subscription.</p>
+    <h3>3.2 Subscription Fees</h3>
+    <p>Subscription fees are charged monthly per the pricing displayed at industryforms.app/pricing. Fees are exclusive of GST (New Zealand) or GST/applicable taxes (Australia), which will be added at checkout. Pricing may change with 30 days' written notice.</p>
+    <h3>3.3 Payment</h3>
+    <p>Payments are processed by a third-party payment provider. By providing payment details, you authorise us to charge the applicable fees on a recurring monthly basis. If a payment fails, we will notify you and your access may be suspended until payment is resolved.</p>
+    <h3>3.4 Cancellation and Refunds</h3>
+    <p>You may cancel your subscription at any time. Access continues until the end of the current billing period. We do not provide refunds for partial months. If we cancel your account for breach of these Terms, no refund will be provided.</p>
+
+    <h2>4. Acceptable Use</h2>
+    <p>You agree not to:</p>
+    <ul>
+      <li>Use the Service for any unlawful purpose or in violation of any applicable law or regulation</li>
+      <li>Upload or transmit malicious code, viruses, or harmful content</li>
+      <li>Attempt to gain unauthorised access to any part of the Service or its infrastructure</li>
+      <li>Reverse-engineer, decompile, or disassemble any part of the Service</li>
+      <li>Resell or sublicense the Service without our prior written consent</li>
+      <li>Use the Service to store or transmit content that is defamatory, obscene, or infringes any third-party rights</li>
+    </ul>
+
+    <h2>5. Your Data</h2>
+    <h3>5.1 Ownership</h3>
+    <p>You retain ownership of all data you input into the Service ("Customer Data"), including job records, customer details, and site information.</p>
+    <h3>5.2 Licence to Us</h3>
+    <p>By using the Service, you grant us a limited licence to store, process, and display your Customer Data solely to provide and improve the Service.</p>
+    <h3>5.3 Data Export and Deletion</h3>
+    <p>You may export your Customer Data at any time. Upon account termination, we will retain your data for 90 days before permanent deletion, during which time you may request an export. See our <a href="privacy.html" class="text-brand underline">Privacy Policy</a> for further details.</p>
+
+    <h2>6. Intellectual Property</h2>
+    <p>The Service, including all software, designs, trademarks, and content created by us, is owned by Industry Forms Limited and protected by intellectual property laws. Nothing in these Terms transfers ownership of our intellectual property to you.</p>
+
+    <h2>7. Third-Party Integrations</h2>
+    <p>The Service integrates with third-party services including Xero (accounting), Google Calendar, and payment processors. Your use of these integrations is subject to the respective third party's terms of service. We are not responsible for any third-party service's availability, accuracy, or actions.</p>
+
+    <h2>8. Warranties and Disclaimers</h2>
+    <p>The Service is provided "as is" and "as available". To the maximum extent permitted by law, we disclaim all warranties, express or implied, including warranties of merchantability, fitness for a particular purpose, and non-infringement. We do not warrant that the Service will be uninterrupted, error-free, or free of viruses or other harmful components.</p>
+
+    <h2>9. Limitation of Liability</h2>
+    <p>To the maximum extent permitted by applicable law, our total liability to you for any claim arising out of or related to these Terms or the Service shall not exceed the total fees paid by you in the three months preceding the claim. We are not liable for any indirect, incidental, special, consequential, or punitive damages, including lost profits or data, even if we have been advised of the possibility of such damages.</p>
+    <p>Nothing in these Terms excludes liability that cannot be excluded by law, including liability under the New Zealand Consumer Guarantees Act 1993 where applicable.</p>
+
+    <h2>10. Indemnification</h2>
+    <p>You agree to indemnify and hold harmless Industry Forms Limited, its officers, directors, and employees from any claims, damages, losses, or expenses (including legal fees) arising from your use of the Service, your Customer Data, or your violation of these Terms.</p>
+
+    <h2>11. Changes to the Service</h2>
+    <p>We may modify, suspend, or discontinue any part of the Service at any time with reasonable notice. We will not be liable to you for any modification, suspension, or discontinuation of the Service.</p>
+
+    <h2>12. Changes to These Terms</h2>
+    <p>We may update these Terms from time to time. Material changes will be notified via email or in-app notice at least 14 days before they take effect. Your continued use of the Service after the effective date constitutes your acceptance of the updated Terms.</p>
+
+    <h2>13. Governing Law</h2>
+    <p>These Terms are governed by the laws of New Zealand. Any disputes will be subject to the exclusive jurisdiction of the New Zealand courts, except where mandatory consumer protection laws in Australia or another jurisdiction apply.</p>
+
+    <h2>14. Contact</h2>
+    <p>For questions about these Terms, please contact us:</p>
+    <p>Industry Forms Limited<br>
+    Email: <a href="mailto:admin@industryforms.co.nz" class="text-brand underline">admin@industryforms.co.nz</a><br>
+    Postal Address: 349 Mangakura Road, Helensville 0875, New Zealand</p>
+  </div>
+</main>
+
+<!-- ============================================================ FOOTER -->
+<footer class="relative z-10 bg-ink border-t border-white/[0.05] pt-16 pb-10 px-6">
+  <div class="max-w-7xl mx-auto">
+    <div class="grid grid-cols-2 md:grid-cols-5 gap-8 mb-16">
+      <div class="col-span-2 md:col-span-1">
+        <a href="index.html" class="flex items-center gap-2.5 mb-5">
+          <img src="Logo/Industry Forms Logo Transparent.png" alt="Industry Forms" class="h-8 w-auto brightness-0 invert opacity-70">
+        </a>
+        <p class="text-xs text-white/30 leading-relaxed">Intelligent job management for tradespeople and SMEs.</p>
+      </div>
+      <div>
+        <p class="text-[10px] font-bold tracking-widest uppercase text-white/25 mb-5">Product</p>
+        <ul class="space-y-3">
+          <li><a href="index.html#features" class="text-sm text-white/45 hover:text-white transition-colors duration-150">Features</a></li>
+          <li><a href="index.html#pricing" class="text-sm text-white/45 hover:text-white transition-colors duration-150">Pricing</a></li>
+          <li><a href="#" class="text-sm text-white/45 hover:text-white transition-colors duration-150">Integrations</a></li>
+          <li><a href="#" class="text-sm text-white/45 hover:text-white transition-colors duration-150">Changelog</a></li>
+        </ul>
+      </div>
+      <div>
+        <p class="text-[10px] font-bold tracking-widest uppercase text-white/25 mb-5">Solutions</p>
+        <ul class="space-y-3">
+          <li><a href="#" class="text-sm text-white/45 hover:text-white transition-colors duration-150">Plumbers</a></li>
+          <li><a href="#" class="text-sm text-white/45 hover:text-white transition-colors duration-150">Electricians</a></li>
+          <li><a href="#" class="text-sm text-white/45 hover:text-white transition-colors duration-150">Builders</a></li>
+          <li><a href="#" class="text-sm text-white/45 hover:text-white transition-colors duration-150">HVAC</a></li>
+        </ul>
+      </div>
+      <div>
+        <p class="text-[10px] font-bold tracking-widest uppercase text-white/25 mb-5">Company</p>
+        <ul class="space-y-3">
+          <li><a href="#" class="text-sm text-white/45 hover:text-white transition-colors duration-150">About</a></li>
+          <li><a href="blog.html" class="text-sm text-white/45 hover:text-white transition-colors duration-150">Blog</a></li>
+          <li><a href="#" class="text-sm text-white/45 hover:text-white transition-colors duration-150">Careers</a></li>
+          <li><a href="#" class="text-sm text-white/45 hover:text-white transition-colors duration-150">Contact</a></li>
+        </ul>
+      </div>
+      <div>
+        <p class="text-[10px] font-bold tracking-widest uppercase text-white/25 mb-5">Legal</p>
+        <ul class="space-y-3">
+          <li><a href="privacy.html" class="text-sm text-white/45 hover:text-white transition-colors duration-150">Privacy</a></li>
+          <li><a href="terms.html" class="text-sm text-white/45 hover:text-white transition-colors duration-150">Terms</a></li>
+          <li><a href="#" class="text-sm text-white/45 hover:text-white transition-colors duration-150">Security</a></li>
+          <li><a href="#" class="text-sm text-white/45 hover:text-white transition-colors duration-150">GDPR</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="border-t border-white/[0.05] pt-6 flex flex-col md:flex-row items-center justify-between gap-4">
+      <p class="text-xs text-white/20">© 2025 Industry Forms Ltd. All rights reserved.</p>
+    </div>
+  </div>
+</footer>
+
+<script>
+  lucide.createIcons();
+  document.getElementById('mobileMenuBtn').addEventListener('click', () => {
+    document.getElementById('mobileMenu').classList.toggle('hidden');
+  });
+</script>
+</body>
+</html>
