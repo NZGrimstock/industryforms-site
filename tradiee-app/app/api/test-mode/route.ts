@@ -55,7 +55,17 @@ export async function POST(req: Request) {
     ids.customers = (customers ?? []).map(r => r.id)
     const [custBiz, custRes, custBig] = ids.customers
 
-    // 3. Enquiries
+    // 3. Customer sites (cascades on customer delete — not tracked separately)
+    if (ids.customers.length >= 3) {
+      await svc.from('customer_sites').insert([
+        { customer_id: ids.customers[0], address: '12 Taharoto Rd, Takapuna, Auckland 0622', label: 'Main office' },
+        { customer_id: ids.customers[1], address: '45 Beachfront Dr, Orewa, Auckland 0931', label: 'Home' },
+        { customer_id: ids.customers[2], address: '50 Queen St, Auckland CBD 1010', label: 'Head office' },
+        { customer_id: ids.customers[2], address: '8 Wiri Station Rd, Manukau, Auckland 2104', label: 'Warehouse' },
+      ])
+    }
+
+    // 4. Enquiries
     const { data: enquiries } = await svc.from('enquiries').insert([
       { company_id: cid, customer_name: 'Mike Thompson', customer_email: 'mike.t@email.co.nz', customer_phone: '021 888 4455', description: 'Looking to get a heat pump installed in the lounge — 6m x 4m room, currently no air con.', source: 'website', status: 'new' },
       { company_id: cid, customer_name: 'Foodstuffs North Island', customer_email: 'maintenance@foodstuffs.co.nz', customer_phone: '09 526 9900', description: 'Full electrical rewire required for commercial kitchen upgrade at our Henderson depot.', source: 'phone', status: 'contacted' },

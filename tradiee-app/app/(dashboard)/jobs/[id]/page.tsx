@@ -21,8 +21,8 @@ import { ComplianceDocs } from '@/components/compliance/ComplianceDocs'
 import { InviteSubcontractorModal } from '@/components/jobs/InviteSubcontractorModal'
 import { SubcontractorStatus } from '@/components/jobs/SubcontractorStatus'
 import { JobAssigneesCard } from './assignees'
+import { JobSiteSelector } from '@/components/jobs/job-site-selector'
 import Link from 'next/link'
-import { MapPin } from 'lucide-react'
 
 export default async function JobDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -40,6 +40,12 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
   if (jobError) console.error('[job detail]', jobError.message)
 
   if (!job) notFound()
+
+  const { data: customerSites } = await supabase
+    .from('customer_sites')
+    .select('id, address, label')
+    .eq('customer_id', job.customer_id)
+    .order('created_at')
 
   const [visitsRes, notesRes, timesheetsRes, invoicesRes, teamRes, materialsRes, priceItemsRes, photosRes, formTemplatesRes, formSubmissionsRes, claimsRes, complianceDocsRes] = await Promise.all([
     supabase.from('job_visits').select('*, profiles(full_name)').eq('job_id', id).order('scheduled_start'),
@@ -229,12 +235,13 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
               </Link>
               {job.quotes && <> · From quote <Link href={`/quotes/${job.quote_id}`} className="text-orange-500 hover:underline">{(job.quotes as {quote_number: string}).quote_number}</Link></>}
             </p>
-            {job.customer_sites && (
-              <p className="text-sm text-gray-500 flex items-center gap-1 mt-1">
-                <MapPin className="h-3.5 w-3.5" />
-                {(job.customer_sites as {address: string}).address}
-              </p>
-            )}
+            <JobSiteSelector
+              jobId={id}
+              customerId={job.customer_id}
+              currentSiteId={job.site_id ?? null}
+              currentAddress={(job.customer_sites as {address: string} | null)?.address ?? null}
+              customerSites={customerSites ?? []}
+            />
             {job.tags && job.tags.length > 0 && (
               <div className="flex gap-1 mt-2">
                 {job.tags.map((t: string) => <span key={t} className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">{t}</span>)}

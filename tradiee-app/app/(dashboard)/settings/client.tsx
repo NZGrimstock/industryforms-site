@@ -352,7 +352,7 @@ export function SettingsClient({ profile, company, team: initialTeam, googleConn
           { key: 'profile',      label: 'My profile' },
           { key: 'integrations', label: 'Integrations' },
           { key: 'subscription', label: 'Subscription' },
-          { key: 'developer',    label: 'Developer' },
+          { key: 'developer',    label: 'Test Mode' },
         ] as const).map(t => (
           <button key={t.key} onClick={() => setTab(t.key)} className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${tab === t.key ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}>
             {t.label}
@@ -365,7 +365,7 @@ export function SettingsClient({ profile, company, team: initialTeam, googleConn
         {tab === 'team'         && 'Invite people, set their rate, and control what they can see.'}
         {tab === 'profile'      && 'Your personal details, signature and trade qualifications.'}
         {tab === 'integrations' && 'Connect external services — accounting, calendar, SMS, email.'}
-        {tab === 'developer'    && 'Test mode and developer tools.'}
+        {tab === 'developer'    && 'Load demo data to explore the system without touching real records.'}
         {tab === 'subscription' && 'Your plan, billing history and seat usage.'}
       </p>
 

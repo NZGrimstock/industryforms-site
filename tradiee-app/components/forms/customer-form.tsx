@@ -35,6 +35,7 @@ export function CustomerForm({ companyId, customer, onSuccess }: Props) {
     billing_address: customer?.billing_address ?? '',
     notes: customer?.notes ?? '',
   })
+  const [addAsJobSite, setAddAsJobSite] = useState(true)
 
   function set(k: string, v: string) { setForm(f => ({ ...f, [k]: v })) }
 
@@ -48,17 +49,28 @@ export function CustomerForm({ companyId, customer, onSuccess }: Props) {
       billing_address: form.billing_address || null,
       notes: form.notes || null,
     }
-    const { error } = customer
-      ? await supabase.from('customers').update(payload).eq('id', customer.id)
-      : await supabase.from('customers').insert(payload).select().single()
 
-    if (error) {
-      toast(error.message, 'error')
+    let customerId = customer?.id ?? ''
+    if (customer) {
+      const { error } = await supabase.from('customers').update(payload).eq('id', customer.id)
+      if (error) { toast(error.message, 'error'); setLoading(false); return }
     } else {
-      toast(customer ? 'Customer updated' : 'Customer created')
-      if (onSuccess) onSuccess()
-      else router.push('/customers')
+      const { data, error } = await supabase.from('customers').insert(payload).select('id').single()
+      if (error) { toast(error.message, 'error'); setLoading(false); return }
+      customerId = data!.id
     }
+
+    if (addAsJobSite && form.billing_address.trim()) {
+      await supabase.from('customer_sites').insert({
+        customer_id: customerId,
+        address: form.billing_address.trim(),
+        label: customer ? 'Billing address' : null,
+      })
+    }
+
+    toast(customer ? 'Customer updated' : 'Customer created')
+    if (onSuccess) onSuccess()
+    else router.push('/customers')
     setLoading(false)
   }
 
@@ -139,6 +151,12 @@ export function CustomerForm({ companyId, customer, onSuccess }: Props) {
         <div>
           <Label>Billing address</Label>
           <AddressAutocomplete value={form.billing_address} onChange={v => set('billing_address', v)} placeholder="Start typing an address…" />
+          {form.billing_address.trim() && (
+            <label className="flex items-center gap-2 mt-2 cursor-pointer select-none">
+              <input type="checkbox" checked={addAsJobSite} onChange={e => setAddAsJobSite(e.target.checked)} className="rounded" />
+              <span className="text-sm text-gray-600">Add as job site</span>
+            </label>
+          )}
         </div>
         <div>
           <div className="flex items-center justify-between mb-1">
