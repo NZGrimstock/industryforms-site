@@ -4,8 +4,10 @@ import { usePathname } from 'next/navigation'
 import { useSidebar } from './sidebar-context'
 import { accentForPath, hasRouteAccent } from '@/lib/route-accent'
 import { darken } from '@/lib/extract-color'
+import { TestModeBanner } from '@/components/ui/test-mode-banner'
+import { AIAssist } from '@/components/ui/ai-assist'
 
-export function DashboardShell({ children, brandAccent }: { children: React.ReactNode; brandAccent?: string | null }) {
+export function DashboardShell({ children, brandAccent, testMode }: { children: React.ReactNode; brandAccent?: string | null; testMode?: boolean }) {
   const { collapsed } = useSidebar()
   const pathname = usePathname()
   // Route accent wins on mapped pages; on unscoped pages (dashboard, upgrade,
@@ -38,6 +40,8 @@ export function DashboardShell({ children, brandAccent }: { children: React.Reac
       )}
     >
       {children}
+      <AIAssist />
+      {testMode && <TestModeBanner />}
     </main>
   )
 }

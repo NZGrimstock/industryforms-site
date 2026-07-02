@@ -35,7 +35,9 @@ export function SettingsClient({ profile, company, team: initialTeam, googleConn
   const supabase = createClient()
   const router = useRouter()
   const { toast } = useToast()
-  const [tab, setTab] = useState<'business' | 'workflow' | 'team' | 'profile' | 'integrations' | 'subscription'>('business')
+  const [tab, setTab] = useState<'business' | 'workflow' | 'team' | 'profile' | 'integrations' | 'subscription' | 'developer'>('business')
+  const [testMode, setTestMode] = useState<boolean>(!!(company as Company & { test_mode?: boolean }).test_mode)
+  const [testToggling, setTestToggling] = useState(false)
   const [loading, setLoading] = useState(false)
   const [inviteOpen, setInviteOpen] = useState(false)
   const [editMember, setEditMember] = useState<Profile | null>(null)
@@ -350,6 +352,7 @@ export function SettingsClient({ profile, company, team: initialTeam, googleConn
           { key: 'profile',      label: 'My profile' },
           { key: 'integrations', label: 'Integrations' },
           { key: 'subscription', label: 'Subscription' },
+          { key: 'developer',    label: 'Developer' },
         ] as const).map(t => (
           <button key={t.key} onClick={() => setTab(t.key)} className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${tab === t.key ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}>
             {t.label}
@@ -362,6 +365,7 @@ export function SettingsClient({ profile, company, team: initialTeam, googleConn
         {tab === 'team'         && 'Invite people, set their rate, and control what they can see.'}
         {tab === 'profile'      && 'Your personal details, signature and trade qualifications.'}
         {tab === 'integrations' && 'Connect external services — accounting, calendar, SMS, email.'}
+        {tab === 'developer'    && 'Test mode and developer tools.'}
         {tab === 'subscription' && 'Your plan, billing history and seat usage.'}
       </p>
 
@@ -828,6 +832,52 @@ export function SettingsClient({ profile, company, team: initialTeam, googleConn
       {tab === 'subscription' && (
         <div className="space-y-6 max-w-2xl">
           <BillingTab company={company} />
+        </div>
+      )}
+
+      {tab === 'developer' && (
+        <div className="space-y-6 max-w-2xl">
+          <Card>
+            <CardHeader><CardTitle>Test mode</CardTitle></CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-gray-600">
+                Populate your account with realistic demo data — customers, jobs, invoices, purchase orders, bills, suppliers, travel logs and projects — so you can explore the system without touching real records. A caution-tape banner appears while test mode is active as a reminder. Disabling test mode deletes all seeded records.
+              </p>
+              <div className="flex items-center justify-between rounded-xl border border-gray-200 px-4 py-3">
+                <div>
+                  <p className="text-sm font-medium text-gray-900">Test mode is {testMode ? 'on' : 'off'}</p>
+                  <p className="text-xs text-gray-500 mt-0.5">{testMode ? 'Demo data is loaded. Disable to delete all test records.' : 'Enable to load sample data across all modules.'}</p>
+                </div>
+                <button
+                  disabled={testToggling}
+                  onClick={async () => {
+                    setTestToggling(true)
+                    const res = await fetch('/api/test-mode', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ action: testMode ? 'disable' : 'enable' }),
+                    })
+                    if (res.ok) {
+                      setTestMode(v => !v)
+                      toast(testMode ? 'Test data cleared' : 'Test data loaded', 'success')
+                      router.refresh()
+                    } else {
+                      toast('Failed to toggle test mode', 'error')
+                    }
+                    setTestToggling(false)
+                  }}
+                  className={`relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none disabled:opacity-50 ${testMode ? 'bg-amber-500' : 'bg-gray-200'}`}
+                >
+                  <span className={`inline-block h-5 w-5 rounded-full bg-white shadow transform transition-transform duration-200 ${testMode ? 'translate-x-5' : 'translate-x-0'}`} />
+                </button>
+              </div>
+              {testMode && (
+                <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                  Test mode is active. All data shown in the app may include demo records. Disable above to clean up.
+                </p>
+              )}
+            </CardContent>
+          </Card>
         </div>
       )}
 
