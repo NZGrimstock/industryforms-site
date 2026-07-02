@@ -73,6 +73,11 @@ export default function LoginPage() {
           No account?{' '}
           <Link href="/signup" className="text-orange-500 hover:text-orange-600 font-medium">Get started free</Link>
         </p>
+        <div className="flex justify-center mt-6">
+          <a href="https://expo.dev/accounts/grimstock/projects/industryforms/builds" target="_blank" rel="noopener noreferrer">
+            <Image src="/Button.png" alt="Download the app" width={160} height={162} className="h-14 w-auto object-contain" />
+          </a>
+        </div>
       </div>
     </div>
   )
