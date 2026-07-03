@@ -172,6 +172,56 @@ export function reviewRequestEmailHtml({
   return { subject, html }
 }
 
+export function bookingConfirmationEmailHtml({
+  companyName,
+  customerName,
+  packageName,
+  startsAt,
+  timezone,
+  siteAddress,
+  companyPhone,
+}: {
+  companyName: string
+  customerName: string
+  packageName: string
+  startsAt: string
+  timezone: string
+  siteAddress?: string | null
+  companyPhone?: string | null
+}) {
+  const when = new Date(startsAt).toLocaleString('en-NZ', {
+    timeZone: timezone, weekday: 'long', day: 'numeric', month: 'long', hour: 'numeric', minute: '2-digit',
+  })
+  const subject = `Booking confirmed with ${companyName} — ${when}`
+  const html = `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f9fafb;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
+  <div style="max-width:560px;margin:40px auto;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.1)">
+    <div style="background:#f97316;padding:24px 32px">
+      <p style="margin:0;color:#ffffff;font-size:20px;font-weight:700">${companyName}</p>
+    </div>
+    <div style="padding:32px">
+      <p style="margin:0 0 16px;font-size:16px;color:#374151">Hi ${customerName},</p>
+      <p style="margin:0 0 16px;color:#4b5563">Your booking is confirmed:</p>
+      <div style="background:#f9fafb;border-radius:8px;padding:16px 20px;margin:0 0 16px">
+        <p style="margin:0 0 4px;font-weight:600;color:#111827">${packageName}</p>
+        <p style="margin:0;color:#4b5563">${when}</p>
+        ${siteAddress ? `<p style="margin:4px 0 0;color:#6b7280;font-size:14px">${siteAddress}</p>` : ''}
+      </div>
+      <p style="margin:0;font-size:13px;color:#9ca3af">
+        Questions? Reply to this email${companyPhone ? ` or call ${companyPhone}` : ''}.
+      </p>
+    </div>
+    <div style="background:#f9fafb;padding:16px 32px;border-top:1px solid #e5e7eb">
+      <p style="margin:0;font-size:12px;color:#9ca3af">Sent by ${companyName} · Powered by IndustryForms</p>
+    </div>
+  </div>
+</body>
+</html>`
+  return { subject, html }
+}
+
 export function reminderEmailHtml({
   type,
   companyName,

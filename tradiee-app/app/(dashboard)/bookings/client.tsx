@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/components/ui/toast'
-import { Plus, Trash2, Package, Clock, Ban } from 'lucide-react'
+import { Plus, Trash2, Package, Clock, Ban, CalendarCheck } from 'lucide-react'
 
 type BookablePackage = {
   id: string; name: string; description: string | null; duration_minutes: number
@@ -13,13 +13,20 @@ type BookablePackage = {
 type BookingSettings = { timezone: string; min_notice_hours: number; max_days_ahead: number; slot_interval_minutes: number } | null
 type AvailabilityRule = { id: string; day_of_week: number; starts_at: string; ends_at: string; profile_id: string | null }
 type Blackout = { id: string; starts_at: string; ends_at: string; reason: string | null; profile_id: string | null }
+type Booking = {
+  id: string; status: string; customer_name: string; customer_email: string | null; customer_phone: string | null
+  site_address: string | null; notes: string | null; starts_at: string; ends_at: string
+  deposit_required: number; deposit_paid: number; deposit_refunded: number; stripe_payment_intent_id: string | null
+  bookable_packages: { name: string } | null
+}
 
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 const inputCls = 'w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500'
+const REFUND_WINDOW_HOURS = 24
 
 export function BookingsClient({
   companyId, entitled, packages: initialPackages, settings: initialSettings, rules: initialRules,
-  blackouts: initialBlackouts, kits, priceItems,
+  blackouts: initialBlackouts, kits, priceItems, bookings: initialBookings, websiteSlug,
 }: {
   companyId: string
   entitled: boolean
@@ -29,11 +36,15 @@ export function BookingsClient({
   blackouts: Blackout[]
   kits: { id: string; name: string }[]
   priceItems: { id: string; name: string }[]
+  bookings: Booking[]
+  websiteSlug: string | null
 }) {
   const supabase = createClient()
   const router = useRouter()
   const { toast } = useToast()
-  const [tab, setTab] = useState<'packages' | 'hours' | 'blackouts'>('packages')
+  const [tab, setTab] = useState<'requests' | 'packages' | 'hours' | 'blackouts'>('requests')
+  const [bookings, setBookings] = useState(initialBookings)
+  const [busyId, setBusyId] = useState<string | null>(null)
   const [packages, setPackages] = useState(initialPackages)
   const [rules, setRules] = useState(initialRules)
   const [blackouts, setBlackouts] = useState(initialBlackouts)
@@ -138,15 +149,101 @@ export function BookingsClient({
     setBlackouts(b => b.filter(x => x.id !== id))
   }
 
+  async function bookingAction(id: string, action: 'confirm' | 'cancel' | 'no_show') {
+    setBusyId(id)
+    const res = await fetch(`/api/bookings/${id}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action }),
+    })
+    const data = await res.json().catch(() => ({}))
+    setBusyId(null)
+    if (!res.ok) { toast(data.error ?? 'Could not update booking', 'error'); return }
+    router.refresh()
+    const status = action === 'confirm' ? 'confirmed' : action === 'cancel' ? 'cancelled' : 'no_show'
+    setBookings(b => b.map(x => x.id === id ? { ...x, status } : x))
+  }
+
+  async function refundDeposit(id: string) {
+    if (!confirm('Refund this deposit?')) return
+    setBusyId(id)
+    const res = await fetch('/api/bookings/refund', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ bookingId: id }),
+    })
+    const data = await res.json().catch(() => ({}))
+    setBusyId(null)
+    if (!res.ok) { toast(data.error ?? 'Could not refund', 'error'); return }
+    toast('Deposit refunded')
+    router.refresh()
+    setBookings(b => b.map(x => x.id === id ? { ...x, deposit_refunded: x.deposit_paid } : x))
+  }
+
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 space-y-6">
       <div className="flex gap-1 p-1 bg-gray-100 rounded-lg w-fit">
-        {(['packages', 'hours', 'blackouts'] as const).map(t => (
+        {(['requests', 'packages', 'hours', 'blackouts'] as const).map(t => (
           <button key={t} onClick={() => setTab(t)} className={`px-4 py-1.5 text-sm font-medium rounded-md capitalize ${tab === t ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}>
             {t}
           </button>
         ))}
       </div>
+
+      {tab === 'requests' && (
+        <div className="space-y-3">
+          {bookings.length === 0 && (
+            <div className="rounded-xl border border-gray-200 bg-white p-8 text-center text-sm text-gray-400">
+              <CalendarCheck className="h-8 w-8 text-gray-300 mx-auto mb-2" />
+              No bookings yet.
+            </div>
+          )}
+          {bookings.map(b => {
+            const refundable = Number(b.deposit_paid) - Number(b.deposit_refunded)
+            const hoursBeforeStart = (new Date(b.starts_at).getTime() - Date.now()) / 3600000
+            const canRefund = refundable > 0 && ['cancelled', 'no_show'].includes(b.status) && b.status !== 'no_show' && hoursBeforeStart >= REFUND_WINDOW_HOURS
+            return (
+              <div key={b.id} className="rounded-xl border border-gray-200 bg-white p-4 space-y-2">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium text-gray-900">{b.bookable_packages?.name ?? 'Booking'}</p>
+                      <span className={`text-[10px] font-semibold uppercase rounded-full px-2 py-0.5 ${
+                        b.status === 'confirmed' || b.status === 'scheduled' ? 'bg-green-100 text-green-700'
+                        : b.status === 'requested' || b.status === 'deposit_pending' ? 'bg-amber-100 text-amber-700'
+                        : b.status === 'cancelled' || b.status === 'no_show' ? 'bg-gray-100 text-gray-500'
+                        : 'bg-gray-100 text-gray-500'
+                      }`}>{b.status.replace('_', ' ')}</span>
+                    </div>
+                    <p className="text-sm text-gray-600 mt-0.5">{b.customer_name} · {b.customer_email || b.customer_phone}</p>
+                    <p className="text-xs text-gray-400 mt-0.5">{new Date(b.starts_at).toLocaleString('en-NZ', { dateStyle: 'medium', timeStyle: 'short' })}</p>
+                    {b.site_address && <p className="text-xs text-gray-400">{b.site_address}</p>}
+                    {b.notes && <p className="text-xs text-amber-600 mt-1">{b.notes}</p>}
+                    {Number(b.deposit_required) > 0 && (
+                      <p className="text-xs text-gray-400 mt-1">Deposit: ${Number(b.deposit_paid).toFixed(2)} paid of ${Number(b.deposit_required).toFixed(2)}{Number(b.deposit_refunded) > 0 && ` · $${Number(b.deposit_refunded).toFixed(2)} refunded`}</p>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    {['requested', 'deposit_pending'].includes(b.status) && (
+                      <button disabled={busyId === b.id} onClick={() => bookingAction(b.id, 'confirm')} className="text-xs font-medium text-green-600 hover:text-green-700 disabled:opacity-50">Confirm</button>
+                    )}
+                    {!['cancelled', 'no_show', 'completed'].includes(b.status) && (
+                      <button disabled={busyId === b.id} onClick={() => bookingAction(b.id, 'no_show')} className="text-xs font-medium text-gray-500 hover:text-gray-700 disabled:opacity-50">No-show</button>
+                    )}
+                    {!['cancelled', 'no_show', 'completed'].includes(b.status) && (
+                      <button disabled={busyId === b.id} onClick={() => bookingAction(b.id, 'cancel')} className="text-xs font-medium text-red-500 hover:text-red-600 disabled:opacity-50">Cancel</button>
+                    )}
+                    {refundable > 0 && ['cancelled', 'no_show'].includes(b.status) && (
+                      <button
+                        disabled={busyId === b.id || !canRefund}
+                        title={!canRefund ? `Forfeited — refund only allowed >${REFUND_WINDOW_HOURS}h before the booking` : undefined}
+                        onClick={() => refundDeposit(b.id)}
+                        className="text-xs font-medium text-[var(--accent,#f97316)] hover:underline disabled:opacity-40 disabled:no-underline"
+                      >Refund ${refundable.toFixed(2)}</button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
 
       {tab === 'packages' && (
         <div className="space-y-3">
@@ -160,6 +257,15 @@ export function BookingsClient({
                 <p className="text-xs text-gray-400 mt-0.5">{pkg.duration_minutes} min · ${Number(pkg.price).toFixed(2)}</p>
               </div>
               <div className="flex items-center gap-3">
+                {websiteSlug && pkg.is_active && (
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(`${window.location.origin}/site/${websiteSlug}/book/${pkg.id}`)
+                      toast('Booking link copied')
+                    }}
+                    className="text-xs font-medium text-[var(--accent,#f97316)] hover:underline"
+                  >Copy link</button>
+                )}
                 <button onClick={() => togglePackageActive(pkg)} className="text-xs font-medium text-gray-500 hover:text-gray-700">
                   {pkg.is_active ? 'Deactivate' : 'Activate'}
                 </button>

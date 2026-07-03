@@ -4,6 +4,8 @@ import { createServiceClient } from '@/lib/supabase/server'
 import { getStripe } from '@/lib/stripe'
 import { maybeSendReviewRequest } from '@/lib/review-request'
 import { setAddonActive } from '@/lib/billing'
+import { createJobFromBooking } from '@/lib/bookings/fulfill'
+import { sendBookingConfirmationEmail } from '@/lib/bookings/notify'
 
 export async function POST(req: NextRequest) {
   const stripe = getStripe()
@@ -23,6 +25,11 @@ export async function POST(req: NextRequest) {
   switch (event.type) {
     case 'payment_intent.succeeded': {
       const pi = event.data.object as Stripe.PaymentIntent
+      const bookingId = pi.metadata?.booking_id
+      if (bookingId) {
+        await handleBookingDepositPaid(service, bookingId, pi)
+        break
+      }
       const invoiceId = pi.metadata?.invoice_id
       if (!invoiceId) break
 
@@ -89,4 +96,38 @@ export async function POST(req: NextRequest) {
   }
 
   return NextResponse.json({ received: true })
+}
+
+// Idempotent under Stripe retries: every write is guarded by the booking's
+// current status, so replaying the same event after the first success is a
+// no-op (status is no longer 'deposit_pending', job_id is already set).
+async function handleBookingDepositPaid(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  service: any,
+  bookingId: string,
+  pi: Stripe.PaymentIntent
+) {
+  const { data: booking } = await service.from('bookings')
+    .select('id, status, company_id, customer_id, package_id, assigned_to, customer_email, customer_name, site_address, starts_at, ends_at, job_id')
+    .eq('id', bookingId).single()
+  if (!booking || booking.status !== 'deposit_pending') return
+
+  const amount = pi.amount / 100
+  await service.from('bookings').update({
+    deposit_paid: amount,
+    status: 'confirmed',
+    updated_at: new Date().toISOString(),
+  }).eq('id', bookingId).eq('status', 'deposit_pending')
+
+  const { data: pkg } = await service.from('bookable_packages')
+    .select('name, creates_job').eq('id', booking.package_id).single()
+
+  if (!booking.job_id && pkg?.creates_job) {
+    await createJobFromBooking(service, booking, pkg.name)
+  }
+
+  await sendBookingConfirmationEmail(service, booking.company_id, {
+    customer_email: booking.customer_email, customer_name: booking.customer_name,
+    starts_at: booking.starts_at, site_address: booking.site_address,
+  }, pkg?.name ?? 'Booking')
 }
