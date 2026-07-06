@@ -108,7 +108,7 @@ async function handleBookingDepositPaid(
   pi: Stripe.PaymentIntent
 ) {
   const { data: booking } = await service.from('bookings')
-    .select('id, status, company_id, customer_id, package_id, assigned_to, customer_email, customer_name, site_address, starts_at, ends_at, job_id')
+    .select('id, status, company_id, customer_id, package_id, assigned_to, customer_email, customer_phone, customer_name, site_address, starts_at, ends_at, job_id')
     .eq('id', bookingId).single()
   if (!booking || booking.status !== 'deposit_pending') return
 
@@ -126,8 +126,5 @@ async function handleBookingDepositPaid(
     await createJobFromBooking(service, booking, pkg.name)
   }
 
-  await sendBookingConfirmationEmail(service, booking.company_id, {
-    customer_email: booking.customer_email, customer_name: booking.customer_name,
-    starts_at: booking.starts_at, site_address: booking.site_address,
-  }, pkg?.name ?? 'Booking')
+  await sendBookingConfirmationEmail(service, booking.company_id, booking, pkg?.name ?? 'Booking')
 }

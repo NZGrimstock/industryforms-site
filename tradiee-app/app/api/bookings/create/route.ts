@@ -6,7 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
 import { createJobFromBooking } from '@/lib/bookings/fulfill'
-import { sendBookingConfirmationEmail } from '@/lib/bookings/notify'
+import { sendBookingConfirmationEmail, sendBookingRequestedEmail } from '@/lib/bookings/notify'
 
 function normalizeEmail(email: string) {
   return email.trim().toLowerCase()
@@ -111,7 +111,13 @@ export async function POST(req: NextRequest) {
       }, pkg.name)
     }
     await sendBookingConfirmationEmail(service, booking.company_id, {
-      customer_email: normEmail, customer_name: String(name), starts_at: updated.starts_at, site_address: siteAddress ? String(siteAddress) : null,
+      id: bookingId, customer_email: normEmail, customer_phone: normPhone, customer_name: String(name),
+      starts_at: updated.starts_at, site_address: siteAddress ? String(siteAddress) : null,
+    }, pkg.name)
+  } else if (status === 'requested') {
+    await sendBookingRequestedEmail(service, booking.company_id, {
+      id: bookingId, customer_email: normEmail, customer_phone: normPhone, customer_name: String(name),
+      starts_at: updated.starts_at, site_address: siteAddress ? String(siteAddress) : null,
     }, pkg.name)
   }
 

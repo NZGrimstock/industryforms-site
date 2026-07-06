@@ -1,6 +1,6 @@
 # IndustryForms — Project State (handoff)
 
-Last updated: 2026-07-04. Catch-up doc for a fresh session. Read this first.
+Last updated: 2026-07-06. Catch-up doc for a fresh session. Read this first.
 
 ## What it is
 **IndustryForms** — a SaaS job-management app for NZ/AU tradespeople (a Tradify
@@ -13,17 +13,97 @@ competitor). Monorepo at `D:\TRADIEE`:
 GitHub: **https://github.com/NZGrimstock/industryforms** (branch `main`, auto-deploys to Vercel).
 
 ### Where work lives right now
-**`main` is current** — Growth Engine Sprints A, B, C, and D merged
-2026-07-03/04, executing `SPRINTS_GROWTH_ENGINE_RESCOPED.md` (see that file +
-`SPRINT_A_INBOX_EXECUTION.md` for the full sprint plan). Migrations now use
-timestamped filenames (`YYYYMMDDHHMMSS_description.sql`), not the old `0XX_`
-numbering — latest is `20260703155109_bookings_slot_index_null_fix.sql`, all
-applied to cloud Supabase (Sprint D needed no new migration — Sprint C's
-`bookings` table already had every column). PowerSync sync rules switched to
-**streams (edition 3)** — already validated + deployed via the PowerSync
-Dashboard. Latest APK is
-`tradiee-mobile/android/app/build/outputs/apk/release/app-release.apk`
+**`main` is current** — Growth Engine Sprints A through E all merged
+(A/B/C/D on 2026-07-03/04, E on 2026-07-06), executing
+`SPRINTS_GROWTH_ENGINE_RESCOPED.md` in full (see that file +
+`SPRINT_A_INBOX_EXECUTION.md` for the original sprint plan). **The Growth
+Engine roadmap is now complete** — no more sprints scoped in that doc.
+Migrations use timestamped filenames (`YYYYMMDDHHMMSS_description.sql`), not
+the old `0XX_` numbering — latest is `20260704090000_automation_events.sql`,
+applied to cloud Supabase. PowerSync sync rules switched to **streams
+(edition 3)** — already validated + deployed via the PowerSync Dashboard.
+Latest APK is `tradiee-mobile/android/app/build/outputs/apk/release/app-release.apk`
 (Jun 25, 145 MB — mobile untouched by the Growth Engine sprints).
+
+**Sprint E (automations + growth reporting) shipped 2026-07-06.** New
+`automation_events` table (migration `20260704090000_automation_events.sql`)
+logs every automated send — `channel` (email/sms), `status`
+(pending/sent/skipped_sms_dark/failed), `error`. `lib/notify.ts` is the
+channel-aware helper: `notify()` fires every channel that has a recipient
+(used for confirmations/reminders — belt-and-suspenders is fine there);
+`notifyPreferred()` sends exactly one message, preferring SMS when Twilio's
+live and the customer has a phone (used for review requests, so going live
+with Twilio doesn't suddenly double-send). SMS always logs
+`skipped_sms_dark` instead of vanishing when Twilio isn't configured — flips
+to actually sending with zero code changes once it is. **Not manually
+verified against live Twilio** — credentials are live in this env, so
+SMS-path testing was deliberately skipped to avoid sending real texts to a
+real number during dev; the code path is exercised (build+lint clean, dark
+path exercised naturally since Twilio wasn't invoked with sms recipients in
+testing) but not this specific fork of the notify() logic. Verify manually
+before relying on it in production.
+
+Automations wired in (all routed through `notify()`/`notifyPreferred()`,
+all logged to `automation_events`):
+- **Booking confirmed** (`lib/bookings/notify.ts sendBookingConfirmationEmail`) —
+  called from `api/bookings/create` (no-deposit auto-confirm), the Stripe
+  webhook (deposit paid), and the admin confirm action. Respects
+  `booking_settings.confirmation_channel` (email/sms/both) for whether SMS is
+  attempted at all.
+- **Booking requested** (`sendBookingRequestedEmail`) — new acknowledgement
+  email sent when a booking lands in `requested` (manual-approval packages);
+  this didn't exist before Sprint E — visitors got silence until an admin
+  manually confirmed.
+- **24h booking reminder** — extended `api/reminders` (existing appointment-
+  reminder cron section). Booking-sourced visits now get email too (was
+  SMS-only before, and only SMS at that — a real pre-existing gap since email
+  is the only channel actually live). Dedup via `automation_events`, not
+  `job_visits.reminder_sent_at` (that column still belongs to the plain,
+  non-booking visit loop, untouched).
+- **Post-completion invoice** — new `api/reminders` section: when a
+  booking's package has `creates_invoice=true` and its linked job's status is
+  literally `'completed'` (scope note: checks the seeded default key, not each
+  company's custom `job_statuses` — see code comment), creates a draft
+  invoice at the package price and emails it, linking `bookings.invoice_id`.
+- **Win-back** — new `api/reminders` section: completed jobs whose package
+  has `recurring_interval_months` queue a re-book email (+ dark SMS) once
+  that interval has elapsed since the visit's `actual_end`/`scheduled_end`.
+  Link is `{appUrl}/site/{slug}/book/{packageId}` when the company has a
+  website, else just `{appUrl}`.
+- **Review request** — `lib/review-request.ts` refactored to route through
+  `notifyPreferred()` instead of raw `sendEmail()` — same invoice-paid
+  trigger as before (Stripe webhook + manual "Record payment"), now also
+  tries SMS first when live, and links back to the originating booking (if
+  any) via a `bookings.invoice_id` lookup for `automation_events`.
+
+**Reporting**: `/reports` gained a **Growth** section (gated on
+`hasAddon('bookings_website')`) — booking conversion rate, deposit revenue,
+review requests sent, repeat-customer revenue, leads by source, bookings by
+package, and an **Automation activity** card (sent / dark / failed counts +
+the 5 most recent failures with their error text) satisfying "failed/skipped
+sends visible to admin". **Not built**: avg inbound response time — nothing
+in the schema records when a lead first got a reply, so there's no data to
+report on; would need a new timestamp captured at first-response time, out of
+scope for this sprint.
+
+**Two real bugs caught and fixed during Sprint E build/testing** (both
+pre-existing, found because Sprint E's post-completion invoicing exercised
+draft-invoice creation for the first time in an automated context):
+1. `companies.gst_rate` doesn't exist — the real column is
+   `companies.default_gst_rate`. Both `app/api/reminders/route.ts` (new, this
+   sprint) and the **pre-existing** `app/api/invoices/route.ts` (mobile
+   "Complete and Invoice" flow) had this typo; both silently fell back to the
+   0.15 default via `?? 0.15` instead of erroring, so a company with a custom
+   GST rate got the wrong tax on every job→invoice conversion — a real,
+   silent, live bug, now fixed in both places.
+2. Companies with no custom `job_statuses` rows (i.e. **every company created
+   after** migration 037's one-time backfill — new signups never get seeded)
+   have zero terminal-status rows in the DB, so a naive `is_terminal=true`
+   lookup finds nothing and every "is this job done" check silently fails for
+   any new company. Fixed by falling back to `DEFAULT_JOB_STATUSES` from
+   `lib/job-statuses.ts` (the same fallback every other reader in the app
+   already uses) when a company has no custom rows — win-back would otherwise
+   never fire for the majority of real companies.
 
 **Sprint D (public booking widget + Stripe deposits) shipped 2026-07-04.**
 Public widget at `app/site/[slug]/book/[packageId]/page.tsx` +
@@ -200,7 +280,8 @@ previously be framed by any third-party site). Super-admin takedown control
 lives on a new `/admin/companies/[id]` detail page — the companies list had
 been linking to that route already, 404ing, since no detail page existed.
 
-**Not started**: Sprint E (automations + reporting) — Sprints A–D are all shipped.
+Sprint E (automations + reporting) shipped 2026-07-06 — see the summary near
+the top of this doc under "Where work lives right now".
 
 ### Sprint 6 (2026-07-03) — mobile nav/quote fixes + kits + signup, all on `main`
 
@@ -560,13 +641,22 @@ travel_logs.verified_by.
    dev/super-admin; needs a Stripe checkout + webhook for prod.
 
 ### Building next
-**Sprint E (automations + reporting)** is the last scoped Growth Engine sprint
-— see `SPRINTS_GROWTH_ENGINE_RESCOPED.md` for the `automation_events` schema
-and scope (email automations live now via Resend; SMS automations built but
-dark until Twilio numbers are mapped per-company). Other leading candidates:
+**The Growth Engine roadmap (Sprints A–E) is fully shipped** — no explicit
+next sprint scoped. Leading candidates:
 - **Marketing site** (industryforms.app — separate from tenant Instant Websites). No work started.
 - **Configurable dashboard widgets** (swappable widget system).
 - **Job maps: geocode-on-save** when a new site address is set.
+- **Per-company job_statuses backfill** — new signups get zero rows in
+  `job_statuses` (the migration 037 seed only ran once, against companies
+  that existed at the time); every reader falls back to
+  `DEFAULT_JOB_STATUSES` so nothing's broken, but seeding real rows on
+  signup (mirroring the migration's seed logic) would remove the need for
+  that fallback path everywhere.
+- **Twilio SMS path for Sprint E's notify()/notifyPreferred()** — code-complete
+  and logs correctly to `automation_events`, but not manually verified against
+  live Twilio (avoided sending real test texts). Worth a real smoke test with
+  a real phone number before relying on `confirmation_channel: 'sms'/'both'`
+  or the review-request SMS-preferred path in production.
 
 ### Future backlog (in priority order)
 - **Tap to Pay finish** — install `@stripe/stripe-terminal-react-native` in

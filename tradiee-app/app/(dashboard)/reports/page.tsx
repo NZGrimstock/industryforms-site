@@ -2,12 +2,15 @@ import { createClient } from '@/lib/supabase/server'
 import { Header } from '@/components/layout/header'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatCurrency, calcDurationHours } from '@/lib/utils'
+import { hasAddon } from '@/lib/billing'
 
 export default async function ReportsPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  const { data: profile } = await supabase.from('profiles').select('company_id, full_name, role').eq('id', user!.id).single()
+  const { data: profile } = await supabase.from('profiles').select('company_id, full_name, role, is_super_admin, companies(addons, billing_exempt)').eq('id', user!.id).single()
   const companyId = profile!.company_id
+  const company = profile?.companies as unknown as { addons: Record<string, { active?: boolean }> | null; billing_exempt: boolean | null } | null
+  const bookingsEntitled = hasAddon(!!profile?.is_super_admin, company, 'bookings_website')
 
   const now = new Date()
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
@@ -66,6 +69,61 @@ export default async function ReportsPage() {
     acc[j.status] = (acc[j.status] ?? 0) + 1
     return acc
   }, {})
+
+  // ── Growth Engine (Sprint E) — bookings, automations, leads ────────────────
+  let leadsBySource: [string, number][] = []
+  let bookingsByPackage: [string, number][] = []
+  let bookingConversionRate = 0
+  let depositRevenue = 0
+  let reviewRequestsSent = 0
+  let repeatCustomerRevenue = 0
+  let automationCounts = { sent: 0, skipped_sms_dark: 0, failed: 0 }
+  let recentFailures: { event_type: string; channel: string; error: string | null; created_at: string }[] = []
+
+  if (bookingsEntitled) {
+    const [enquiriesRes, bookingsRes, reviewSentRes, automationRes, customerInvoicesRes] = await Promise.all([
+      supabase.from('enquiries').select('source').eq('company_id', companyId),
+      supabase.from('bookings').select('status, deposit_paid, bookable_packages(name)').eq('company_id', companyId).neq('status', 'slot_held'),
+      supabase.from('invoices').select('id', { count: 'exact', head: true }).eq('company_id', companyId).not('review_request_sent_at', 'is', null),
+      supabase.from('automation_events').select('event_type, channel, status, error, created_at').eq('company_id', companyId).order('created_at', { ascending: false }).limit(200),
+      supabase.from('invoices').select('customer_id, total, status').eq('company_id', companyId).eq('status', 'paid'),
+    ])
+
+    const enquiries = enquiriesRes.data ?? []
+    const sourceCounts = enquiries.reduce((acc: Record<string, number>, e) => { acc[e.source] = (acc[e.source] ?? 0) + 1; return acc }, {})
+    leadsBySource = Object.entries(sourceCounts).sort((a, b) => b[1] - a[1])
+
+    const bookings = bookingsRes.data ?? []
+    const pkgCounts = bookings.reduce((acc: Record<string, number>, b) => {
+      const name = (b.bookable_packages as unknown as { name: string } | null)?.name ?? 'Unknown'
+      acc[name] = (acc[name] ?? 0) + 1
+      return acc
+    }, {})
+    bookingsByPackage = Object.entries(pkgCounts).sort((a, b) => b[1] - a[1])
+    const notCancelled = bookings.filter(b => !['cancelled', 'no_show'].includes(b.status))
+    const convertedBookings = bookings.filter(b => ['confirmed', 'scheduled', 'completed'].includes(b.status))
+    bookingConversionRate = notCancelled.length > 0 ? Math.round((convertedBookings.length / notCancelled.length) * 100) : 0
+    depositRevenue = bookings.reduce((sum, b) => sum + Number(b.deposit_paid), 0)
+
+    reviewRequestsSent = reviewSentRes.count ?? 0
+
+    const events = automationRes.data ?? []
+    automationCounts = {
+      sent: events.filter(e => e.status === 'sent').length,
+      skipped_sms_dark: events.filter(e => e.status === 'skipped_sms_dark').length,
+      failed: events.filter(e => e.status === 'failed').length,
+    }
+    recentFailures = events.filter(e => e.status === 'failed').slice(0, 5)
+
+    const paidInvoices = customerInvoicesRes.data ?? []
+    const byCustomer = paidInvoices.reduce((acc: Record<string, { count: number; total: number }>, i) => {
+      const c = acc[i.customer_id] ?? { count: 0, total: 0 }
+      c.count += 1; c.total += Number(i.total)
+      acc[i.customer_id] = c
+      return acc
+    }, {})
+    repeatCustomerRevenue = Object.values(byCustomer).filter(c => c.count > 1).reduce((sum, c) => sum + c.total, 0)
+  }
 
   return (
     <>
@@ -131,6 +189,74 @@ export default async function ReportsPage() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Growth Engine — bookings, automations, leads */}
+        {bookingsEntitled && (
+          <>
+            <section>
+              <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Growth</h2>
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <StatCard label="Booking conversion" value={`${bookingConversionRate}%`} sub="confirmed+ / not cancelled" />
+                <StatCard label="Deposit revenue" value={formatCurrency(depositRevenue)} />
+                <StatCard label="Review requests sent" value={String(reviewRequestsSent)} />
+                <StatCard label="Repeat-customer revenue" value={formatCurrency(repeatCustomerRevenue)} sub="from paid invoices" />
+              </div>
+            </section>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <Card>
+                <CardHeader><CardTitle>Leads by source</CardTitle></CardHeader>
+                <CardContent className="space-y-2">
+                  {leadsBySource.map(([source, count]) => (
+                    <div key={source} className="flex items-center justify-between">
+                      <span className="text-sm text-gray-600 capitalize">{source.replace(/_/g, ' ')}</span>
+                      <span className="text-sm font-medium text-gray-700">{count}</span>
+                    </div>
+                  ))}
+                  {leadsBySource.length === 0 && <p className="text-sm text-gray-400">No enquiries yet</p>}
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader><CardTitle>Bookings by package</CardTitle></CardHeader>
+                <CardContent className="space-y-2">
+                  {bookingsByPackage.map(([name, count]) => (
+                    <div key={name} className="flex items-center justify-between">
+                      <span className="text-sm text-gray-600">{name}</span>
+                      <span className="text-sm font-medium text-gray-700">{count}</span>
+                    </div>
+                  ))}
+                  {bookingsByPackage.length === 0 && <p className="text-sm text-gray-400">No bookings yet</p>}
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader><CardTitle>Automation activity</CardTitle></CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-600">Sent</span>
+                    <span className="font-medium text-green-600">{automationCounts.sent}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-600">Dark (SMS, awaiting Twilio)</span>
+                    <span className="font-medium text-gray-500">{automationCounts.skipped_sms_dark}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-600">Failed</span>
+                    <span className={`font-medium ${automationCounts.failed > 0 ? 'text-red-600' : 'text-gray-500'}`}>{automationCounts.failed}</span>
+                  </div>
+                  {recentFailures.length > 0 && (
+                    <ul className="pt-2 border-t border-gray-100 space-y-1">
+                      {recentFailures.map((f, i) => (
+                        <li key={i} className="text-xs text-red-500">{f.event_type} ({f.channel}): {f.error}</li>
+                      ))}
+                    </ul>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </>
+        )}
       </div>
     </>
   )

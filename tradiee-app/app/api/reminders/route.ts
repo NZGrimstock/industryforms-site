@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
-import { sendEmail, reminderEmailHtml } from '@/lib/email'
-import { sendSms, smsConfigured } from '@/lib/sms'
+import { sendEmail, reminderEmailHtml, invoiceEmailHtml } from '@/lib/email'
+import { sendSms, smsConfigured, toE164 } from '@/lib/sms'
 import { nextDocNumber } from '@/lib/numbering'
+import { notify } from '@/lib/notify'
+import { DEFAULT_JOB_STATUSES } from '@/lib/job-statuses'
 
 function addInterval(dateStr: string, interval: string | null): string {
   const d = new Date(dateStr)
@@ -125,10 +127,60 @@ async function runReminders() {
     }).eq('id', invoice.id)
   }
 
-  // ── Appointment reminders ─────────────────────────────────────────────────
-  // Visits starting in the next 24h that haven't been reminded yet.
+  // ── Booking appointment reminders (email + sms, logged) ───────────────────
+  // Booking-sourced visits get the full notify() treatment (email live today,
+  // sms dark until Twilio) so the confirmation and reminder come from the
+  // same automation trail. Dedup is via automation_events, not
+  // job_visits.reminder_sent_at, since the plain visit loop below still owns
+  // that column for non-booking visits.
   const now = new Date()
   const in24h = new Date(now.getTime() + 24 * 3600000)
+  const bookingVisitIds = new Set<string>()
+
+  const { data: reminderBookings } = await service
+    .from('bookings')
+    .select('id, visit_id, company_id, customer_id, customer_name, customer_email, customer_phone, package_id, starts_at')
+    .in('status', ['confirmed', 'scheduled'])
+    .not('visit_id', 'is', null)
+    .gte('starts_at', now.toISOString())
+    .lte('starts_at', in24h.toISOString())
+
+  if (reminderBookings?.length) {
+    const { data: alreadySent } = await service
+      .from('automation_events')
+      .select('booking_id')
+      .eq('event_type', 'booking_reminder_24h')
+      .in('booking_id', reminderBookings.map(b => b.id))
+    const alreadySentIds = new Set((alreadySent ?? []).map(r => r.booking_id))
+
+    for (const b of reminderBookings) {
+      bookingVisitIds.add(b.visit_id as string)
+      if (alreadySentIds.has(b.id)) continue
+
+      const [{ data: company }, { data: settingsRow }, { data: pkg }] = await Promise.all([
+        service.from('companies').select('name, country').eq('id', b.company_id).single(),
+        service.from('booking_settings').select('timezone, confirmation_channel').eq('company_id', b.company_id).maybeSingle(),
+        service.from('bookable_packages').select('name').eq('id', b.package_id).single(),
+      ])
+      if (!company) continue
+      const timezone = settingsRow?.timezone ?? 'Pacific/Auckland'
+      const when = new Date(b.starts_at).toLocaleString('en-NZ', { timeZone: timezone, weekday: 'short', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })
+      const smsTo = (settingsRow?.confirmation_channel === 'sms' || settingsRow?.confirmation_channel === 'both') ? toE164(b.customer_phone, company.country) : null
+
+      await notify({
+        service, companyId: b.company_id, customerId: b.customer_id, bookingId: b.id, eventType: 'booking_reminder_24h',
+        email: b.customer_email ? {
+          to: b.customer_email, subject: `Reminder: ${pkg?.name ?? 'your booking'} tomorrow`,
+          html: `<p>Hi ${b.customer_name.split(' ')[0]},</p><p>Reminder — ${company.name} has you booked for <strong>${pkg?.name ?? 'your appointment'}</strong> on ${when}.</p>`,
+        } : undefined,
+        sms: smsTo ? { to: smsTo, country: company.country, body: `Hi ${b.customer_name.split(' ')[0]}, reminder: ${company.name} has your ${pkg?.name ?? 'booking'} ${when}.` } : undefined,
+      })
+      sent.push(`Booking reminder ${b.id}`)
+    }
+  }
+
+  // ── Appointment reminders (non-booking visits) ────────────────────────────
+  // Visits starting in the next 24h that haven't been reminded yet.
   const { data: visits } = await service
     .from('job_visits')
     .select('id, scheduled_start, jobs(title, customers(name, phone), companies(name, country))')
@@ -138,6 +190,7 @@ async function runReminders() {
     .lte('scheduled_start', in24h.toISOString())
 
   for (const visit of visits ?? []) {
+    if (bookingVisitIds.has(visit.id)) { await service.from('job_visits').update({ reminder_sent_at: now.toISOString() }).eq('id', visit.id); continue }
     const job = visit.jobs as unknown as { title: string; customers: { name: string; phone: string | null } | null; companies: { name: string; country: string | null } | null } | null
     const customer = job?.customers
     const company = job?.companies
@@ -150,6 +203,126 @@ async function runReminders() {
     if (r.error && r.error !== 'SMS service not configured') errors.push(`Visit ${visit.id} sms: ${r.error}`)
     else if (!r.error) sent.push('Appointment reminder sms')
     await service.from('job_visits').update({ reminder_sent_at: now.toISOString() }).eq('id', visit.id)
+  }
+
+  // ── Post-completion invoicing ──────────────────────────────────────────────
+  // Bookings whose package is flagged creates_invoice: once the linked job
+  // completes, generate a draft invoice at the package price and email it.
+  // Scope note: "completed" is checked literally (the seeded default terminal
+  // key) rather than resolving each company's custom job_statuses — a company
+  // that renames its completed status won't trigger this until that's made
+  // configurable. Good enough for a first version; not a correctness issue
+  // for the (currently 100%) default-status companies.
+  const { data: invoiceCandidates } = await service
+    .from('bookings')
+    .select('id, company_id, customer_id, site_address, job_id, bookable_packages!inner(name, price, creates_invoice)')
+    .not('job_id', 'is', null)
+    .is('invoice_id', null)
+    .eq('bookable_packages.creates_invoice', true)
+
+  for (const b of invoiceCandidates ?? []) {
+    const pkg = b.bookable_packages as unknown as { name: string; price: number; creates_invoice: boolean } | null
+    if (!pkg?.creates_invoice) continue
+    const { data: job } = await service.from('jobs').select('status').eq('id', b.job_id).single()
+    if (job?.status !== 'completed') continue
+
+    try {
+      const { data: co } = await service.from('companies').select('default_gst_rate, name, email, phone').eq('id', b.company_id).single()
+      const gstRate = Number(co?.default_gst_rate ?? 0.15)
+      const subtotal = Number(pkg.price)
+      const gst = subtotal * gstRate
+      const total = subtotal + gst
+      const invoiceNumber = await nextDocNumber(service, b.company_id, 'invoice')
+
+      const { data: inv } = await service.from('invoices').insert({
+        company_id: b.company_id, customer_id: b.customer_id, job_id: b.job_id,
+        invoice_number: invoiceNumber, status: 'draft',
+        subtotal, gst_amount: gst, total, amount_paid: 0,
+      }).select('id, public_token').single()
+      if (!inv) continue
+
+      await service.from('invoice_line_items').insert({
+        invoice_id: inv.id, type: 'labour', description: pkg.name,
+        quantity: 1, unit: 'each', unit_price: pkg.price, line_total: pkg.price, sort_order: 0,
+      })
+      await service.from('bookings').update({ invoice_id: inv.id }).eq('id', b.id)
+
+      const { data: customer } = await service.from('customers').select('name, email').eq('id', b.customer_id).single()
+      if (customer?.email && co) {
+        const html = invoiceEmailHtml({
+          companyName: co.name, customerName: customer.name, invoiceNumber, jobTitle: pkg.name,
+          total: `$${total.toFixed(2)}`, amountDue: `$${total.toFixed(2)}`, dueDate: null,
+          viewUrl: `${appUrl}/i/${inv.public_token}`, companyPhone: co.phone, companyEmail: co.email,
+        })
+        await notify({
+          service, companyId: b.company_id, customerId: b.customer_id, bookingId: b.id, eventType: 'post_completion_invoice',
+          email: { to: customer.email, subject: `Invoice ${invoiceNumber} from ${co.name}`, html, replyTo: co.email },
+        })
+        await service.from('invoices').update({ status: 'sent', sent_at: new Date().toISOString() }).eq('id', inv.id)
+      }
+      sent.push(`Post-completion invoice ${invoiceNumber}`)
+    } catch (e) {
+      errors.push(`Post-completion invoice for booking ${b.id}: ${e instanceof Error ? e.message : 'failed'}`)
+    }
+  }
+
+  // ── Win-back reminders ─────────────────────────────────────────────────────
+  // Completed jobs whose booking package has a recurring_interval_months set:
+  // queue a re-book message once that interval has elapsed since completion.
+  // Email now; sms logs skipped_sms_dark until Twilio, per the sprint doc.
+  const { data: terminalStatuses } = await service.from('job_statuses').select('company_id, key').eq('is_terminal', true)
+  const terminalByCompany = new Map<string, Set<string>>()
+  for (const s of terminalStatuses ?? []) {
+    if (!terminalByCompany.has(s.company_id)) terminalByCompany.set(s.company_id, new Set())
+    terminalByCompany.get(s.company_id)!.add(s.key)
+  }
+  // Companies with no job_statuses rows (new signups — the seed only backfilled
+  // existing companies at migration time) fall back to the same defaults every
+  // other job-status reader in the app uses (lib/job-statuses.ts).
+  const defaultTerminalKeys = new Set(DEFAULT_JOB_STATUSES.filter(s => s.is_terminal).map(s => s.key))
+  function isTerminalStatus(companyId: string, statusKey: string): boolean {
+    const custom = terminalByCompany.get(companyId)
+    return custom ? custom.has(statusKey) : defaultTerminalKeys.has(statusKey)
+  }
+
+  const { data: winBackCandidates } = await service
+    .from('bookings')
+    .select('id, company_id, customer_id, customer_name, customer_email, customer_phone, package_id, job_id, visit_id, bookable_packages!inner(name, recurring_interval_months), jobs!inner(status)')
+    .not('job_id', 'is', null)
+    .not('bookable_packages.recurring_interval_months', 'is', null)
+
+  for (const b of winBackCandidates ?? []) {
+    const pkg = b.bookable_packages as unknown as { name: string; recurring_interval_months: number | null } | null
+    const job = b.jobs as unknown as { status: string } | null
+    if (!pkg?.recurring_interval_months || !job) continue
+    if (!isTerminalStatus(b.company_id, job.status)) continue
+
+    const { data: visit } = b.visit_id ? await service.from('job_visits').select('actual_end, scheduled_end').eq('id', b.visit_id).single() : { data: null }
+    const doneAt = visit?.actual_end ?? visit?.scheduled_end
+    if (!doneAt) continue
+    const dueDate = new Date(doneAt)
+    dueDate.setMonth(dueDate.getMonth() + pkg.recurring_interval_months)
+    if (dueDate.getTime() > now.getTime()) continue
+
+    const { data: already } = await service.from('automation_events').select('id').eq('booking_id', b.id).eq('event_type', 'win_back').maybeSingle()
+    if (already) continue
+
+    const [{ data: company }, { data: site }] = await Promise.all([
+      service.from('companies').select('name, country').eq('id', b.company_id).maybeSingle(),
+      service.from('company_websites').select('slug').eq('company_id', b.company_id).maybeSingle(),
+    ])
+    if (!company) continue
+    const rebookUrl = site?.slug ? `${appUrl}/site/${site.slug}/book/${b.package_id}` : appUrl
+
+    await notify({
+      service, companyId: b.company_id, customerId: b.customer_id, bookingId: b.id, eventType: 'win_back',
+      email: b.customer_email ? {
+        to: b.customer_email, subject: `Time for another ${pkg.name}?`,
+        html: `<p>Hi ${b.customer_name.split(' ')[0]},</p><p>It's been a while since your last ${pkg.name} with ${company.name} — ready to book again?</p><p><a href="${rebookUrl}">Book now</a></p>`,
+      } : undefined,
+      sms: b.customer_phone ? { to: toE164(b.customer_phone, company.country), body: `Hi ${b.customer_name.split(' ')[0]}, it's ${company.name} — time to re-book your ${pkg.name}? ${rebookUrl}` } : undefined,
+    })
+    sent.push(`Win-back ${b.id}`)
   }
 
   // ── Recurring jobs ────────────────────────────────────────────────────────

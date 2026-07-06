@@ -44,10 +44,10 @@ export async function POST(req: NextRequest) {
 
   const { data: co } = await service
     .from('companies')
-    .select('gst_rate')
+    .select('default_gst_rate')
     .eq('id', profile.company_id)
     .single()
-  const gstRate = Number(co?.gst_rate ?? 0.15)
+  const gstRate = Number(co?.default_gst_rate ?? 0.15)
 
   const lines = materials ?? []
   const subtotal = lines.reduce((s, m) => s + Number(m.quantity) * Number(m.unit_price), 0)

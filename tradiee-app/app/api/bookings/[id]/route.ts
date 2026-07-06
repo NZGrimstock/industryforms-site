@@ -24,7 +24,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
   const service = createServiceClient()
   const { data: booking } = await service.from('bookings')
-    .select('id, company_id, status, customer_id, package_id, assigned_to, customer_email, customer_name, site_address, starts_at, ends_at, job_id')
+    .select('id, company_id, status, customer_id, package_id, assigned_to, customer_email, customer_phone, customer_name, site_address, starts_at, ends_at, job_id')
     .eq('id', id).single()
   if (!booking || booking.company_id !== profile.company_id) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 })
@@ -48,10 +48,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   if (!booking.job_id && pkg?.creates_job) {
     await createJobFromBooking(service, booking, pkg.name)
   }
-  await sendBookingConfirmationEmail(service, booking.company_id, {
-    customer_email: booking.customer_email, customer_name: booking.customer_name,
-    starts_at: booking.starts_at, site_address: booking.site_address,
-  }, pkg?.name ?? 'Booking')
+  await sendBookingConfirmationEmail(service, booking.company_id, booking, pkg?.name ?? 'Booking')
 
   return NextResponse.json({ ok: true })
 }
