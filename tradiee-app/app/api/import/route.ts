@@ -1,8 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import type { DataType } from '@/lib/import/programs'
 
 interface ImportRow { [key: string]: string }
+
+// 5,000 rows is generous headroom for a CSV import while bounding the loop
+// below from an unbounded/oversized payload.
+const bodySchema = z.object({
+  dataType: z.enum(['customers', 'price_list', 'jobs', 'invoices']),
+  rows: z.array(z.record(z.string(), z.string())).max(5000),
+  duplicateMode: z.enum(['skip', 'overwrite']).optional(),
+})
 
 export async function POST(req: NextRequest) {
   try {
@@ -18,7 +27,9 @@ export async function POST(req: NextRequest) {
       .single()
     if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 403 })
 
-    const { dataType, rows, duplicateMode }: { dataType: DataType; rows: ImportRow[]; duplicateMode?: 'skip' | 'overwrite' } = await req.json()
+    const parsed = bodySchema.safeParse(await req.json().catch(() => ({})))
+    if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 })
+    const { dataType, rows, duplicateMode } = parsed.data as { dataType: DataType; rows: ImportRow[]; duplicateMode?: 'skip' | 'overwrite' }
     const companyId = profile.company_id
 
     let inserted = 0

@@ -1,22 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { sendEmail } from '@/lib/email'
 import { formatCurrency } from '@/lib/utils'
+
+const bodySchema = z.object({ poId: z.string().uuid() })
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { poId } = await req.json()
+  const parsed = bodySchema.safeParse(await req.json().catch(() => ({})))
+  if (!parsed.success) return NextResponse.json({ error: 'poId required' }, { status: 400 })
+  const { poId } = parsed.data
   const service = createServiceClient()
+  const { data: callerProfile } = await service.from('profiles').select('company_id').eq('id', user.id).single()
 
   const { data: po } = await service
     .from('purchase_orders')
-    .select('po_number, total, notes, expected_date, suppliers(name, email), companies(name, email, phone), purchase_order_items(description, quantity, unit, unit_cost, line_total, sort_order)')
+    .select('company_id, po_number, total, notes, expected_date, suppliers(name, email), companies(name, email, phone), purchase_order_items(description, quantity, unit, unit_cost, line_total, sort_order)')
     .eq('id', poId)
     .single()
-  if (!po) return NextResponse.json({ error: 'Purchase order not found' }, { status: 404 })
+  if (!po || po.company_id !== callerProfile?.company_id) {
+    return NextResponse.json({ error: 'Purchase order not found' }, { status: 404 })
+  }
 
   const supplier = po.suppliers as unknown as { name: string; email: string | null } | null
   if (!supplier?.email) return NextResponse.json({ error: 'Supplier has no email address' }, { status: 400 })

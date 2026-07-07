@@ -1,14 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 import { createServiceClient } from '@/lib/supabase/server'
+
+const bodySchema = z.object({
+  slug: z.string().trim().min(1).max(200),
+  name: z.string().trim().min(1).max(200),
+  email: z.string().trim().email().max(320).nullish().or(z.literal('')),
+  phone: z.string().trim().max(50).nullish().or(z.literal('')),
+  message: z.string().trim().max(4000).nullish(),
+  kind: z.string().max(50).nullish(),
+}).refine(d => !!d.email || !!d.phone, { message: 'Name and a contact detail are required' })
 
 // Public lead capture from a company's Instant Website contact form.
 // Creates an enquiry (source = 'website') for the site owner's company.
 export async function POST(req: NextRequest) {
-  const { slug, name, email, phone, message, kind } = await req.json().catch(() => ({}))
-
-  if (!slug || !name || (!email && !phone)) {
-    return NextResponse.json({ error: 'Name and a contact detail are required' }, { status: 400 })
+  const parsed = bodySchema.safeParse(await req.json().catch(() => ({})))
+  if (!parsed.success) {
+    return NextResponse.json({ error: parsed.error.issues[0]?.message ?? 'Name and a contact detail are required' }, { status: 400 })
   }
+  const { slug, name, email, phone, message, kind } = parsed.data
 
   const service = createServiceClient()
   const { data: site } = await service

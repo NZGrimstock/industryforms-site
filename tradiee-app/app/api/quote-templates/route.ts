@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
+
+const bodySchema = z.object({ quoteId: z.string().uuid(), name: z.string().trim().min(1).max(200) })
 
 // Save an existing quote as a reusable template (line items + terms, no customer).
 export async function POST(req: NextRequest) {
@@ -7,8 +10,9 @@ export async function POST(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { quoteId, name } = await req.json()
-  if (!quoteId || !name?.trim()) return NextResponse.json({ error: 'Template name required' }, { status: 400 })
+  const parsed = bodySchema.safeParse(await req.json().catch(() => ({})))
+  if (!parsed.success) return NextResponse.json({ error: 'Template name required' }, { status: 400 })
+  const { quoteId, name } = parsed.data
 
   const service = createServiceClient()
   const { data: profile } = await service.from('profiles').select('company_id').eq('id', user.id).single()

@@ -8,9 +8,11 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import { StatusBar } from 'expo-status-bar'
 import * as Notifications from 'expo-notifications'
 import * as Linking from 'expo-linking'
+import { StripeTerminalProvider, useStripeTerminal } from '@stripe/stripe-terminal-react-native'
 import { db } from '@/lib/powersync/database'
 import { SupabaseConnector } from '@/lib/powersync/connector'
 import { supabase } from '@/lib/supabase'
+import { fetchConnectionToken } from '@/lib/tap-to-pay'
 import type { Session } from '@supabase/supabase-js'
 
 const API_BASE = (process.env.EXPO_PUBLIC_API_URL ?? '').replace(/\/$/, '')
@@ -41,6 +43,23 @@ async function registerPushToken(userId: string) {
   } catch (e) {
     console.warn('[push]', e)
   }
+}
+
+async function terminalTokenProvider() {
+  if (!API_BASE) throw new Error('Missing EXPO_PUBLIC_API_URL for Stripe Terminal.')
+  return fetchConnectionToken(API_BASE)
+}
+
+function StripeTerminalInitializer({ enabled }: { enabled: boolean }) {
+  const { initialize, isInitialized } = useStripeTerminal()
+
+  useEffect(() => {
+    if (!enabled) return
+    if (isInitialized) return
+    initialize().catch(error => console.warn('[tap-to-pay:init]', error))
+  }, [enabled, initialize, isInitialized])
+
+  return null
 }
 
 export default function RootLayout() {
@@ -101,7 +120,10 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
+      <StripeTerminalProvider tokenProvider={terminalTokenProvider} logLevel="none">
         <PowerSyncContext.Provider value={db}>
+          {/* Codex build audit marker (2026-07-07): Stripe Terminal provider/init wiring. */}
+          <StripeTerminalInitializer enabled={!!session} />
           <StatusBar style="dark" />
           <Stack screenOptions={{ headerShown: false }}>
             <Stack.Screen name="login" />
@@ -121,6 +143,7 @@ export default function RootLayout() {
             <Stack.Screen name="notifications" options={{ headerShown: true, title: 'Notifications', headerTintColor: '#f97316' }} />
           </Stack>
         </PowerSyncContext.Provider>
+      </StripeTerminalProvider>
     </GestureHandlerRootView>
   )
 }

@@ -13,8 +13,9 @@ export async function resolveCompanyUser(req: Request): Promise<{ userId: string
   if (authHeader?.toLowerCase().startsWith('bearer ')) {
     const token = authHeader.slice(7)
     const svc = createServiceClient()
-    const { data } = await svc.auth.getUser(token)
+    const { data, error } = await svc.auth.getUser(token)
     userId = data.user?.id ?? null
+    if (error) console.warn(`[auth] bearer token rejected on ${req.url}: ${error.message}`)
   } else {
     const supabase = await createClient()
     const { data } = await supabase.auth.getUser()
@@ -25,7 +26,10 @@ export async function resolveCompanyUser(req: Request): Promise<{ userId: string
 
   const svc = createServiceClient()
   const { data: profile } = await svc.from('profiles').select('company_id').eq('id', userId).single()
-  if (!profile?.company_id) return null
+  if (!profile?.company_id) {
+    console.warn(`[auth] user ${userId} has no company_id on ${req.url}`)
+    return null
+  }
 
   return { userId, companyId: profile.company_id }
 }

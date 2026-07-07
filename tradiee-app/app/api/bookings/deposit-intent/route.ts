@@ -3,12 +3,16 @@
 // (before payment completes) so the webhook can find it later — mirrors
 // app/api/stripe/payment-intent/route.ts for invoices.
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 import { createServiceClient } from '@/lib/supabase/server'
 import { getStripe } from '@/lib/stripe'
 
+const bodySchema = z.object({ bookingId: z.string().uuid() })
+
 export async function POST(req: NextRequest) {
-  const { bookingId } = await req.json().catch(() => ({}))
-  if (!bookingId) return NextResponse.json({ error: 'bookingId required' }, { status: 400 })
+  const parsed = bodySchema.safeParse(await req.json().catch(() => ({})))
+  if (!parsed.success) return NextResponse.json({ error: 'bookingId required' }, { status: 400 })
+  const { bookingId } = parsed.data
 
   const service = createServiceClient()
   const { data: booking } = await service.from('bookings')

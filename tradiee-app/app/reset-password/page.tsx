@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import Image from 'next/image'
 import { Eye, EyeOff } from 'lucide-react'
 import { createClient } from '@/lib/supabase/browser'
+import { isPasswordValid, PASSWORD_POLICY_MESSAGE } from '@/lib/password'
 
 export default function ResetPasswordPage() {
   const [supabase] = useState(() => createClient())
@@ -24,7 +25,7 @@ export default function ResetPasswordPage() {
   }, [supabase])
 
   async function handleSubmit() {
-    if (password.length < 8) { setError('Password must be at least 8 characters.'); return }
+    if (!isPasswordValid(password)) { setError(PASSWORD_POLICY_MESSAGE); return }
     setError('')
     setLoading(true)
     const { error: authError } = await supabase.auth.updateUser({ password })

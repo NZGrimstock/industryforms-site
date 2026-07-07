@@ -2,14 +2,24 @@
 // visitor fills in their details. Wraps tryHoldSlot(), whose partial unique
 // index is the actual concurrency guard (see lib/bookings/availability.ts).
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 import { createServiceClient } from '@/lib/supabase/server'
 import { tryHoldSlot } from '@/lib/bookings/availability'
 
+const bodySchema = z.object({
+  companyId: z.string().uuid(),
+  packageId: z.string().uuid(),
+  profileId: z.string().uuid().nullish(),
+  startsAt: z.string().datetime({ offset: true }).or(z.string().datetime()),
+  endsAt: z.string().datetime({ offset: true }).or(z.string().datetime()),
+})
+
 export async function POST(req: NextRequest) {
-  const { companyId, packageId, profileId, startsAt, endsAt } = await req.json().catch(() => ({}))
-  if (!companyId || !packageId || !startsAt || !endsAt) {
-    return NextResponse.json({ error: 'companyId, packageId, startsAt, endsAt required' }, { status: 400 })
+  const parsed = bodySchema.safeParse(await req.json().catch(() => ({})))
+  if (!parsed.success) {
+    return NextResponse.json({ error: parsed.error.issues[0]?.message ?? 'companyId, packageId, startsAt, endsAt required' }, { status: 400 })
   }
+  const { companyId, packageId, profileId, startsAt, endsAt } = parsed.data
 
   const service = createServiceClient()
   const { data: pkg } = await service.from('bookable_packages').select('id, is_active')

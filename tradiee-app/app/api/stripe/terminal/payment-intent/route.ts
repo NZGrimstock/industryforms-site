@@ -10,8 +10,11 @@
 // only needs to confirm via the SDK.
 
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { getStripe } from '@/lib/stripe'
+
+const bodySchema = z.object({ invoice_id: z.string().uuid(), amount: z.number().positive().optional() })
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
@@ -25,13 +28,14 @@ export async function POST(req: NextRequest) {
   }
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { invoice_id, amount } = await req.json().catch(() => ({}))
-  if (!invoice_id) return NextResponse.json({ error: 'invoice_id required' }, { status: 400 })
-
-  const { data: profile } = await supabase.from('profiles').select('company_id').eq('id', user.id).single()
-  if (!profile) return NextResponse.json({ error: 'No profile' }, { status: 403 })
+  const parsed = bodySchema.safeParse(await req.json().catch(() => ({})))
+  if (!parsed.success) return NextResponse.json({ error: 'invoice_id required' }, { status: 400 })
+  const { invoice_id, amount } = parsed.data
 
   const service = createServiceClient()
+  const { data: profile } = await service.from('profiles').select('company_id').eq('id', user.id).single()
+  if (!profile) return NextResponse.json({ error: 'No profile' }, { status: 403 })
+
   const { data: invoice } = await service
     .from('invoices')
     .select('id, company_id, total, amount_paid, invoice_number')
@@ -42,7 +46,9 @@ export async function POST(req: NextRequest) {
   }
 
   const outstanding = Number(invoice.total) - Number(invoice.amount_paid)
-  const cents = Math.round((amount ? Number(amount) : outstanding) * 100)
+  const requested = amount ? Number(amount) : outstanding
+  const chargeAmount = Math.min(requested, outstanding)
+  const cents = Math.round(chargeAmount * 100)
   if (cents <= 0) return NextResponse.json({ error: 'Nothing to charge' }, { status: 400 })
 
   const stripe = getStripe()

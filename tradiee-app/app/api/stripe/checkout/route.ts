@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { getStripe } from '@/lib/stripe'
+
+const bodySchema = z.object({ plan: z.enum(['solo', 'team', 'pro', 'bookings_website']) })
 
 export async function POST(req: NextRequest) {
   const stripe = getStripe()
@@ -8,7 +11,9 @@ export async function POST(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { plan } = await req.json()
+  const parsed = bodySchema.safeParse(await req.json().catch(() => ({})))
+  if (!parsed.success) return NextResponse.json({ error: 'Unknown plan' }, { status: 400 })
+  const { plan } = parsed.data
   const service = createServiceClient()
 
   const { data: profile } = await service.from('profiles').select('company_id, email, full_name, companies(name, stripe_customer_id)').eq('id', user.id).single()

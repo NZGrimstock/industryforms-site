@@ -44,22 +44,15 @@ export default async function PortalJobDetailPage({
 
   if (!job || job.customer_id !== customer_id) notFound()
 
-  // Fetch visits and notes in parallel
-  const [visitsRes, notesRes] = await Promise.all([
-    supabase
-      .from('job_visits')
-      .select('id, scheduled_start, scheduled_end, status, notes')
-      .eq('job_id', jobId)
-      .order('scheduled_start', { ascending: true }),
-    supabase
-      .from('job_notes')
-      .select('id, body, created_at')
-      .eq('job_id', jobId)
-      .order('created_at', { ascending: true }),
-  ])
+  // Codex build audit marker (2026-07-07): customer portal deliberately omits
+  // internal visit/job notes because the schema has no public/private marker.
+  const { data: visits } = await supabase
+    .from('job_visits')
+    .select('id, scheduled_start, scheduled_end, status')
+    .eq('job_id', jobId)
+    .order('scheduled_start', { ascending: true })
 
-  const visits = visitsRes.data ?? []
-  const notes = notesRes.data ?? []
+  const safeVisits = visits ?? []
 
   const JOB_STATUS_CONFIG: Record<string, { label: string; className: string }> = {
     unscheduled: { label: 'Unscheduled', className: 'bg-gray-100 text-gray-600' },
@@ -135,13 +128,13 @@ export default async function PortalJobDetailPage({
         </div>
 
         {/* Scheduled visits */}
-        {visits.length > 0 && (
+        {safeVisits.length > 0 && (
           <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-100">
               <h2 className="font-semibold text-gray-900">Scheduled visits</h2>
             </div>
             <ul className="divide-y divide-gray-50">
-              {visits.map((visit) => {
+              {safeVisits.map((visit) => {
                 const vstConfig = VISIT_STATUS_CONFIG[visit.status] ?? {
                   label: visit.status,
                   className: 'bg-gray-100 text-gray-600',
@@ -160,9 +153,6 @@ export default async function PortalJobDetailPage({
                     <div>
                       <p className="text-sm font-medium text-gray-800">{dateStr}</p>
                       <p className="text-xs text-gray-500 mt-0.5">{timeStr}</p>
-                      {visit.notes && (
-                        <p className="text-xs text-gray-400 mt-1">{visit.notes}</p>
-                      )}
                     </div>
                     <span
                       className={`text-xs px-2 py-0.5 rounded-full font-medium shrink-0 ${vstConfig.className}`}
@@ -172,23 +162,6 @@ export default async function PortalJobDetailPage({
                   </li>
                 )
               })}
-            </ul>
-          </div>
-        )}
-
-        {/* Job notes (no author shown) */}
-        {notes.length > 0 && (
-          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-100">
-              <h2 className="font-semibold text-gray-900">Notes</h2>
-            </div>
-            <ul className="divide-y divide-gray-50">
-              {notes.map((note) => (
-                <li key={note.id} className="px-6 py-3">
-                  <p className="text-xs text-gray-400 mb-1">{formatDate(note.created_at)}</p>
-                  <p className="text-sm text-gray-700 whitespace-pre-wrap">{note.body}</p>
-                </li>
-              ))}
             </ul>
           </div>
         )}

@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/server'
 import { sendEmail, quoteEmailHtml } from '@/lib/email'
 import { logCommunication } from '@/lib/comms'
 import { formatCurrency } from '@/lib/utils'
+
+const bodySchema = z.object({ quoteId: z.string().uuid() })
 
 export async function POST(req: NextRequest) {
   // Cookie-based auth (web) — fall back to Bearer token (mobile)
@@ -18,8 +21,11 @@ export async function POST(req: NextRequest) {
   }
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { quoteId } = await req.json()
+  const parsed = bodySchema.safeParse(await req.json().catch(() => ({})))
+  if (!parsed.success) return NextResponse.json({ error: 'quoteId required' }, { status: 400 })
+  const { quoteId } = parsed.data
   const service = createServiceClient()
+  const { data: callerProfile } = await service.from('profiles').select('company_id').eq('id', user.id).single()
 
   const { data: quote } = await service
     .from('quotes')
@@ -27,7 +33,9 @@ export async function POST(req: NextRequest) {
     .eq('id', quoteId)
     .single()
 
-  if (!quote) return NextResponse.json({ error: 'Quote not found' }, { status: 404 })
+  if (!quote || quote.company_id !== callerProfile?.company_id) {
+    return NextResponse.json({ error: 'Quote not found' }, { status: 404 })
+  }
 
   const customer = quote.customers as { name: string; email: string | null }
   if (!customer?.email) return NextResponse.json({ error: 'Customer has no email address' }, { status: 400 })

@@ -10,6 +10,7 @@ import { sendSms, smsConfigured } from '@/lib/sms'
 
 type EmailPayload = { to: string | null; subject: string; html: string; replyTo?: string | null }
 type SmsPayload = { to: string | null; country?: 'NZ' | 'AU'; body: string }
+export type NotificationResult = { channel: 'email' | 'sms'; status: string; error?: string | null }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type SupabaseClient = any
@@ -46,26 +47,34 @@ export async function notify(params: {
   sms?: SmsPayload
 }) {
   const { service, companyId, customerId, bookingId, eventType, email, sms } = params
+  const results: NotificationResult[] = []
 
   if (email?.to) {
     const result = await sendEmail({ to: email.to, subject: email.subject, html: email.html, replyTo: email.replyTo ?? undefined })
+    const status = result.error ? 'failed' : 'sent'
     await logEvent(service, {
       companyId, customerId, bookingId, eventType, channel: 'email',
-      status: result.error ? 'failed' : 'sent', error: result.error,
+      status, error: result.error,
     })
+    results.push({ channel: 'email', status, error: result.error })
   }
 
   if (sms?.to) {
     if (!smsConfigured()) {
       await logEvent(service, { companyId, customerId, bookingId, eventType, channel: 'sms', status: 'skipped_sms_dark' })
+      results.push({ channel: 'sms', status: 'skipped_sms_dark' })
     } else {
       const result = await sendSms({ to: sms.to, country: sms.country, body: sms.body })
+      const status = result.error ? 'failed' : 'sent'
       await logEvent(service, {
         companyId, customerId, bookingId, eventType, channel: 'sms',
-        status: result.error ? 'failed' : 'sent', error: result.error,
+        status, error: result.error,
       })
+      results.push({ channel: 'sms', status, error: result.error })
     }
   }
+
+  return results
 }
 
 /**
@@ -85,23 +94,31 @@ export async function notifyPreferred(params: {
 }) {
   const { service, companyId, customerId, bookingId, eventType, email, sms } = params
   const preferSms = !!sms?.to
+  const results: NotificationResult[] = []
 
   if (preferSms && smsConfigured()) {
     const result = await sendSms({ to: sms!.to, country: sms!.country, body: sms!.body })
+    const status = result.error ? 'failed' : 'sent'
     await logEvent(service, {
       companyId, customerId, bookingId, eventType, channel: 'sms',
-      status: result.error ? 'failed' : 'sent', error: result.error,
+      status, error: result.error,
     })
-    if (!result.error) return
+    results.push({ channel: 'sms', status, error: result.error })
+    if (!result.error) return results
   } else if (preferSms) {
     await logEvent(service, { companyId, customerId, bookingId, eventType, channel: 'sms', status: 'skipped_sms_dark' })
+    results.push({ channel: 'sms', status: 'skipped_sms_dark' })
   }
 
   if (email?.to) {
     const result = await sendEmail({ to: email.to, subject: email.subject, html: email.html, replyTo: email.replyTo ?? undefined })
+    const status = result.error ? 'failed' : 'sent'
     await logEvent(service, {
       companyId, customerId, bookingId, eventType, channel: 'email',
-      status: result.error ? 'failed' : 'sent', error: result.error,
+      status, error: result.error,
     })
+    results.push({ channel: 'email', status, error: result.error })
   }
+
+  return results
 }

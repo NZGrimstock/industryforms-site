@@ -1,16 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { sendEmail, invoiceEmailHtml } from '@/lib/email'
 import { logCommunication } from '@/lib/comms'
 import { formatCurrency } from '@/lib/utils'
+
+const bodySchema = z.object({ invoiceId: z.string().uuid() })
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { invoiceId } = await req.json()
+  const parsed = bodySchema.safeParse(await req.json().catch(() => ({})))
+  if (!parsed.success) return NextResponse.json({ error: 'invoiceId required' }, { status: 400 })
+  const { invoiceId } = parsed.data
   const service = createServiceClient()
+
+  const { data: callerProfile } = await service.from('profiles').select('company_id').eq('id', user.id).single()
 
   const { data: invoice } = await service
     .from('invoices')
@@ -18,7 +25,9 @@ export async function POST(req: NextRequest) {
     .eq('id', invoiceId)
     .single()
 
-  if (!invoice) return NextResponse.json({ error: 'Invoice not found' }, { status: 404 })
+  if (!invoice || invoice.company_id !== callerProfile?.company_id) {
+    return NextResponse.json({ error: 'Invoice not found' }, { status: 404 })
+  }
 
   const customer = invoice.customers as { name: string; email: string | null }
   if (!customer?.email) return NextResponse.json({ error: 'Customer has no email address' }, { status: 400 })

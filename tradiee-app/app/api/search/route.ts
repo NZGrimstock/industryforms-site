@@ -22,7 +22,11 @@ export async function GET(req: NextRequest) {
   const { data: profile } = await supabase.from('profiles').select('company_id').eq('id', user.id).single()
   if (!profile?.company_id) return NextResponse.json({ results: [] })
   const company = profile.company_id
-  const like = `%${q}%`
+  // PostgREST treats , . ( ) as filter syntax in .or() strings — wrap the
+  // value in double quotes (escaping \ and ") so `q` can't inject extra
+  // filter clauses.
+  const escaped = q.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
+  const like = `"%${escaped}%"`
 
   const [jobs, customers, quotes, invoices] = await Promise.all([
     supabase.from('jobs').select('id, job_number, title, customers(name)').eq('company_id', company)

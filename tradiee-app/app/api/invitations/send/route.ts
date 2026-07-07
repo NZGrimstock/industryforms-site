@@ -1,6 +1,17 @@
 import { NextResponse } from 'next/server'
+import { z } from 'zod'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { sendEmail } from '@/lib/email'
+
+const bodySchema = z.object({
+  jobId: z.string().uuid(),
+  subcontractorEmail: z.string().trim().email().max(320),
+  title: z.string().trim().min(1).max(200),
+  description: z.string().trim().max(4000).nullish(),
+  projectAddress: z.string().trim().max(500).nullish(),
+  dueDate: z.string().nullish(),
+  agreedPrice: z.number().nonnegative().nullish(),
+})
 
 type PushMessage = {
   to: string
@@ -23,21 +34,9 @@ export async function POST(request: Request) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const body = await request.json() as {
-    jobId: string
-    subcontractorEmail: string
-    title: string
-    description?: string
-    projectAddress?: string
-    dueDate?: string
-    agreedPrice?: number
-  }
-
-  const { jobId, subcontractorEmail, title, description, projectAddress, dueDate, agreedPrice } = body
-
-  if (!jobId || !subcontractorEmail || !title) {
-    return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
-  }
+  const parsed = bodySchema.safeParse(await request.json().catch(() => ({})))
+  if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 })
+  const { jobId, subcontractorEmail, title, description, projectAddress, dueDate, agreedPrice } = parsed.data
 
   // 1. Get authed user's company_id and company name
   const { data: profile } = await supabase

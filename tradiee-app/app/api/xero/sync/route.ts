@@ -1,13 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { refreshXeroToken, syncInvoiceToXero } from '@/lib/xero'
+
+const bodySchema = z.object({ invoiceId: z.string().uuid() })
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { invoiceId } = await req.json()
+  const parsed = bodySchema.safeParse(await req.json().catch(() => ({})))
+  if (!parsed.success) return NextResponse.json({ error: 'invoiceId required' }, { status: 400 })
+  const { invoiceId } = parsed.data
   const service = createServiceClient()
 
   const { data: profile } = await service.from('profiles').select('company_id, companies(xero_tenant_id, xero_access_token, xero_refresh_token, xero_token_expires_at)').eq('id', user.id).single()
@@ -36,7 +41,12 @@ export async function POST(req: NextRequest) {
     .eq('id', invoiceId)
     .single()
 
-  if (!invoice) return NextResponse.json({ error: 'Invoice not found' }, { status: 404 })
+  // Without this check, any authenticated user could pass another
+  // company's invoiceId and have it synced into their OWN Xero org —
+  // leaking a different tenant's customer/invoice data cross-company.
+  if (!invoice || invoice.company_id !== profile.company_id) {
+    return NextResponse.json({ error: 'Invoice not found' }, { status: 404 })
+  }
 
   const customer = invoice.customers as { name: string; email: string | null }
 

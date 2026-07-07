@@ -7,6 +7,12 @@ import { setAddonActive } from '@/lib/billing'
 import { createJobFromBooking } from '@/lib/bookings/fulfill'
 import { sendBookingConfirmationEmail } from '@/lib/bookings/notify'
 
+type InvoicePaymentResult = {
+  applied: boolean
+  invoice_status: string
+  invoice_amount_paid: number
+}
+
 export async function POST(req: NextRequest) {
   const stripe = getStripe()
   const body = await req.text()
@@ -33,28 +39,24 @@ export async function POST(req: NextRequest) {
       const invoiceId = pi.metadata?.invoice_id
       if (!invoiceId) break
 
-      const { data: inv } = await service.from('invoices').select('total, amount_paid').eq('id', invoiceId).single()
-      if (!inv) break
+      const amount = (pi.amount_received || pi.amount) / 100
+      const { data: paymentResult, error: paymentError } = await service
+        .rpc('record_stripe_invoice_payment', {
+          p_invoice_id: invoiceId,
+          p_payment_intent_id: pi.id,
+          p_amount: amount,
+          p_paid_at: new Date().toISOString(),
+        })
+        .single()
+      if (paymentError) {
+        console.error('[stripe-webhook] invoice payment settlement failed', paymentError)
+        break
+      }
+      const settledPayment = paymentResult as InvoicePaymentResult | null
 
-      const amount = pi.amount / 100
-      const newPaid = Number(inv.amount_paid) + amount
-      const newStatus = newPaid >= Number(inv.total) ? 'paid' : 'partially_paid'
-
-      await service.from('payments').insert({
-        invoice_id: invoiceId,
-        amount,
-        method: 'stripe',
-        notes: `Stripe payment ${pi.id}`,
-        paid_at: new Date().toISOString(),
-      })
-
-      await service.from('invoices').update({
-        amount_paid: newPaid,
-        status: newStatus,
-        paid_at: newStatus === 'paid' ? new Date().toISOString() : null,
-      }).eq('id', invoiceId)
-
-      if (newStatus === 'paid') await maybeSendReviewRequest(service, invoiceId)
+      if (settledPayment?.applied && settledPayment.invoice_status === 'paid') {
+        await maybeSendReviewRequest(service, invoiceId)
+      }
       break
     }
 

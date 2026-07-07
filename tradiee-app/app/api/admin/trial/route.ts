@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { logAdminAction } from '@/lib/audit'
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
@@ -19,6 +20,7 @@ export async function POST(req: NextRequest) {
       subscription_status: 'trialing',
       trial_ends_at: new Date().toISOString(),
     }).eq('id', companyId)
+    await logAdminAction(service, { adminId: user.id, action: 'trial.end', targetType: 'company', targetId: companyId })
     return NextResponse.json({ ok: true })
   }
 
@@ -31,6 +33,11 @@ export async function POST(req: NextRequest) {
     subscription_status: 'trialing',
     trial_ends_at: newEnd.toISOString(),
   }).eq('id', companyId)
+
+  await logAdminAction(service, {
+    adminId: user.id, action: `trial.${action}`, targetType: 'company', targetId: companyId,
+    details: { trial_ends_at: newEnd.toISOString(), days: days ?? null },
+  })
 
   return NextResponse.json({ ok: true, trial_ends_at: newEnd.toISOString() })
 }

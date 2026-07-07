@@ -1,5 +1,28 @@
 import { NextResponse } from 'next/server'
+import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
+
+const bodySchema = z.union([
+  z.object({
+    type: z.literal('job_assigned'),
+    payload: z.object({
+      jobId: z.string().uuid(),
+      assignedToId: z.string().uuid(),
+      jobTitle: z.string().max(200),
+      jobNumber: z.string().max(50),
+    }),
+  }),
+  z.object({
+    type: z.literal('visit_reminder'),
+    payload: z.object({
+      visitId: z.string().uuid(),
+      assignedToId: z.string().uuid(),
+      jobTitle: z.string().max(200),
+      scheduledStart: z.string(),
+    }),
+  }),
+  z.object({ type: z.literal('visit_reminder_batch'), payload: z.unknown().optional() }),
+])
 
 type PushMessage = {
   to: string
@@ -24,7 +47,9 @@ export async function POST(request: Request) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { type, payload } = await request.json()
+  const parsed = bodySchema.safeParse(await request.json().catch(() => ({})))
+  if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 })
+  const { type, payload } = parsed.data
 
   if (type === 'job_assigned') {
     const { jobId, assignedToId, jobTitle, jobNumber } = payload

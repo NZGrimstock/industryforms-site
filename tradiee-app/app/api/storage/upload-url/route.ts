@@ -8,14 +8,24 @@
 export const runtime = 'nodejs'
 
 import { NextResponse } from 'next/server'
+import { z } from 'zod'
 import { resolveCompanyUser } from '@/lib/api-auth'
 import { presignedUpload, publicUrl } from '@/lib/r2'
+
+const bodySchema = z.object({
+  kind: z.enum(['job-photo', 'company-logo']),
+  jobId: z.string().uuid().optional(),
+  ext: z.string().max(10).optional(),
+  contentType: z.string().max(100).optional(),
+})
 
 export async function POST(req: Request) {
   const auth = await resolveCompanyUser(req)
   if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const body = await req.json() as { kind: 'job-photo' | 'company-logo'; jobId?: string; ext?: string; contentType?: string }
+  const parsed = bodySchema.safeParse(await req.json().catch(() => ({})))
+  if (!parsed.success) return NextResponse.json({ error: 'Invalid kind' }, { status: 400 })
+  const body = parsed.data
   const ext = (body.ext ?? 'bin').replace(/[^a-z0-9]/gi, '').toLowerCase() || 'bin'
   const contentType = body.contentType ?? 'application/octet-stream'
   const company = auth.companyId

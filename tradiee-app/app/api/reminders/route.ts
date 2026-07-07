@@ -5,6 +5,7 @@ import { sendSms, smsConfigured, toE164 } from '@/lib/sms'
 import { nextDocNumber } from '@/lib/numbering'
 import { notify } from '@/lib/notify'
 import { DEFAULT_JOB_STATUSES } from '@/lib/job-statuses'
+import { logCommunication } from '@/lib/comms'
 
 function addInterval(dateStr: string, interval: string | null): string {
   const d = new Date(dateStr)
@@ -103,6 +104,7 @@ async function runReminders() {
     if (amountDue <= 0.01) continue
     const viewUrl = `${appUrl}/i/${invoice.public_token}`
     const dueLabel = overdue ? `${daysFromDue} day${daysFromDue !== 1 ? 's' : ''} overdue` : daysFromDue === 0 ? 'due today' : `due in ${-daysFromDue} day${-daysFromDue !== 1 ? 's' : ''}`
+    let delivered = false
 
     if (customer.email) {
       const { subject, html } = reminderEmailHtml({
@@ -111,7 +113,7 @@ async function runReminders() {
       })
       const r = await sendEmail({ to: customer.email, subject, html, replyTo: company.email ?? undefined })
       if (r.error) errors.push(`Invoice ${invoice.invoice_number} email: ${r.error}`)
-      else sent.push(`Invoice ${invoice.invoice_number} email (${dueLabel})`)
+      else { delivered = true; sent.push(`Invoice ${invoice.invoice_number} email (${dueLabel})`) }
     }
     if (customer.phone) {
       const r = await sendSms({
@@ -119,23 +121,24 @@ async function runReminders() {
         body: `Hi ${customer.name.split(' ')[0]}, invoice ${invoice.invoice_number} from ${company.name} ($${amountDue.toFixed(2)}) is ${dueLabel}. View & pay: ${viewUrl}`,
       })
       if (r.error && r.error !== 'SMS service not configured') errors.push(`Invoice ${invoice.invoice_number} sms: ${r.error}`)
-      else if (!r.error) sent.push(`Invoice ${invoice.invoice_number} sms (${dueLabel})`)
+      else if (!r.error) { delivered = true; sent.push(`Invoice ${invoice.invoice_number} sms (${dueLabel})`) }
     }
-    await service.from('invoices').update({
-      last_reminder_at: new Date().toISOString(),
-      ...(overdue ? { status: 'overdue' } : {}),
-    }).eq('id', invoice.id)
+    if (delivered || overdue) {
+      await service.from('invoices').update({
+        ...(delivered ? { last_reminder_at: new Date().toISOString() } : {}),
+        ...(overdue ? { status: 'overdue' } : {}),
+      }).eq('id', invoice.id)
+    }
   }
 
   // ── Booking appointment reminders (email + sms, logged) ───────────────────
-  // Booking-sourced visits get the full notify() treatment (email live today,
-  // sms dark until Twilio) so the confirmation and reminder come from the
-  // same automation trail. Dedup is via automation_events, not
-  // job_visits.reminder_sent_at, since the plain visit loop below still owns
-  // that column for non-booking visits.
+  // Booking-sourced visits get the full notify() treatment so the confirmation
+  // and reminder come from the same automation trail. Failed/skipped attempts
+  // are logged but do not count as sent or stamp the visit.
   const now = new Date()
   const in24h = new Date(now.getTime() + 24 * 3600000)
   const bookingVisitIds = new Set<string>()
+  const bookingVisitReminderSentIds = new Set<string>()
 
   const { data: reminderBookings } = await service
     .from('bookings')
@@ -148,14 +151,18 @@ async function runReminders() {
   if (reminderBookings?.length) {
     const { data: alreadySent } = await service
       .from('automation_events')
-      .select('booking_id')
+      .select('booking_id, status')
       .eq('event_type', 'booking_reminder_24h')
+      .eq('status', 'sent')
       .in('booking_id', reminderBookings.map(b => b.id))
     const alreadySentIds = new Set((alreadySent ?? []).map(r => r.booking_id))
 
     for (const b of reminderBookings) {
       bookingVisitIds.add(b.visit_id as string)
-      if (alreadySentIds.has(b.id)) continue
+      if (alreadySentIds.has(b.id)) {
+        bookingVisitReminderSentIds.add(b.visit_id as string)
+        continue
+      }
 
       const [{ data: company }, { data: settingsRow }, { data: pkg }] = await Promise.all([
         service.from('companies').select('name, country').eq('id', b.company_id).single(),
@@ -167,7 +174,7 @@ async function runReminders() {
       const when = new Date(b.starts_at).toLocaleString('en-NZ', { timeZone: timezone, weekday: 'short', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })
       const smsTo = (settingsRow?.confirmation_channel === 'sms' || settingsRow?.confirmation_channel === 'both') ? toE164(b.customer_phone, company.country) : null
 
-      await notify({
+      const notifyResults = await notify({
         service, companyId: b.company_id, customerId: b.customer_id, bookingId: b.id, eventType: 'booking_reminder_24h',
         email: b.customer_email ? {
           to: b.customer_email, subject: `Reminder: ${pkg?.name ?? 'your booking'} tomorrow`,
@@ -175,7 +182,12 @@ async function runReminders() {
         } : undefined,
         sms: smsTo ? { to: smsTo, country: company.country, body: `Hi ${b.customer_name.split(' ')[0]}, reminder: ${company.name} has your ${pkg?.name ?? 'booking'} ${when}.` } : undefined,
       })
-      sent.push(`Booking reminder ${b.id}`)
+      if (notifyResults.some(result => result.status === 'sent')) {
+        bookingVisitReminderSentIds.add(b.visit_id as string)
+        sent.push(`Booking reminder ${b.id}`)
+      } else {
+        errors.push(`Booking reminder ${b.id} not sent`)
+      }
     }
   }
 
@@ -183,26 +195,65 @@ async function runReminders() {
   // Visits starting in the next 24h that haven't been reminded yet.
   const { data: visits } = await service
     .from('job_visits')
-    .select('id, scheduled_start, jobs(title, customers(name, phone), companies(name, country))')
+    .select('id, scheduled_start, jobs(id, company_id, title, customer_id, customers(id, name, phone), companies(id, name, country))')
     .eq('status', 'scheduled')
     .is('reminder_sent_at', null)
     .gte('scheduled_start', now.toISOString())
     .lte('scheduled_start', in24h.toISOString())
 
   for (const visit of visits ?? []) {
-    if (bookingVisitIds.has(visit.id)) { await service.from('job_visits').update({ reminder_sent_at: now.toISOString() }).eq('id', visit.id); continue }
-    const job = visit.jobs as unknown as { title: string; customers: { name: string; phone: string | null } | null; companies: { name: string; country: string | null } | null } | null
+    if (bookingVisitIds.has(visit.id)) {
+      if (bookingVisitReminderSentIds.has(visit.id)) {
+        await service.from('job_visits').update({ reminder_sent_at: now.toISOString() }).eq('id', visit.id)
+      } else {
+        errors.push(`Booking visit ${visit.id} reminder not sent; reminder_sent_at not updated`)
+      }
+      continue
+    }
+    const job = visit.jobs as unknown as {
+      id: string
+      company_id: string
+      title: string
+      customer_id: string | null
+      customers: { id: string; name: string; phone: string | null } | null
+      companies: { id: string; name: string; country: string | null } | null
+    } | null
     const customer = job?.customers
     const company = job?.companies
-    if (!customer?.phone || !company) { await service.from('job_visits').update({ reminder_sent_at: now.toISOString() }).eq('id', visit.id); continue }
+    if (!customer?.phone || !company) {
+      errors.push(`Visit ${visit.id} reminder skipped: missing customer phone or company`)
+      continue
+    }
     const when = new Date(visit.scheduled_start).toLocaleString('en-NZ', { weekday: 'short', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit', hour12: true })
-    const r = await sendSms({
-      to: customer.phone, country: (company.country as 'NZ' | 'AU') ?? 'NZ',
-      body: `Hi ${customer.name.split(' ')[0]}, reminder: ${company.name} has an appointment with you ${when} (${job!.title}).`,
+    const body = `Hi ${customer.name.split(' ')[0]}, reminder: ${company.name} has an appointment with you ${when} (${job!.title}).`
+    // Codex build audit marker (2026-07-07): plain visit reminders now leave automation + comms history.
+    const notifyResults = await notify({
+      service,
+      companyId: job.company_id,
+      customerId: job.customer_id,
+      eventType: 'visit_reminder_24h',
+      sms: {
+        to: customer.phone,
+        country: (company.country as 'NZ' | 'AU') ?? 'NZ',
+        body,
+      },
     })
-    if (r.error && r.error !== 'SMS service not configured') errors.push(`Visit ${visit.id} sms: ${r.error}`)
-    else if (!r.error) sent.push('Appointment reminder sms')
-    await service.from('job_visits').update({ reminder_sent_at: now.toISOString() }).eq('id', visit.id)
+    const smsResult = notifyResults.find(result => result.channel === 'sms')
+    if (smsResult?.status === 'sent') {
+      await logCommunication(service, {
+        companyId: job.company_id,
+        customerId: job.customer_id,
+        channel: 'sms',
+        subject: 'Appointment reminder',
+        summary: body,
+        relatedType: 'reminder',
+        relatedId: visit.id,
+      })
+      sent.push('Appointment reminder sms')
+      await service.from('job_visits').update({ reminder_sent_at: now.toISOString() }).eq('id', visit.id)
+    } else {
+      errors.push(`Visit ${visit.id} reminder not sent: ${smsResult?.status ?? 'no_sms_result'}${smsResult?.error ? ` (${smsResult.error})` : ''}`)
+    }
   }
 
   // ── Post-completion invoicing ──────────────────────────────────────────────
@@ -396,6 +447,7 @@ async function runReminders() {
   for (const sr of dueReminders ?? []) {
     const customer = sr.customers as unknown as { name: string; email: string | null } | null
     const company = sr.companies as unknown as { name: string; email: string | null } | null
+    let delivered = false
     if (customer?.email && company) {
       const r = await sendEmail({
         to: customer.email,
@@ -404,8 +456,12 @@ async function runReminders() {
         replyTo: company.email ?? undefined,
       })
       if (r.error) errors.push(`Service reminder ${sr.id}: ${r.error}`)
-      else sent.push(`Service reminder: ${sr.title}`)
+      else { delivered = true; sent.push(`Service reminder: ${sr.title}`) }
+    } else {
+      errors.push(`Service reminder ${sr.id} not sent: missing customer email or company`)
     }
+    if (!delivered) continue
+
     // Roll forward if repeating, otherwise mark sent.
     if (sr.interval) {
       await service.from('service_reminders').update({ due_date: addInterval(sr.due_date as string, sr.interval as string), last_sent_at: new Date().toISOString() }).eq('id', sr.id)

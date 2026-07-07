@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 import { createServiceClient } from '@/lib/supabase/server'
 import { getStripe } from '@/lib/stripe'
 
+const bodySchema = z.object({ token: z.string().trim().min(1).max(200) })
+
 export async function POST(req: NextRequest) {
   const stripe = getStripe()
-  const { token } = await req.json()
-  if (!token) return NextResponse.json({ error: 'Missing token' }, { status: 400 })
+  const parsed = bodySchema.safeParse(await req.json().catch(() => ({})))
+  if (!parsed.success) return NextResponse.json({ error: 'Missing token' }, { status: 400 })
+  const { token } = parsed.data
 
   const service = createServiceClient()
   const { data: invoice } = await service

@@ -2,8 +2,11 @@
 // Creates a draft invoice from a job's materials (for mobile "Complete and Invoice" flow).
 // If the job has no materials, creates an empty draft invoice.
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { nextDocNumber } from '@/lib/numbering'
+
+const bodySchema = z.object({ job_id: z.string().uuid() })
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
@@ -20,8 +23,9 @@ export async function POST(req: NextRequest) {
   const { data: profile } = await supabase.from('profiles').select('company_id').eq('id', user.id).single()
   if (!profile?.company_id) return NextResponse.json({ error: 'No company' }, { status: 403 })
 
-  const { job_id } = await req.json().catch(() => ({}))
-  if (!job_id) return NextResponse.json({ error: 'job_id required' }, { status: 400 })
+  const parsed = bodySchema.safeParse(await req.json().catch(() => ({})))
+  if (!parsed.success) return NextResponse.json({ error: 'job_id required' }, { status: 400 })
+  const { job_id } = parsed.data
 
   const service = createServiceClient()
 

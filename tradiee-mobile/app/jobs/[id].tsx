@@ -45,6 +45,7 @@ const SIGNATURE_HTML = `<!DOCTYPE html><html><head>
 
 const ACTIVE_JOB_KEY = 'TRADIEE_ACTIVE_JOB'
 type ActiveJob = { jobId: string; timesheetId: string; startedAt: string }
+type OpenTimesheet = { id: string; job_id: string | null; started_at: string }
 
 // Visit statuses are a fixed enum (not the company's custom job statuses).
 const VISIT_STATUS_COLOR: Record<string, string> = {
@@ -135,11 +136,53 @@ export default function JobDetailScreen() {
     if (!user) { setTogglingTimer(false); return }
     const { data: profile } = await supabase.from('profiles').select('company_id').eq('id', user.id).single()
     const now = new Date().toISOString()
+    const reconcileOpenTimer = async () => {
+      const { data: open } = await supabase
+        .from('timesheets')
+        .select('id, job_id, started_at')
+        .eq('profile_id', user.id)
+        .is('ended_at', null)
+        .order('started_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      if (!open) return false
+      const existingOpen = open as OpenTimesheet
+      const aj: ActiveJob = { jobId: existingOpen.job_id ?? id!, timesheetId: existingOpen.id, startedAt: existingOpen.started_at }
+      await AsyncStorage.setItem(ACTIVE_JOB_KEY, JSON.stringify(aj))
+      if (existingOpen.job_id === id) setActiveJob(aj)
+      else Alert.alert('Timer already running', 'Stop your current job timer before starting another one.')
+      return true
+    }
+    const { data: existing } = await supabase
+      .from('timesheets')
+      .select('id, job_id, started_at')
+      .eq('profile_id', user.id)
+      .is('ended_at', null)
+      .order('started_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    if (existing) {
+      const existingOpen = existing as OpenTimesheet
+      const aj: ActiveJob = { jobId: existingOpen.job_id ?? id!, timesheetId: existingOpen.id, startedAt: existingOpen.started_at }
+      await AsyncStorage.setItem(ACTIVE_JOB_KEY, JSON.stringify(aj))
+      if (existingOpen.job_id === id) setActiveJob(aj)
+      else Alert.alert('Timer already running', 'Stop your current job timer before starting another one.')
+      setTogglingTimer(false)
+      return
+    }
     const { data, error } = await supabase.from('timesheets').insert({
       job_id: id, profile_id: user.id, company_id: profile?.company_id,
       started_at: now, is_billable: true,
     }).select('id').single()
-    if (error) { Alert.alert('Error', error.message); setTogglingTimer(false); return }
+    if (error) {
+      if ((error as { code?: string }).code === '23505' && await reconcileOpenTimer()) {
+        setTogglingTimer(false)
+        return
+      }
+      Alert.alert('Error', error.message)
+      setTogglingTimer(false)
+      return
+    }
     const aj: ActiveJob = { jobId: id!, timesheetId: data.id, startedAt: now }
     await AsyncStorage.setItem(ACTIVE_JOB_KEY, JSON.stringify(aj))
     setActiveJob(aj)

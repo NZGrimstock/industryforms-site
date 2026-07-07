@@ -13,6 +13,7 @@ import { VoiceInput } from '@/components/ui/voice-input'
 import { SmartWriteButton } from '@/components/ui/smart-write'
 import { Plus, Trash2, ChevronRight, Package } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
+import { geocodeAddress } from '@/lib/geocode'
 
 type Site = { id: string; label: string | null; address: string }
 
@@ -81,10 +82,13 @@ export function NewJobButton({ companyId, customers, nextJobNumber, priceItems =
   async function addSiteInline() {
     if (!newSite.address.trim() || !form.customerId) return
     setAddingSite(true)
+    const coords = await geocodeAddress(newSite.address.trim())
     const { data, error } = await supabase.from('customer_sites').insert({
       customer_id: form.customerId,
       label: newSite.label.trim() || null,
       address: newSite.address.trim(),
+      lat: coords?.lat ?? null,
+      lng: coords?.lng ?? null,
     }).select('id, label, address').single()
     setAddingSite(false)
     if (error) { toast(error.message, 'error'); return }
@@ -200,9 +204,12 @@ export function NewJobButton({ companyId, customers, nextJobNumber, priceItems =
     // If creating a new customer with "Add as job site" checked, create the site too
     let siteId: string | null = form.siteId || null
     if (customerMode === 'new' && newCust.addAsSite && newCust.siteAddress.trim() && customerId) {
+      const coords = await geocodeAddress(newCust.siteAddress.trim())
       const { data: site } = await supabase.from('customer_sites').insert({
         customer_id: customerId,
         address: newCust.siteAddress.trim(),
+        lat: coords?.lat ?? null,
+        lng: coords?.lng ?? null,
       }).select('id').single()
       if (site) siteId = site.id
     }

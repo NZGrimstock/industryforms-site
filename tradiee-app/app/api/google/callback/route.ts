@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServiceClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID!
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET!
@@ -7,15 +7,24 @@ const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET!
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const code = searchParams.get('code')
-  const state = searchParams.get('state')
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
 
-  if (!code || !state) {
+  if (!code) {
     return NextResponse.redirect(`${appUrl}/settings?gcal=error`)
   }
 
+  // The tokens must be stored against whoever is actually signed in right
+  // now — never trust a client-supplied `state` param for this, since an
+  // attacker can complete their own Google consent and then hit this
+  // callback directly with an arbitrary state, writing their own refresh
+  // token into someone else's profile (and later exfiltrating that
+  // victim's synced calendar data into the attacker's Google account).
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.redirect(`${appUrl}/login`)
+  const userId = user.id
+
   try {
-    const { userId } = JSON.parse(Buffer.from(state, 'base64url').toString())
     const redirectUri = `${appUrl}/api/google/callback`
 
     const tokenRes = await fetch('https://oauth2.googleapis.com/token', {

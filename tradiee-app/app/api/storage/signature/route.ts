@@ -8,18 +8,24 @@
 export const runtime = 'nodejs'
 
 import { NextResponse } from 'next/server'
+import { z } from 'zod'
 import { resolveCompanyUser } from '@/lib/api-auth'
 import { createServiceClient } from '@/lib/supabase/server'
 import { putObject, publicUrl, PUBLIC_BUCKET } from '@/lib/r2'
+
+const bodySchema = z.object({
+  jobId: z.string().uuid(),
+  dataBase64: z.string().min(1).max(3_000_000),
+  caption: z.string().trim().max(500).optional(),
+})
 
 export async function POST(req: Request) {
   const auth = await resolveCompanyUser(req)
   if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const body = await req.json() as { jobId?: string; dataBase64?: string; caption?: string }
-  if (!body.jobId || !body.dataBase64) {
-    return NextResponse.json({ error: 'jobId and dataBase64 required' }, { status: 400 })
-  }
+  const parsed = bodySchema.safeParse(await req.json().catch(() => ({})))
+  if (!parsed.success) return NextResponse.json({ error: 'jobId and dataBase64 required' }, { status: 400 })
+  const body = parsed.data
 
   const svc = createServiceClient()
   // Make sure the job belongs to the caller's company before writing anything.

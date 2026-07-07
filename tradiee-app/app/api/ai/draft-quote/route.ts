@@ -14,9 +14,12 @@
 export const runtime = 'nodejs'
 
 import { NextResponse } from 'next/server'
+import { z } from 'zod'
 import Anthropic from '@anthropic-ai/sdk'
 import { resolveCompanyUser } from '@/lib/api-auth'
 import { createServiceClient } from '@/lib/supabase/server'
+
+const bodySchema = z.object({ description: z.string().trim().min(5).max(4000) })
 
 type AiLine = {
   priceListItemId?: string | null
@@ -31,10 +34,9 @@ export async function POST(req: Request) {
   const auth = await resolveCompanyUser(req)
   if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { description } = await req.json() as { description?: string }
-  if (!description || description.trim().length < 5) {
-    return NextResponse.json({ error: 'description required' }, { status: 400 })
-  }
+  const parsed = bodySchema.safeParse(await req.json().catch(() => ({})))
+  if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 })
+  const { description } = parsed.data
 
   const svc = createServiceClient()
   const { data: priceItems } = await svc

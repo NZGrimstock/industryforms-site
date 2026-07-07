@@ -1,23 +1,34 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServiceClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { exchangeXeroCode, getXeroTenants } from '@/lib/xero'
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const code = searchParams.get('code')
-  const state = searchParams.get('state')
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
 
-  if (!code || !state) return NextResponse.redirect(`${appUrl}/settings?xero=error`)
+  if (!code) return NextResponse.redirect(`${appUrl}/settings?xero=error`)
+
+  // The tokens must be stored against whoever is actually signed in right
+  // now — never trust a client-supplied `state` param for this (same class
+  // of issue fixed in the Google Calendar callback: an attacker could
+  // complete their own Xero consent and hit this callback directly with an
+  // arbitrary state, planting their own Xero org connection on someone
+  // else's company).
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.redirect(`${appUrl}/login`)
+  const service = createServiceClient()
+  const { data: profile } = await service.from('profiles').select('company_id').eq('id', user.id).single()
+  if (!profile) return NextResponse.redirect(`${appUrl}/login`)
+  const companyId = profile.company_id
 
   try {
-    const { companyId } = JSON.parse(Buffer.from(state, 'base64url').toString())
     const tokens = await exchangeXeroCode(code)
     const tenants = await getXeroTenants(tokens.access_token)
     const tenant = tenants[0]
     if (!tenant) throw new Error('No Xero organisation found')
 
-    const service = createServiceClient()
     await service.from('companies').update({
       xero_tenant_id: tenant.tenantId,
       xero_access_token: tokens.access_token,

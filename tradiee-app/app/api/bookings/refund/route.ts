@@ -4,14 +4,17 @@
 // than 24h before starts_at; forfeited for a late cancellation or no-show.
 // Admin-triggered only — never auto-refunded on cancellation.
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { getStripe } from '@/lib/stripe'
 
 const REFUND_WINDOW_HOURS = 24
+const bodySchema = z.object({ bookingId: z.string().uuid() })
 
 export async function POST(req: NextRequest) {
-  const { bookingId } = await req.json().catch(() => ({}))
-  if (!bookingId) return NextResponse.json({ error: 'bookingId required' }, { status: 400 })
+  const parsed = bodySchema.safeParse(await req.json().catch(() => ({})))
+  if (!parsed.success) return NextResponse.json({ error: 'bookingId required' }, { status: 400 })
+  const { bookingId } = parsed.data
 
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

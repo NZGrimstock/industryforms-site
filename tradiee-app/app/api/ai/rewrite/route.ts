@@ -8,6 +8,7 @@
 export const runtime = 'nodejs'
 
 import { NextResponse } from 'next/server'
+import { z } from 'zod'
 import Anthropic from '@anthropic-ai/sdk'
 import { resolveCompanyUser } from '@/lib/api-auth'
 
@@ -19,12 +20,18 @@ const STYLE: Record<string, string> = {
   longer: 'a more thorough version that fleshes out the work involved without inventing details',
 }
 
+const bodySchema = z.object({
+  text: z.string().trim().min(1).max(4000),
+  mode: z.enum(['description', 'professional', 'friendly', 'shorter', 'longer']).optional(),
+})
+
 export async function POST(req: Request) {
   const auth = await resolveCompanyUser(req)
   if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { text, mode } = await req.json() as { text?: string; mode?: keyof typeof STYLE }
-  if (!text || !text.trim()) return NextResponse.json({ error: 'text required' }, { status: 400 })
+  const parsed = bodySchema.safeParse(await req.json().catch(() => ({})))
+  if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 })
+  const { text, mode } = parsed.data
   const style = STYLE[mode ?? 'description'] ?? STYLE.description
 
   const prompt =

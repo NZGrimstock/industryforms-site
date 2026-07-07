@@ -8,6 +8,7 @@ import { getProfitabilityStatus } from '@/components/ui/profitability-badge'
 import { OnboardingChecklist } from '@/components/ui/onboarding-checklist'
 import { DashboardGreeting } from '@/components/ui/dashboard-greeting'
 import { TodoWidget } from '@/components/dashboard/todo-widget'
+import { DashboardWidgets, type DashboardWidget, type DashboardWidgetConfig } from '@/components/dashboard/dashboard-widgets'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -15,6 +16,8 @@ export default async function DashboardPage() {
   if (!user) return null
 
   const { data: profile } = await supabase.from('profiles').select('*, companies(*)').eq('id', user.id).single()
+  const timesheetSince = new Date()
+  timesheetSince.setDate(timesheetSince.getDate() - 7)
 
   // Parallel data fetches for stats
   const [quotesRes, jobsRes, invoicesRes, timesheetsRes, activeJobsRes, todosRes] = await Promise.all([
@@ -22,7 +25,7 @@ export default async function DashboardPage() {
     supabase.from('jobs').select('id, job_number, title, status').eq('company_id', profile?.company_id),
     supabase.from('invoices').select('id, status, total, amount_paid').eq('company_id', profile?.company_id),
     supabase.from('timesheets').select('id, started_at, ended_at, break_minutes').eq('company_id', profile?.company_id)
-      .gte('started_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()),
+      .gte('started_at', timesheetSince.toISOString()),
     supabase.from('jobs')
       .select('id, job_number, title, quote_id, job_materials(quantity, unit_cost), timesheets(started_at, ended_at, cost_rate, bill_rate)')
       .eq('company_id', profile?.company_id)
@@ -113,22 +116,11 @@ export default async function DashboardPage() {
     return { ...j, materialsCost, labourCost, quotedSubtotal, profitability: getProfitabilityStatus({ quotedSubtotal, materialsCost, labourCost }) }
   })
 
-  return (
-    <>
-      <Header title="Dashboard" profile={profile} />
-      <div className="p-6 space-y-6">
-        <DashboardGreeting firstName={profile?.full_name?.split(' ')[0] ?? 'there'} />
-        <OnboardingChecklist steps={onboardingSteps} />
-
-        {/* Trial banner */}
-        {profile?.companies && (profile.companies as {subscription_plan: string}).subscription_plan === 'trial' && (
-          <div className="bg-orange-50 border border-orange-200 rounded-xl px-4 py-3 text-sm text-orange-800 flex items-center justify-between">
-            <span>You&apos;re on a free trial — <strong>30 days remaining</strong>.</span>
-            <Link href="/settings" className="font-medium underline hover:no-underline">Upgrade plan</Link>
-          </div>
-        )}
-
-        {/* Stats */}
+  const dashboardWidgetCandidates: DashboardWidget[] = [
+    {
+      id: 'stats' as const,
+      label: 'Stats',
+      node: (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {stats.map(s => (
             <Link key={s.label} href={s.href} className="group">
@@ -146,98 +138,133 @@ export default async function DashboardPage() {
             </Link>
           ))}
         </div>
-
-        {/* To-Do list */}
-        <TodoWidget todos={todos} userId={user.id} companyId={profile?.company_id} />
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Recent jobs */}
-          <Card>
-            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-gray-900">Recent jobs</h2>
-              <Link href="/jobs" className="text-xs text-orange-500 hover:text-[var(--accent,#f97316)]">View all</Link>
-            </div>
-            <CardContent className="p-0">
-              {recentJobs.length === 0 ? (
-                <p className="text-sm text-gray-500 text-center py-8">No jobs yet</p>
-              ) : (
-                <ul className="divide-y divide-gray-50">
-                  {recentJobs.map((j: {id: string; job_number: string; title: string; status: string}) => (
-                    <li key={j.id}>
-                      <Link href={`/jobs/${j.id}`} className="flex items-center justify-between px-6 py-3 hover:bg-gray-50">
-                        <div className="min-w-0">
-                          <span className="text-xs font-medium text-orange-500 mr-2">{j.job_number}</span>
-                          <span className="text-sm text-gray-700 truncate">{j.title}</span>
-                        </div>
-                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium whitespace-nowrap ml-2 ${statusColors[j.status] ?? 'bg-gray-100 text-gray-600'}`}>
-                          {j.status.replace(/_/g, ' ')}
-                        </span>
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Overdue invoices */}
-          <Card>
-            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-gray-900">Overdue invoices</h2>
-              <Link href="/invoices?status=overdue" className="text-xs text-orange-500 hover:text-[var(--accent,#f97316)]">View all</Link>
-            </div>
-            <CardContent className="p-0">
-              {overdueInvoices.length === 0 ? (
-                <p className="text-sm text-gray-500 text-center py-8">No overdue invoices</p>
-              ) : (
-                <ul className="divide-y divide-gray-50">
-                  {overdueInvoices.slice(0, 5).map((i: {id: string; total: number; amount_paid: number}) => (
-                    <li key={i.id}>
-                      <Link href={`/invoices/${i.id}`} className="flex items-center justify-between px-6 py-3 hover:bg-gray-50">
-                        <span className="text-sm text-gray-700">#{i.id.slice(0, 8)}</span>
-                        <span className="text-sm font-medium text-red-600">{formatCurrency(i.total - i.amount_paid)}</span>
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Job profitability */}
-        {jobsWithProfitability.length > 0 && (
-          <Card>
-            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-gray-900">Job profitability</h2>
-              <Link href="/jobs?view=list&status=in_progress" className="text-xs text-orange-500 hover:text-[var(--accent,#f97316)]">View jobs</Link>
-            </div>
-            <CardContent className="p-0">
+      ),
+    },
+    {
+      id: 'todos' as const,
+      label: 'To-Do',
+      node: <TodoWidget todos={todos} userId={user.id} companyId={profile?.company_id} />,
+    },
+    {
+      id: 'recent_jobs' as const,
+      label: 'Recent jobs',
+      node: (
+        <Card>
+          <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-gray-900">Recent jobs</h2>
+            <Link href="/jobs" className="text-xs text-orange-500 hover:text-[var(--accent,#f97316)]">View all</Link>
+          </div>
+          <CardContent className="p-0">
+            {recentJobs.length === 0 ? (
+              <p className="text-sm text-gray-500 text-center py-8">No jobs yet</p>
+            ) : (
               <ul className="divide-y divide-gray-50">
-                {jobsWithProfitability.map(j => (
+                {recentJobs.map((j: {id: string; job_number: string; title: string; status: string}) => (
                   <li key={j.id}>
                     <Link href={`/jobs/${j.id}`} className="flex items-center justify-between px-6 py-3 hover:bg-gray-50">
                       <div className="min-w-0">
                         <span className="text-xs font-medium text-orange-500 mr-2">{j.job_number}</span>
                         <span className="text-sm text-gray-700 truncate">{j.title}</span>
                       </div>
-                      <div className="flex items-center gap-3 ml-4 shrink-0">
-                        {j.profitability ? (
-                          <>
-                            <span className="text-xs text-gray-400">{j.profitability.pct}% of budget</span>
-                            <span className="text-base" title={j.profitability.label}>{j.profitability.emoji}</span>
-                          </>
-                        ) : (
-                          <span className="text-xs text-gray-300">No quote</span>
-                        )}
-                      </div>
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium whitespace-nowrap ml-2 ${statusColors[j.status] ?? 'bg-gray-100 text-gray-600'}`}>
+                        {j.status.replace(/_/g, ' ')}
+                      </span>
                     </Link>
                   </li>
                 ))}
               </ul>
-            </CardContent>
-          </Card>
+            )}
+          </CardContent>
+        </Card>
+      ),
+    },
+    {
+      id: 'overdue_invoices' as const,
+      label: 'Overdue invoices',
+      node: (
+        <Card>
+          <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-gray-900">Overdue invoices</h2>
+            <Link href="/invoices?status=overdue" className="text-xs text-orange-500 hover:text-[var(--accent,#f97316)]">View all</Link>
+          </div>
+          <CardContent className="p-0">
+            {overdueInvoices.length === 0 ? (
+              <p className="text-sm text-gray-500 text-center py-8">No overdue invoices</p>
+            ) : (
+              <ul className="divide-y divide-gray-50">
+                {overdueInvoices.slice(0, 5).map((i: {id: string; total: number; amount_paid: number}) => (
+                  <li key={i.id}>
+                    <Link href={`/invoices/${i.id}`} className="flex items-center justify-between px-6 py-3 hover:bg-gray-50">
+                      <span className="text-sm text-gray-700">#{i.id.slice(0, 8)}</span>
+                      <span className="text-sm font-medium text-red-600">{formatCurrency(i.total - i.amount_paid)}</span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+      ),
+    },
+    {
+      id: 'profitability' as const,
+      label: 'Job profitability',
+      node: jobsWithProfitability.length > 0 ? (
+        <Card>
+          <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-gray-900">Job profitability</h2>
+            <Link href="/jobs?view=list&status=in_progress" className="text-xs text-orange-500 hover:text-[var(--accent,#f97316)]">View jobs</Link>
+          </div>
+          <CardContent className="p-0">
+            <ul className="divide-y divide-gray-50">
+              {jobsWithProfitability.map(j => (
+                <li key={j.id}>
+                  <Link href={`/jobs/${j.id}`} className="flex items-center justify-between px-6 py-3 hover:bg-gray-50">
+                    <div className="min-w-0">
+                      <span className="text-xs font-medium text-orange-500 mr-2">{j.job_number}</span>
+                      <span className="text-sm text-gray-700 truncate">{j.title}</span>
+                    </div>
+                    <div className="flex items-center gap-3 ml-4 shrink-0">
+                      {j.profitability ? (
+                        <>
+                          <span className="text-xs text-gray-400">{j.profitability.pct}% of budget</span>
+                          <span className="text-base" title={j.profitability.label}>{j.profitability.emoji}</span>
+                        </>
+                      ) : (
+                        <span className="text-xs text-gray-300">No quote</span>
+                      )}
+                    </div>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      ) : null,
+    },
+  ]
+  const dashboardWidgets = dashboardWidgetCandidates.filter(widget => widget.node !== null)
+
+  return (
+    <>
+      <Header title="Dashboard" profile={profile} />
+      <div className="p-6 space-y-6">
+        <DashboardGreeting firstName={profile?.full_name?.split(' ')[0] ?? 'there'} />
+        <OnboardingChecklist steps={onboardingSteps} />
+
+        {/* Trial banner */}
+        {profile?.companies && (profile.companies as {subscription_plan: string}).subscription_plan === 'trial' && (
+          <div className="bg-orange-50 border border-orange-200 rounded-xl px-4 py-3 text-sm text-orange-800 flex items-center justify-between">
+            <span>You&apos;re on a free trial — <strong>30 days remaining</strong>.</span>
+            <Link href="/settings" className="font-medium underline hover:no-underline">Upgrade plan</Link>
+          </div>
         )}
+
+        <DashboardWidgets
+          profileId={user.id}
+          widgets={dashboardWidgets}
+          initialConfig={profile?.dashboard_widgets as DashboardWidgetConfig | null}
+        />
       </div>
     </>
   )

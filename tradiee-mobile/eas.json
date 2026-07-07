@@ -18,7 +18,8 @@
         "EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_r6oE2gTIFjwpQ5ZfYUglng_-HSytJOY",
         "EXPO_PUBLIC_POWERSYNC_URL": "https://6a33b406deeddd0df605d498.powersync.journeyapps.com",
         "EXPO_PUBLIC_API_URL": "https://app.industryforms.app",
-        "EXPO_PUBLIC_R2_PUBLIC_BASE_URL": "https://cdn.industryforms.app"
+        "EXPO_PUBLIC_R2_PUBLIC_BASE_URL": "https://cdn.industryforms.app",
+        "EXPO_PUBLIC_STRIPE_TERMINAL_LOCATION_ID": "tml_Gjk2AE1e6OUFu2"
       }
     },
     "production": {
@@ -31,7 +32,8 @@
         "EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_r6oE2gTIFjwpQ5ZfYUglng_-HSytJOY",
         "EXPO_PUBLIC_POWERSYNC_URL": "https://6a33b406deeddd0df605d498.powersync.journeyapps.com",
         "EXPO_PUBLIC_API_URL": "https://app.industryforms.app",
-        "EXPO_PUBLIC_R2_PUBLIC_BASE_URL": "https://cdn.industryforms.app"
+        "EXPO_PUBLIC_R2_PUBLIC_BASE_URL": "https://cdn.industryforms.app",
+        "EXPO_PUBLIC_STRIPE_TERMINAL_LOCATION_ID": "tml_Gjk2AE1e6OUFu2"
       }
     }
   },

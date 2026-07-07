@@ -23,6 +23,13 @@ export async function POST(req: NextRequest) {
   }
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
+  const { data: profile } = await createServiceClient()
+    .from('profiles')
+    .select('id')
+    .eq('id', user.id)
+    .single()
+  if (!profile) return NextResponse.json({ error: 'No profile' }, { status: 403 })
+
   const stripe = getStripe()
   const token = await stripe.terminal.connectionTokens.create()
   return NextResponse.json({ secret: token.secret })

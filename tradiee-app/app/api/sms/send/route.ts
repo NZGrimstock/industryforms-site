@@ -4,14 +4,21 @@
 // customer_messages (direction: outbound). Owner/admin only.
 
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { sendSms } from '@/lib/sms'
 
+// 1600 chars ≈ 10 concatenated SMS segments — generous headroom while
+// capping cost/abuse from unbounded Twilio sends.
+const bodySchema = z.object({
+  customer_id: z.string().uuid(),
+  body: z.string().trim().min(1).max(1600),
+})
+
 export async function POST(req: NextRequest) {
-  const { customer_id, body } = await req.json().catch(() => ({}))
-  if (!customer_id || !body?.trim()) {
-    return NextResponse.json({ error: 'customer_id and body required' }, { status: 400 })
-  }
+  const parsed = bodySchema.safeParse(await req.json().catch(() => ({})))
+  if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 })
+  const { customer_id, body } = parsed.data
 
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

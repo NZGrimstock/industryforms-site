@@ -1,5 +1,11 @@
 import { NextResponse } from 'next/server'
+import { z } from 'zod'
 import Anthropic from '@anthropic-ai/sdk'
+
+const bodySchema = z.object({
+  transcript: z.string().trim().min(1).max(8000),
+  mode: z.enum(['customer', 'job', 'quote_header', 'description']),
+})
 
 const PROMPTS: Record<string, string> = {
   customer: `Extract customer details from the following speech transcript and return a JSON object with these fields:
@@ -40,11 +46,10 @@ Return ONLY the improved text, no JSON, no explanation, no quotes around it.`,
 
 export async function POST(request: Request) {
   try {
-    const { transcript, mode } = await request.json()
-    if (!transcript || !mode) return NextResponse.json({ error: 'Missing transcript or mode' }, { status: 400 })
-
+    const parsed = bodySchema.safeParse(await request.json().catch(() => ({})))
+    if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 })
+    const { transcript, mode } = parsed.data
     const prompt = PROMPTS[mode]
-    if (!prompt) return NextResponse.json({ error: 'Unknown mode' }, { status: 400 })
 
     const apiKey = process.env.ANTHROPIC_API_KEY
     if (!apiKey) {

@@ -8,10 +8,22 @@
 export const runtime = 'nodejs'
 
 import { NextResponse } from 'next/server'
+import { z } from 'zod'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
-import { generateComplianceDoc, DocType, DOC_TYPE_FORM_CODES } from '@/lib/compliance/generate'
+import { generateComplianceDoc, DOC_TYPE_FORM_CODES } from '@/lib/compliance/generate'
 import { sendEmail } from '@/lib/email'
 import { putObject, presignedDownload, PRIVATE_BUCKET } from '@/lib/r2'
+
+const bodySchema = z.object({
+  docType: z.enum(['PS1', 'PS2', 'PS3_GENERAL', 'PS3_DRAINAGE', 'PS3_PLUMBING', 'PS4', 'RBW_2A', 'RBW_6A']),
+  jobId: z.string().uuid().nullish(),
+  bcReference: z.string().trim().max(200).nullish(),
+  clientName: z.string().trim().max(200).nullish(),
+  clientEmail: z.string().trim().email().max(320).nullish().or(z.literal('')),
+  projectAddress: z.string().trim().max(500).nullish(),
+  territorialAuthority: z.string().trim().max(200).nullish(),
+  statementData: z.record(z.string(), z.unknown()).optional(),
+})
 
 export async function POST(req: Request) {
   try {
@@ -32,17 +44,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 400 })
     }
 
-    const body = await req.json() as {
-      docType: DocType
-      jobId?: string
-      bcReference?: string
-      clientName?: string
-      clientEmail?: string
-      projectAddress?: string
-      territorialAuthority?: string
-      statementData?: Record<string, unknown>
-    }
-
+    const parsed = bodySchema.safeParse(await req.json().catch(() => ({})))
+    if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 })
     const {
       docType,
       jobId,
@@ -52,11 +55,7 @@ export async function POST(req: Request) {
       projectAddress,
       territorialAuthority,
       statementData = {},
-    } = body
-
-    if (!docType) {
-      return NextResponse.json({ error: 'docType is required' }, { status: 400 })
-    }
+    } = parsed.data
 
     const serviceClient = createServiceClient()
 

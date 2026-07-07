@@ -2,12 +2,13 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { LayoutDashboard, Users, CreditCard, BarChart3, Settings, ShieldAlert, Wrench } from 'lucide-react'
+import { LayoutDashboard, Users, CreditCard, BarChart3, Settings, ShieldAlert, Wrench, UserX } from 'lucide-react'
 
 const nav = [
   { href: '/admin', label: 'Overview', icon: LayoutDashboard },
   { href: '/admin/companies', label: 'Companies', icon: Users },
   { href: '/admin/subscriptions', label: 'Subscriptions', icon: CreditCard },
+  { href: '/admin/deletion-requests', label: 'Deletion requests', icon: UserX },
   { href: '/admin/reports', label: 'Reports', icon: BarChart3 },
   { href: '/admin/settings', label: 'Settings', icon: Settings },
 ]

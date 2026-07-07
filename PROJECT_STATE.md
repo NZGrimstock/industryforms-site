@@ -1,13 +1,13 @@
 # IndustryForms — Project State (handoff)
 
-Last updated: 2026-07-06. Catch-up doc for a fresh session. Read this first.
+Last updated: 2026-07-07. Catch-up doc for a fresh session. Read this first.
 
 ## What it is
 **IndustryForms** — a SaaS job-management app for NZ/AU tradespeople (a Tradify
 competitor). Monorepo at `D:\TRADIEE`:
 - `tradiee-app/` — **Next.js 16** web app (App Router, Turbopack)
 - `tradiee-mobile/` — **Expo SDK 56** mobile app (bare workflow, native `android/` dir)
-- `supabase/migrations/` — database migrations (001–046)
+- `supabase/migrations/` — database migrations (001-046 cloud-applied; 20260707 local migrations pending deploy verification)
 - Root docs: this file, `POWERSYNC_SETUP.md`, `R2_SETUP.md`, `SUPABASE_CLOUD_MIGRATION.md`, `VERCEL_DEPLOY.md`, `sync-rules.yaml`
 
 GitHub: **https://github.com/NZGrimstock/industryforms** (branch `main`, auto-deploys to Vercel).
@@ -18,10 +18,11 @@ GitHub: **https://github.com/NZGrimstock/industryforms** (branch `main`, auto-de
 `SPRINTS_GROWTH_ENGINE_RESCOPED.md` in full (see that file +
 `SPRINT_A_INBOX_EXECUTION.md` for the original sprint plan). **The Growth
 Engine roadmap is now complete** — no more sprints scoped in that doc.
-Migrations use timestamped filenames (`YYYYMMDDHHMMSS_description.sql`), not
-the old `0XX_` numbering — latest is `20260704090000_automation_events.sql`,
-applied to cloud Supabase. PowerSync sync rules switched to **streams
-(edition 3)** — already validated + deployed via the PowerSync Dashboard.
+Migrations now mix older `0XX_` files with timestamped filenames
+(`YYYYMMDDHHMMSS_description.sql`). Cloud Supabase was last confirmed through
+the older applied set; the 2026-07-07 local migrations listed below still need
+deploy verification. PowerSync sync rules switched to **streams (edition 3)**
+— already validated + deployed via the PowerSync Dashboard.
 Latest APK is `tradiee-mobile/android/app/build/outputs/apk/release/app-release.apk`
 (Jun 25, 145 MB — mobile untouched by the Growth Engine sprints).
 
@@ -192,7 +193,9 @@ on each of these so the owner sees what's missing without peeking at env vars.
   `STRIPE_WEBHOOK_SECRET` are all live; Sprint D's testing created and refunded real test-mode
   PaymentIntents successfully. Webhook target: `/api/stripe/webhook`.
 - **Anthropic (live)** — `ANTHROPIC_API_KEY` for SmartWrite / AI quote drafting / daily AI to-dos.
-- **Other placeholders** — `XERO_CLIENT_ID/SECRET`, `GOOGLE_CLIENT_ID/SECRET` (real value present), `CLOUDFLARE_API_TOKEN`+`CLOUDFLARE_ZONE_ID` (+optional `CLOUDFLARE_SAAS_FALLBACK_HOSTNAME`), `INBOUND_EMAIL_SECRET`.
+- **Xero (real value present, 2026-07-07)** — `XERO_CLIENT_ID`/`XERO_CLIENT_SECRET` now set in `.env.local`. Not yet mirrored in Vercel — do that before relying on Xero sync in prod.
+- **Google (real value present)** — `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` set. Google Calendar sync is fully implemented (see Features built) — the OAuth callback (`app/api/google/callback/route.ts`) had its `state`-param trust fixed during the 2026-07-07 security pass (see below).
+- **Other placeholders** — `CLOUDFLARE_API_TOKEN`+`CLOUDFLARE_ZONE_ID` (+optional `CLOUDFLARE_SAAS_FALLBACK_HOSTNAME`), `INBOUND_EMAIL_SECRET`.
 
 Mobile `tradiee-mobile/.env` + `eas.json` carry `EXPO_PUBLIC_*` equivalents (client-public, baked into builds).
 
@@ -288,6 +291,33 @@ been linking to that route already, 404ing, since no detail page existed.
 
 Sprint E (automations + reporting) shipped 2026-07-06 — see the summary near
 the top of this doc under "Where work lives right now".
+
+### Security/compliance pass (2026-07-07)
+
+Full gap-analysis + remediation against SOC2/ISO27001/GDPR/PCI-DSS-style
+controls — not a certification, see `COMPLIANCE_GAP_ANALYSIS.md` for the full
+record. Highlights:
+- **Critical fix**: `POST /api/auth/invite` had **no authentication check** —
+  `companyId` is exposed in the public booking widget's client JS, so any
+  anonymous visitor could mint an admin account (with password returned in
+  the response) inside any company with a public booking page. Now requires
+  a session + owner/admin role in the matching company.
+- Fixed 2 OAuth account-hijack bugs (`api/google/callback`, `api/xero/callback`)
+  that trusted the client-supplied `state` param instead of deriving identity
+  from the session.
+- Fixed 5 cross-tenant authorization gaps found via a dedicated grep pass
+  (`portal/send-link`, `xero/sync`, 2× email routes, 2× sms routes).
+- Added Supabase-native MFA (TOTP) for super-admins (`/admin` now enforces
+  AAL2), password complexity policy (8+ chars, upper/lower/number,
+  `lib/password.ts`), PostgREST filter-injection fix in `api/search`,
+  admin action audit logging (`lib/audit.ts`), RLS on `calendar_sync_log`,
+  account-deletion completion flow, zod validation rolled out across ~25+
+  API routes, `.env.example`.
+- `privacy.md` corrected to say data is hosted in **Singapore**
+  (`ap-southeast-1`), not Australia/NZ as it previously (incorrectly) claimed.
+- Still open: `postcss` transitive vuln (needs a Next major bump),
+  `admin_audit_log` doesn't cover every privileged action yet, no GDPR data
+  export endpoint.
 
 ### Sprint 6 (2026-07-03) — mobile nav/quote fixes + kits + signup, all on `main`
 
@@ -546,7 +576,7 @@ screens use **PowerSync** `useQuery`; photos via presigned R2.
 - **Sign-off modal**: "Customer Signature" label + photo prompt if no photos yet.
 - **Tap to Pay** (scaffolding only — see Sprint 3/4 above).
 
-## Migrations (supabase/migrations/) — all 046 applied to cloud
+## Migrations (supabase/migrations/) — 001-046 applied to cloud; 20260707 local migrations pending deploy verification
 001–021 base schema. **022** PowerSync. **023** billing_exempt. **024**
 visit reminder_sent_at. **025** suppliers/POs. **026** bills. **027** invoice
 last_reminder_at. **028** company_websites. **029** cf_hostname_id. **030**
@@ -562,6 +592,15 @@ invoices.review_request_sent_at. **042** customer_messages. **043**
 profiles.vehicle_registration. **044** project_subcontractors.company. **045**
 companies.default_project_stages text[]. **046** travel_logs.verified_at +
 travel_logs.verified_by.
+
+Local 2026-07-07 migrations added by Codex and not yet verified/applied against
+local Supabase or cloud: `20260707034000_calendar_sync_log_rls.sql`,
+`20260707092713_seed_missing_job_statuses.sql`,
+`20260707092843_profile_dashboard_widgets.sql`,
+`20260707104353_prevent_duplicate_open_timesheets.sql`, and
+`20260707112314_stripe_payment_idempotency.sql`. The last migration also adds
+a service-only `portal_login_attempts` table/RPC and Stripe payment settlement
+RPC; run migration list/apply plus data preflights before deploy.
 
 ## Key decisions & gotchas
 - **Next 16** uses `proxy.ts` (not `middleware.ts`) + `allowedDevOrigins` in
@@ -649,32 +688,110 @@ travel_logs.verified_by.
 ### Building next
 **The Growth Engine roadmap (Sprints A–E) is fully shipped** — no explicit
 next sprint scoped. Leading candidates:
-- **Marketing site** (industryforms.app — separate from tenant Instant Websites). No work started.
-- **Configurable dashboard widgets** (swappable widget system).
-- **Job maps: geocode-on-save** when a new site address is set.
-- **Per-company job_statuses backfill** — new signups get zero rows in
-  `job_statuses` (the migration 037 seed only ran once, against companies
-  that existed at the time); every reader falls back to
-  `DEFAULT_JOB_STATUSES` so nothing's broken, but seeding real rows on
-  signup (mirroring the migration's seed logic) would remove the need for
-  that fallback path everywhere.
+- **Marketing site** (industryforms.app — separate from tenant Instant Websites). No work started — leave until explicitly asked.
+- ~~Configurable dashboard widgets~~ — **done 2026-07-07 by Codex.**
+  `/dashboard` now wraps the existing stats, to-do, recent jobs, overdue
+  invoices, and profitability sections in a swappable widget controller
+  (`components/dashboard/dashboard-widgets.tsx`). Users can hide/show widgets
+  and move them up/down; preferences persist per user on
+  `profiles.dashboard_widgets` (migration
+  `20260707092843_profile_dashboard_widgets.sql`). Saved preferences include
+  an audit payload identifying the feature as built by Codex. Reality-check
+  fix: failed preference saves now surface an inline error instead of silently
+  looking successful.
+- ~~Job maps: geocode-on-save~~ — **done, fixed 2026-07-07.** The two inline
+  add-site paths inside the New Job dialog (`app/(dashboard)/jobs/client.tsx`
+  — `addSiteInline()` and the new-customer "Add as job site" flow) previously
+  inserted `customer_sites` with no `lat`/`lng` at all; the dedicated add-site
+  form (`components/forms/site-form.tsx`) was the only path that geocoded.
+  Both now call `geocodeAddress()` before insert, same pattern as
+  `site-form.tsx`. Verified live end-to-end (new customer → "Add as job site"
+  → real address → `customer_sites` row confirmed with correct `lat`/`lng`
+  via Nominatim; test data cleaned up after).
+- ~~Per-company job_statuses backfill~~ — **done 2026-07-07 by Codex.**
+  `app/api/auth/signup/route.ts` now seeds `DEFAULT_JOB_STATUSES` for every
+  new company and rolls back the signup if profile/status creation fails.
+  Migration `20260707092713_seed_missing_job_statuses.sql` backfills companies
+  that were created after migration 037's one-time seed and now fills missing
+  default keys for partial status sets too.
 - **Twilio SMS path for Sprint E's notify()/notifyPreferred()** — code-complete
   and logs correctly to `automation_events`, but not manually verified against
-  live Twilio (avoided sending real test texts). Worth a real smoke test with
-  a real phone number before relying on `confirmation_channel: 'sms'/'both'`
-  or the review-request SMS-preferred path in production.
+  live Twilio (avoided sending real test texts). Twilio creds are live in
+  `.env.local` — worth a real smoke test with a real phone number before
+  relying on `confirmation_channel: 'sms'/'both'` or the review-request
+  SMS-preferred path in production.
+- ~~Reminder-cron delivery stamps + comms logging~~ — **done 2026-07-07 by
+  Codex.** The plain visit-reminder loop in `app/api/reminders/route.ts` now
+  sends through `notify()` so it logs `automation_events`, then writes a
+  best-effort `communications` entry tied to the visit reminder only when SMS
+  actually sends. Reality-check fixes: dark/failed/missing-phone paths no
+  longer stamp `job_visits.reminder_sent_at` or create misleading communication
+  rows; booking-sourced visit stamps now require an actual sent reminder; and
+  invoice dunning only updates `last_reminder_at` after at least one channel
+  sends successfully. Third-audit fix: service reminders now only roll forward
+  or mark `sent` after email delivery succeeds.
 
 ### Future backlog (in priority order)
-- **Tap to Pay finish** — install `@stripe/stripe-terminal-react-native` in
-  the mobile app, get Apple's proximity-reader entitlement, wire the
-  collect-confirm flow per `tradiee-mobile/lib/tap-to-pay.ts`.
-- **Google Calendar sync** — not yet implemented.
-- **GPS geo-fence time clock** — auto check-in on site arrival.
-- **Customer portal login** — customers view their own job/invoice history.
+- ~~Tap to Pay finish~~ — **code-complete 2026-07-07 by Codex.** Installed
+  `@stripe/stripe-terminal-react-native`, wrapped the mobile app in
+  `StripeTerminalProvider`, wired authenticated Terminal connection-token and
+  PaymentIntent helpers, replaced the `pay-now` placeholder with the real
+  Tap-to-Pay discover/connect/collect/confirm flow, added Android native
+  permissions/hooks/minSdk config, and set the Stripe Terminal location in
+  `eas.json`. Reality-check fixes: Terminal API routes now validate mobile
+  bearer users through the service client/profile lookup, and server-side
+  PaymentIntent creation caps/derives the charge from invoice outstanding
+  instead of trusting the mobile-supplied amount. Third-audit fix: Stripe
+  invoice webhook settlement now writes `payments.stripe_payment_intent_id`
+  through a transactional `record_stripe_invoice_payment` RPC plus a partial
+  unique index, so replayed or concurrent `payment_intent.succeeded` events do
+  not double-count payments. Audit markers were added in the Tap-to-Pay helper,
+  payment flow, Stripe provider init, Android `MainApplication`, Gradle config,
+  and payment idempotency migration. Verified with `npx tsc --noEmit`,
+  scoped web ESLint, `npx next build`, and
+  `android/gradlew.bat assembleDebug --no-daemon`.
+  Still needs real-device smoke testing with a compatible NFC device, Stripe
+  Terminal account/location readiness, and Apple's proximity-reader entitlement
+  before iPhone production use.
+- ~~Google Calendar sync~~ — **done, this line was stale.** Verified
+  2026-07-07: `lib/google-calendar.ts` (token refresh) + `app/api/google/sync/route.ts`
+  (real sync) are both implemented and wired in.
+- ~~GPS geo-fence time clock~~ — **code-complete 2026-07-07 by Codex.**
+  Extended the mobile background location task to detect stationary arrival
+  within 150 m of a geocoded active job site assigned to the signed-in worker,
+  then insert an open `timesheets` row, link a matching scheduled visit when
+  present, update that visit to `in_progress`, and store the same active timer
+  state used by manual job timers. `app/timesheets.tsx` now shows a dismissible
+  auto-check-in notice with a jump to the job. Audit marker lives in
+  `tradiee-mobile/lib/location/tracking.ts`. Reality-check fix: migration
+  `20260707104353_prevent_duplicate_open_timesheets.sql` adds a partial unique
+  index so a worker can have only one open timesheet, and mobile timer starts
+  now reconcile any existing open server timer before inserting and after
+  unique-index race conflicts. Verified with
+  `npx tsc --noEmit` and `android/gradlew.bat assembleDebug --no-daemon`.
+  Still needs a real device drive/arrival smoke test because simulator/desktop
+  builds cannot validate background GPS timing, OS battery policy, or
+  site-radius behavior.
+- ~~Customer portal login~~ — **code-complete 2026-07-07 by Codex.**
+  Added `/portal/login` and `POST /api/portal/login` as a customer magic-link
+  login: a customer enters their email, the API sends fresh
+  `customer_portal_tokens` links to matching customer records, and the response
+  stays generic to avoid email enumeration. Expired portal links now point to
+  the login page for self-service recovery. Staff-sent and customer-requested
+  portal emails share `lib/customer-portal.ts`, which also HTML-escapes
+  customer/company data. Reality-check fix: public login no longer deletes
+  existing portal tokens and applies a per-customer cooldown before sending a
+  fresh link. Third-audit fixes: the public portal job detail no longer exposes
+  internal visit/job notes, staff-sent replacement links only revoke old tokens
+  after successful email delivery, and public login now uses a service-only
+  `portal_login_attempts` throttle table/RPC for atomic IP/email request
+  limits. Audit
+  markers live in `app/api/portal/login/route.ts`, `app/portal/[token]/jobs/[jobId]/page.tsx`,
+  and the 20260707112314 migration. Verified with web `npx tsc --noEmit`,
+  scoped ESLint, and `npx next build`.
 - **Pricing levels** (per-customer-group pricing). **MYOB/QuickBooks** sync
-  (have Xero). **Reminder-cron comms logging** (manual sends are logged;
-  cron sends aren't). **Invoice templates** standalone (currently lean on
-  recurring invoices).
+  (have Xero). **Invoice templates** standalone (currently lean on recurring
+  invoices). Confirmed not started, no matching schema/code found.
 - **Mobile Projects view** — projects feature is web-only by spec, but
   field crews seeing the stage they're on would help.
 - **Google Business Profile sync** — stubbed in `lib/gbp-sync.ts`. Needs

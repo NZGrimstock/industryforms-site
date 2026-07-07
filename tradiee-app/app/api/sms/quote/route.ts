@@ -1,22 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { sendSms } from '@/lib/sms'
 import { logCommunication } from '@/lib/comms'
+
+const bodySchema = z.object({ quoteId: z.string().uuid() })
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { quoteId } = await req.json()
+  const parsed = bodySchema.safeParse(await req.json().catch(() => ({})))
+  if (!parsed.success) return NextResponse.json({ error: 'quoteId required' }, { status: 400 })
+  const { quoteId } = parsed.data
   const service = createServiceClient()
+  const { data: callerProfile } = await service.from('profiles').select('company_id').eq('id', user.id).single()
 
   const { data: quote } = await service
     .from('quotes')
     .select('company_id, customer_id, quote_number, title, public_token, customers(name, phone), companies(name, country)')
     .eq('id', quoteId)
     .single()
-  if (!quote) return NextResponse.json({ error: 'Quote not found' }, { status: 404 })
+  if (!quote || quote.company_id !== callerProfile?.company_id) {
+    return NextResponse.json({ error: 'Quote not found' }, { status: 404 })
+  }
 
   const customer = quote.customers as unknown as { name: string; phone: string | null } | null
   if (!customer?.phone) return NextResponse.json({ error: 'Customer has no phone number' }, { status: 400 })

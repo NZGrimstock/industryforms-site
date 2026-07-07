@@ -50,7 +50,7 @@ Comply with legal obligations under New Zealand and Australian law
 We do not sell your personal information. We may share your data with:
 
 3.1 Service Providers
-We engage trusted third-party companies to assist us in operating the Service, including payment processors, cloud hosting providers, analytics tools, and email delivery services. These providers are contractually obligated to handle your data securely and only for the purposes we specify.
+We engage trusted third-party companies to assist us in operating the Service, including: Supabase (database, authentication, and file storage), Stripe (payment processing), Resend (transactional email delivery), and Anthropic (AI-assisted features). These providers are contractually obligated to handle your data securely and only for the purposes we specify.
 
 3.2 Legal Requirements
 We may disclose your information if required to do so by law, court order, or governmental authority, or where we believe disclosure is necessary to protect our legal rights, your safety, or the safety of others.
@@ -59,7 +59,7 @@ We may disclose your information if required to do so by law, court order, or go
 In the event of a merger, acquisition, or sale of our business assets, your personal information may be transferred to the acquiring entity. We will notify you of any such change and the choices available to you.
 
 4. Data Storage and Security
-Your data is stored on secure servers located in Australia or New Zealand, or with cloud providers that maintain data centres in these regions. We implement industry-standard security measures including encryption in transit (TLS) and at rest, access controls, and regular security reviews.
+Your data is stored on secure servers hosted in Singapore, operated by our infrastructure providers. We implement industry-standard security measures including encryption in transit (TLS) and at rest, access controls, and regular security reviews.
 
 While we take reasonable steps to protect your data, no method of electronic transmission or storage is 100% secure. We encourage you to use a strong, unique password and to contact us immediately if you suspect any unauthorised access to your account.
 

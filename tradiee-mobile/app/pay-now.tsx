@@ -1,12 +1,14 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import {
   View, Text, FlatList, TouchableOpacity, StyleSheet,
-  ActivityIndicator, Alert, RefreshControl,
+  ActivityIndicator, RefreshControl, Platform,
 } from 'react-native'
 import { Stack, useLocalSearchParams, router } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Feather } from '@expo/vector-icons'
+import { requestNeededAndroidPermissions, useStripeTerminal, type Reader } from '@stripe/stripe-terminal-react-native'
 import { supabase } from '@/lib/supabase'
+import { fetchTerminalPaymentIntent, STRIPE_TERMINAL_LOCATION_ID } from '@/lib/tap-to-pay'
 
 const API_BASE = (process.env.EXPO_PUBLIC_API_URL ?? '').replace(/\/$/, '')
 
@@ -34,6 +36,16 @@ function fmt(amount: number) {
   return '$' + (amount ?? 0).toLocaleString('en-NZ', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
+function messageFromError(error: unknown) {
+  if (error instanceof Error) return error.message
+  if (error && typeof error === 'object') {
+    const maybe = error as { message?: string; code?: string }
+    if (maybe.message && maybe.code) return `${maybe.code}: ${maybe.message}`
+    if (maybe.message) return maybe.message
+  }
+  return 'Something went wrong while collecting the payment.'
+}
+
 const STATUS_COLOR: Record<string, string> = {
   draft:          '#6b7280',
   sent:           '#3b82f6',
@@ -43,6 +55,7 @@ const STATUS_COLOR: Record<string, string> = {
 
 export default function PayNowScreen() {
   const { invoiceId: preselectedId } = useLocalSearchParams<{ invoiceId?: string }>()
+  const discoveredReaders = useRef<Reader.Type[]>([])
 
   const [invoices, setInvoices] = useState<InvoiceSummary[]>([])
   const [loading, setLoading] = useState(true)
@@ -50,6 +63,22 @@ export default function PayNowScreen() {
   const [selected, setSelected] = useState<InvoiceSummary | null>(null)
   const [stage, setStage] = useState<PayStage>(preselectedId ? 'confirm' : 'select')
   const [errorMsg, setErrorMsg] = useState('')
+  const {
+    initialize,
+    isInitialized,
+    discoverReaders,
+    cancelDiscovering,
+    connectReader,
+    connectedReader,
+    retrievePaymentIntent,
+    collectPaymentMethod,
+    confirmPaymentIntent,
+    cancelCollectPaymentMethod,
+  } = useStripeTerminal({
+    onUpdateDiscoveredReaders: readers => {
+      discoveredReaders.current = readers
+    },
+  })
 
   const fetchInvoices = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser()
@@ -126,13 +155,85 @@ export default function PayNowScreen() {
     setStage('confirm')
   }
 
-  function startPayment() {
-    Alert.alert('Coming Soon', 'Tap to Pay will be available in a future update.')
+  async function startPayment() {
+    if (!selected) return
+    setErrorMsg('')
+
+    try {
+      // Codex build audit marker (2026-07-07): real Stripe Terminal Tap to Pay collect-confirm flow.
+      if (!API_BASE) throw new Error('Missing EXPO_PUBLIC_API_URL.')
+      if (!STRIPE_TERMINAL_LOCATION_ID) throw new Error('Missing EXPO_PUBLIC_STRIPE_TERMINAL_LOCATION_ID.')
+
+      if (!isInitialized) {
+        const init = await initialize()
+        if (init.error) throw init.error
+      }
+
+      if (Platform.OS === 'android') {
+        const { error } = await requestNeededAndroidPermissions({
+          accessFineLocation: {
+            title: 'Location required',
+            message: 'Stripe Terminal needs location permission to discover and connect Tap to Pay readers.',
+            buttonPositive: 'Allow',
+          },
+        })
+        if (error) throw new Error(Object.values(error).join(', '))
+      }
+
+      setStage('connecting')
+      if (!connectedReader) {
+        discoveredReaders.current = []
+        const discovery = await discoverReaders({ discoveryMethod: 'tapToPay' })
+        if (discovery.error) throw discovery.error
+
+        const reader = discoveredReaders.current[0]
+        if (!reader) throw new Error('No Tap to Pay reader was discovered on this device.')
+
+        const connected = await connectReader({
+          discoveryMethod: 'tapToPay',
+          reader,
+          locationId: STRIPE_TERMINAL_LOCATION_ID,
+          merchantDisplayName: 'IndustryForms',
+          tosAcceptancePermitted: true,
+          autoReconnectOnUnexpectedDisconnect: true,
+        })
+        if (connected.error) throw connected.error
+      }
+
+      const paymentIntent = await fetchTerminalPaymentIntent(API_BASE, selected.id)
+      const retrieved = await retrievePaymentIntent(paymentIntent.client_secret)
+      if (retrieved.error) throw retrieved.error
+      if (!retrieved.paymentIntent) throw new Error('Stripe did not return a PaymentIntent.')
+
+      setStage('collecting')
+      const collected = await collectPaymentMethod({
+        paymentIntent: retrieved.paymentIntent,
+        skipTipping: true,
+        customerCancellation: 'enableIfAvailable',
+      })
+      if (collected.error) throw collected.error
+      if (!collected.paymentIntent) throw new Error('Payment method collection did not return a PaymentIntent.')
+
+      setStage('confirming')
+      const confirmed = await confirmPaymentIntent({ paymentIntent: collected.paymentIntent })
+      if (confirmed.error) throw confirmed.error
+
+      setStage('success')
+    } catch (error) {
+      await cancelDiscovering().catch(() => undefined)
+      setErrorMsg(messageFromError(error))
+      setStage('error')
+    }
   }
 
   function reset() {
     setStage(preselectedId ? 'confirm' : 'select')
     setErrorMsg('')
+  }
+
+  async function cancelPayment() {
+    await cancelCollectPaymentMethod().catch(() => undefined)
+    reset()
   }
 
   // ─── Success state ───────────────────────────────────────────────
@@ -207,7 +308,7 @@ export default function PayNowScreen() {
           {stage === 'collecting' && (
             <TouchableOpacity
               style={s.cancelBtn}
-              onPress={reset}
+              onPress={cancelPayment}
             >
               <Text style={s.cancelBtnText}>Cancel</Text>
             </TouchableOpacity>

@@ -4,6 +4,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { logAdminAction } from '@/lib/audit'
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
@@ -21,6 +22,10 @@ export async function POST(req: NextRequest) {
     .update({ custom_site_status: disabled ? 'disabled' : 'active' })
     .eq('company_id', companyId)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  await logAdminAction(service, {
+    adminId: user.id, action: disabled ? 'site.takedown' : 'site.restore', targetType: 'company', targetId: companyId,
+  })
 
   return NextResponse.json({ ok: true })
 }

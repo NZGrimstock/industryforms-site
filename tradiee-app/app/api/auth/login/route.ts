@@ -1,10 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
+import { z } from 'zod'
+
+const bodySchema = z.object({
+  email: z.string().trim().email().max(320),
+  password: z.string().min(1).max(200),
+})
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, password } = await request.json()
-    if (!email || !password) return NextResponse.json({ error: 'Missing credentials' }, { status: 400 })
+    const parsed = bodySchema.safeParse(await request.json().catch(() => ({})))
+    if (!parsed.success) return NextResponse.json({ error: 'Missing credentials' }, { status: 400 })
+    const { email, password } = parsed.data
 
     const response = NextResponse.json({ success: true })
 

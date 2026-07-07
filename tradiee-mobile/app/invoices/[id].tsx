@@ -205,7 +205,7 @@ export default function InvoiceDetailScreen() {
           <View style={styles.btnRow}>
             <TouchableOpacity
               style={[styles.tapPayBtn]}
-              onPress={() => router.push(`/pay-now?invoiceId=${id}`)}
+              onPress={() => router.push(`/pay-now?invoiceId=${id}` as never)}
               activeOpacity={0.85}
             >
               <Feather name="credit-card" size={16} color="#fff" />

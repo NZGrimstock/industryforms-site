@@ -1,6 +1,6 @@
 'use client'
 import { useState, useRef, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { Company, Profile } from '@/lib/types'
@@ -17,6 +17,7 @@ import { BillingRatesManager, PaymentMethodsManager, TaxRatesManager, EnquiryInb
 import { Upload, Pencil, X, ArrowRightLeft, PenLine, Trash2, Check, Archive } from 'lucide-react'
 import { getPlan, planForSeats } from '@/lib/plans'
 import { extractAccent } from '@/lib/extract-color'
+import { MfaSection } from '@/components/settings/mfa-section'
 
 interface Props {
   profile: Profile & { companies: Company }
@@ -34,8 +35,10 @@ interface Props {
 export function SettingsClient({ profile, company, team: initialTeam, googleConnected: initialGoogleConnected, integrationStatus }: Props) {
   const supabase = createClient()
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const mfaRequired = searchParams.get('mfa_required') === '1'
   const { toast } = useToast()
-  const [tab, setTab] = useState<'business' | 'workflow' | 'team' | 'profile' | 'integrations' | 'subscription' | 'developer'>('business')
+  const [tab, setTab] = useState<'business' | 'workflow' | 'team' | 'profile' | 'integrations' | 'subscription' | 'developer'>(mfaRequired ? 'profile' : 'business')
   const [testMode, setTestMode] = useState<boolean>(!!(company as Company & { test_mode?: boolean }).test_mode)
   const [testToggling, setTestToggling] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -704,6 +707,17 @@ export function SettingsClient({ profile, company, team: initialTeam, googleConn
             </form>
           </CardContent>
         </Card>
+      )}
+
+      {tab === 'profile' && (
+        <div className="max-w-xl mt-6 space-y-4">
+          {mfaRequired && (
+            <p className="text-sm text-orange-700 bg-orange-50 border border-orange-200 rounded-lg p-3">
+              Admin access requires two-factor authentication. Enable it below to continue.
+            </p>
+          )}
+          <MfaSection />
+        </div>
       )}
 
       {/* Signature capture modal */}

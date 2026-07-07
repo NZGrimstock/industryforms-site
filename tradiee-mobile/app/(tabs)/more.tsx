@@ -89,7 +89,7 @@ export default function MoreScreen() {
       <ScrollView contentContainerStyle={{ padding: 16, paddingTop: 24, paddingBottom: 40 }}>
 
         {profile && (
-          <TouchableOpacity style={s.profileCard} onPress={() => router.push('/profile')} activeOpacity={0.8}>
+          <TouchableOpacity style={s.profileCard} onPress={() => router.push('/profile' as never)} activeOpacity={0.8}>
             <View style={s.avatar}>
               <Text style={s.avatarText}>
                 {(profile.full_name ?? profile.email)[0].toUpperCase()}

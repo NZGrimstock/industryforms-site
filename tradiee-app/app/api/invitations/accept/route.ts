@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server'
+import { z } from 'zod'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
+
+const bodySchema = z.object({ token: z.string().trim().min(1).max(200) })
 
 type PushMessage = {
   to: string
@@ -18,12 +21,9 @@ async function sendExpoPush(messages: PushMessage[]) {
 }
 
 export async function POST(request: Request) {
-  const body = await request.json() as { token: string }
-  const { token } = body
-
-  if (!token) {
-    return NextResponse.json({ error: 'Missing token' }, { status: 400 })
-  }
+  const parsed = bodySchema.safeParse(await request.json().catch(() => ({})))
+  if (!parsed.success) return NextResponse.json({ error: 'Missing token' }, { status: 400 })
+  const { token } = parsed.data
 
   const serviceClient = createServiceClient()
 

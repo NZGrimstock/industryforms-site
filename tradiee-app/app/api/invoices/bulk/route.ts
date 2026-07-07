@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { nextDocNumber } from '@/lib/numbering'
 import { round2 } from '@/lib/pricing'
+
+const bodySchema = z.object({ jobIds: z.array(z.string().uuid()).min(1).max(500) })
 
 // Generate a draft invoice for each selected job in one action.
 // Each invoice gets a single "Work completed" line at the job's quoted total
@@ -11,10 +14,9 @@ export async function POST(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { jobIds } = await req.json()
-  if (!Array.isArray(jobIds) || jobIds.length === 0) {
-    return NextResponse.json({ error: 'Select at least one job' }, { status: 400 })
-  }
+  const parsed = bodySchema.safeParse(await req.json().catch(() => ({})))
+  if (!parsed.success) return NextResponse.json({ error: 'Select at least one job' }, { status: 400 })
+  const { jobIds } = parsed.data
 
   const service = createServiceClient()
   const { data: profile } = await service.from('profiles').select('company_id, companies(default_gst_rate)').eq('id', user.id).single()

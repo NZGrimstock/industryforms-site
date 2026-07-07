@@ -1,18 +1,44 @@
 import { NextResponse } from 'next/server'
-import { createServiceClient } from '@/lib/supabase/server'
+import { z } from 'zod'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { getPlan, planForSeats } from '@/lib/plans'
+
+const bodySchema = z.object({
+  full_name: z.string().trim().min(1).max(200),
+  email: z.string().trim().email().max(320),
+  role: z.enum(['owner', 'admin', 'staff']).optional(),
+  companyId: z.string().uuid(),
+  hourly_bill_rate: z.number().nonnegative().nullish(),
+  hourly_cost_rate: z.number().nonnegative().nullish(),
+})
 
 export async function POST(request: Request) {
   try {
-    const { full_name, email, role, companyId, hourly_bill_rate, hourly_cost_rate } = await request.json()
-    if (!full_name || !email || !companyId) return NextResponse.json({ error: 'Missing fields' }, { status: 400 })
+    // This route creates a new auth user + returns its temp password in the
+    // response, so it must never be reachable without proving the caller is
+    // an owner/admin of the exact company they're inviting into. companyId
+    // is not a secret — it's rendered into the public booking widget's
+    // client JS — so without this check, anyone could invite an 'admin' into
+    // any company that has a public booking page and get its password back.
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const supabase = createServiceClient()
+    const parsed = bodySchema.safeParse(await request.json().catch(() => ({})))
+    if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 })
+    const { full_name, email, role, companyId, hourly_bill_rate, hourly_cost_rate } = parsed.data
+
+    const { data: callerProfile } = await supabase.from('profiles').select('company_id, role').eq('id', user.id).single()
+    if (!callerProfile || callerProfile.company_id !== companyId || (callerProfile.role !== 'owner' && callerProfile.role !== 'admin')) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+
+    const service = createServiceClient()
 
     // ── Server-side seat check: don't let the client bypass the plan cap ──
     const [{ count }, { data: company }] = await Promise.all([
-      supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('company_id', companyId).eq('is_active', true),
-      supabase.from('companies').select('subscription_plan, billing_exempt').eq('id', companyId).single(),
+      service.from('profiles').select('id', { count: 'exact', head: true }).eq('company_id', companyId).eq('is_active', true),
+      service.from('companies').select('subscription_plan, billing_exempt').eq('id', companyId).single(),
     ])
     const exempt = company?.billing_exempt === true
     if (!exempt) {
@@ -31,14 +57,14 @@ export async function POST(request: Request) {
 
     const tempPassword = Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2)
 
-    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+    const { data: authData, error: authError } = await service.auth.admin.createUser({
       email,
       password: tempPassword,
       email_confirm: true,
     })
     if (authError) return NextResponse.json({ error: authError.message }, { status: 400 })
 
-    const { error: profileError } = await supabase.from('profiles').insert({
+    const { error: profileError } = await service.from('profiles').insert({
       id: authData.user.id,
       company_id: companyId,
       full_name,
@@ -48,7 +74,7 @@ export async function POST(request: Request) {
       hourly_cost_rate: hourly_cost_rate ?? null,
     })
     if (profileError) {
-      await supabase.auth.admin.deleteUser(authData.user.id)
+      await service.auth.admin.deleteUser(authData.user.id)
       return NextResponse.json({ error: profileError.message }, { status: 400 })
     }
 

@@ -4,11 +4,20 @@ import {
   TextInput, Alert, ActivityIndicator, Modal, ScrollView, Switch, RefreshControl,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { useFocusEffect, Stack } from 'expo-router'
+import { useFocusEffect, Stack, router } from 'expo-router'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { Feather } from '@expo/vector-icons'
 import { supabase } from '@/lib/supabase'
-import { startTracking, stopTracking, isTracking, requestPermissions, TRIP_FOLLOWUP_KEY, type TripFollowup } from '@/lib/location/tracking'
+import {
+  startTracking,
+  stopTracking,
+  isTracking,
+  requestPermissions,
+  TRIP_FOLLOWUP_KEY,
+  AUTO_CHECKIN_NOTICE_KEY,
+  type AutoCheckinNotice,
+  type TripFollowup,
+} from '@/lib/location/tracking'
 
 const ACTIVE_JOB_KEY = 'TRADIEE_ACTIVE_JOB'
 const TRADING_HOURS_KEY = 'TRADIEE_TRADING_HOURS'
@@ -75,6 +84,7 @@ export default function TimesheetsScreen() {
   const [timerJob, setTimerJob] = useState<Job | null>(null)
   const [timerJobSearch, setTimerJobSearch] = useState('')
   const [startingTimer, setStartingTimer] = useState(false)
+  const [autoCheckinNotice, setAutoCheckinNotice] = useState<AutoCheckinNotice | null>(null)
 
   const [entries, setEntries] = useState<TimeEntry[]>([])
   const [travelLogs, setTravelLogs] = useState<TravelLog[]>([])
@@ -95,6 +105,9 @@ export default function TimesheetsScreen() {
     // Check for a completed trip waiting for job timer follow-up
     AsyncStorage.getItem(TRIP_FOLLOWUP_KEY).then(raw => {
       if (raw) setTripFollowup(JSON.parse(raw))
+    })
+    AsyncStorage.getItem(AUTO_CHECKIN_NOTICE_KEY).then(raw => {
+      setAutoCheckinNotice(raw ? JSON.parse(raw) : null)
     })
     AsyncStorage.getItem(TRADING_HOURS_KEY).then(async raw => {
       const hours: TradingHours = raw ? JSON.parse(raw) : DEFAULT_TRADING_HOURS
@@ -211,6 +224,17 @@ export default function TimesheetsScreen() {
     setTripFollowup(null)
   }
 
+  async function dismissAutoCheckin() {
+    await AsyncStorage.removeItem(AUTO_CHECKIN_NOTICE_KEY)
+    setAutoCheckinNotice(null)
+  }
+
+  async function viewAutoCheckedJob() {
+    if (!autoCheckinNotice) return
+    await dismissAutoCheckin()
+    router.push(`/jobs/${autoCheckinNotice.jobId}`)
+  }
+
   async function startJobTimer(job: Job) {
     setStartingTimer(true)
     const { data: { user } } = await supabase.auth.getUser()
@@ -218,18 +242,73 @@ export default function TimesheetsScreen() {
     const { data: profile } = await supabase.from('profiles').select('company_id').eq('id', user.id).single()
     if (!profile) { setStartingTimer(false); return }
     const now = new Date().toISOString()
-    const { data: ts } = await supabase.from('timesheets').insert({
+    const closeStartTimer = async () => {
+      setShowStartTimer(false)
+      setTimerJob(null)
+      setTimerJobSearch('')
+      await dismissFollowup()
+    }
+    const reconcileOpenTimer = async () => {
+      const { data: open } = await supabase
+        .from('timesheets')
+        .select('id, job_id, started_at')
+        .eq('profile_id', user.id)
+        .is('ended_at', null)
+        .order('started_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      if (!open) return false
+      await AsyncStorage.setItem(ACTIVE_JOB_KEY, JSON.stringify({
+        jobId: open.job_id ?? job.id,
+        timesheetId: open.id,
+        startedAt: open.started_at,
+      }))
+      await closeStartTimer()
+      Alert.alert('Timer already running', 'Stop your current job timer before starting another one.')
+      fetchAll()
+      return true
+    }
+    const { data: existing } = await supabase
+      .from('timesheets')
+      .select('id, job_id, started_at')
+      .eq('profile_id', user.id)
+      .is('ended_at', null)
+      .order('started_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    if (existing) {
+      await AsyncStorage.setItem(ACTIVE_JOB_KEY, JSON.stringify({
+        jobId: existing.job_id ?? job.id,
+        timesheetId: existing.id,
+        startedAt: existing.started_at,
+      }))
+      setStartingTimer(false)
+      await closeStartTimer()
+      Alert.alert('Timer already running', 'Stop your current job timer before starting another one.')
+      fetchAll()
+      return
+    }
+    const { data: ts, error } = await supabase.from('timesheets').insert({
       job_id: job.id, profile_id: user.id, company_id: profile.company_id,
       started_at: now, ended_at: null, break_minutes: 0, is_billable: true,
     }).select('id').single()
-    if (ts) {
-      await AsyncStorage.setItem(ACTIVE_JOB_KEY, JSON.stringify({ jobId: job.id, timesheetId: ts.id, startedAt: now }))
+    if (error) {
+      if ((error as { code?: string }).code === '23505' && await reconcileOpenTimer()) {
+        setStartingTimer(false)
+        return
+      }
+      Alert.alert('Error', error.message)
+      setStartingTimer(false)
+      return
     }
+    if (!ts) {
+      Alert.alert('Error', 'Could not start the timer.')
+      setStartingTimer(false)
+      return
+    }
+    await AsyncStorage.setItem(ACTIVE_JOB_KEY, JSON.stringify({ jobId: job.id, timesheetId: ts.id, startedAt: now }))
     setStartingTimer(false)
-    setShowStartTimer(false)
-    setTimerJob(null)
-    setTimerJobSearch('')
-    await dismissFollowup()
+    await closeStartTimer()
     fetchAll()
   }
 
@@ -274,6 +353,26 @@ export default function TimesheetsScreen() {
           </TouchableOpacity>
         </View>
       </View>
+
+      {autoCheckinNotice && (
+        <View style={styles.autoBanner}>
+          <View style={styles.autoIcon}>
+            <Feather name="map-pin" size={16} color="#15803d" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.autoBannerTitle}>Auto check-in started</Text>
+            <Text style={styles.autoBannerSub} numberOfLines={2}>
+              {autoCheckinNotice.jobNumber} - {autoCheckinNotice.jobTitle} ({autoCheckinNotice.distanceM} m away)
+            </Text>
+          </View>
+          <TouchableOpacity style={styles.autoBannerBtn} onPress={viewAutoCheckedJob}>
+            <Text style={styles.autoBannerBtnText}>View</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={dismissAutoCheckin} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <Feather name="x" size={16} color="#16a34a" />
+          </TouchableOpacity>
+        </View>
+      )}
 
       {tripFollowup && (
         <View style={styles.tripBanner}>
@@ -683,4 +782,10 @@ const styles = StyleSheet.create({
   tripBannerSub: { fontSize: 12, color: '#9a3412', marginTop: 1 },
   tripBannerBtn: { backgroundColor: '#f97316', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 7 },
   tripBannerBtnText: { color: '#fff', fontWeight: '700', fontSize: 13 },
+  autoBanner: { flexDirection: 'row', alignItems: 'center', gap: 10, marginHorizontal: 16, marginBottom: 6, backgroundColor: '#f0fdf4', borderRadius: 12, padding: 12, borderWidth: 1, borderColor: '#bbf7d0' },
+  autoIcon: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center', backgroundColor: '#dcfce7' },
+  autoBannerTitle: { fontSize: 13, fontWeight: '700', color: '#15803d' },
+  autoBannerSub: { fontSize: 12, color: '#166534', marginTop: 1 },
+  autoBannerBtn: { backgroundColor: '#22c55e', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 7 },
+  autoBannerBtnText: { color: '#fff', fontWeight: '700', fontSize: 13 },
 })

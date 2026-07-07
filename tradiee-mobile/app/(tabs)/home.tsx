@@ -209,7 +209,7 @@ export default function HomeScreen() {
             <Text style={s.statNum}>{stats.draftQuotes}</Text>
             <Text style={s.statLbl}>Accepted quotes</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={s.statCard} onPress={() => router.push('/todos')} activeOpacity={0.7}>
+          <TouchableOpacity style={s.statCard} onPress={() => router.push('/todos' as never)} activeOpacity={0.7}>
             <Text style={[s.statNum, stats.pendingTodos > 0 && { color: '#f97316' }]}>{stats.pendingTodos}</Text>
             <Text style={s.statLbl}>To-dos</Text>
           </TouchableOpacity>
@@ -259,7 +259,7 @@ export default function HomeScreen() {
           <View style={s.card}>
             <View style={s.cardHeader}>
               <Text style={s.cardTitle}>To-do today</Text>
-              <TouchableOpacity onPress={() => router.push('/todos')}>
+              <TouchableOpacity onPress={() => router.push('/todos' as never)}>
                 <Text style={s.seeAll}>See all →</Text>
               </TouchableOpacity>
             </View>

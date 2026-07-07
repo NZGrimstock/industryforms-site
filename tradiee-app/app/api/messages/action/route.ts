@@ -8,7 +8,18 @@
 //   link_customer  { key, customerId }             — sms-unmatched only
 
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
+
+const bodySchema = z.object({
+  action: z.enum(['mark_read', 'mark_status', 'create_customer', 'link_customer']),
+  key: z.string().min(1).max(200),
+  status: z.enum(['open', 'pending', 'closed', 'spam']).optional(),
+  name: z.string().trim().max(200).optional(),
+  phone: z.string().trim().max(50).optional(),
+  email: z.string().trim().email().max(320).optional().or(z.literal('')),
+  customerId: z.string().uuid().optional(),
+})
 
 function parseKey(key: string): [string, string] {
   const i = key.indexOf(':')
@@ -25,8 +36,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
-  const { action, key, status, name, phone, email, customerId } = await req.json().catch(() => ({}))
-  if (!action || !key) return NextResponse.json({ error: 'action and key required' }, { status: 400 })
+  const parsed = bodySchema.safeParse(await req.json().catch(() => ({})))
+  if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 })
+  const { action, key, status, name, phone, email, customerId } = parsed.data
   const [type, id] = parseKey(key)
 
   if (action === 'mark_read') {
@@ -40,7 +52,7 @@ export async function POST(req: NextRequest) {
   }
 
   if (action === 'mark_status') {
-    if (!['open', 'pending', 'closed', 'spam'].includes(status)) {
+    if (!status) {
       return NextResponse.json({ error: 'Invalid status' }, { status: 400 })
     }
     if (type === 'sms') {

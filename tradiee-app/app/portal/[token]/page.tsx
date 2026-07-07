@@ -189,8 +189,14 @@ function ExpiredPage() {
           <p className="text-gray-600 mb-4">
             This portal link is no longer valid. Portal links expire after 30 days for security.
           </p>
-          <p className="text-gray-500 text-sm">
-            Contact your tradie and ask them to send you a new portal link.
+          <Link
+            href="/portal/login"
+            className="inline-flex rounded-lg bg-orange-500 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-600"
+          >
+            Request a new link
+          </Link>
+          <p className="mt-4 text-gray-500 text-sm">
+            If your email is not recognised, contact your tradie and ask them to send you a portal link.
           </p>
         </div>
       </div>

@@ -4,6 +4,7 @@
 // -> deposit_pending, awaiting Stripe webhook; else -> requested for manual
 // approval).
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 import { createServiceClient } from '@/lib/supabase/server'
 import { createJobFromBooking } from '@/lib/bookings/fulfill'
 import { sendBookingConfirmationEmail, sendBookingRequestedEmail } from '@/lib/bookings/notify'
@@ -15,11 +16,21 @@ function normalizePhone(phone: string) {
   return phone.replace(/\D/g, '')
 }
 
+const bodySchema = z.object({
+  bookingId: z.string().uuid(),
+  name: z.string().trim().min(1).max(200),
+  email: z.string().trim().email().max(200).nullish().or(z.literal('')),
+  phone: z.string().trim().max(50).nullish().or(z.literal('')),
+  siteAddress: z.string().trim().max(500).nullish().or(z.literal('')),
+  notes: z.string().trim().max(2000).nullish().or(z.literal('')),
+}).refine(d => !!d.email || !!d.phone, { message: 'Name and a contact detail are required' })
+
 export async function POST(req: NextRequest) {
-  const { bookingId, name, email, phone, siteAddress, notes } = await req.json().catch(() => ({}))
-  if (!bookingId || !name || (!email && !phone)) {
-    return NextResponse.json({ error: 'Name and a contact detail are required' }, { status: 400 })
+  const parsed = bodySchema.safeParse(await req.json().catch(() => ({})))
+  if (!parsed.success) {
+    return NextResponse.json({ error: parsed.error.issues[0]?.message ?? 'Invalid request' }, { status: 400 })
   }
+  const { bookingId, name, email, phone, siteAddress, notes } = parsed.data
 
   const service = createServiceClient()
   const { data: booking } = await service.from('bookings').select('id, company_id, package_id, status, hold_expires_at, assigned_to')

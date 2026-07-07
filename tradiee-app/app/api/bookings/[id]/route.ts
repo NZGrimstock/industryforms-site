@@ -3,16 +3,18 @@
 // A refund (if a deposit was paid) is a separate step via /api/bookings/refund
 // once the booking is 'cancelled' or 'no_show'.
 import { NextResponse } from 'next/server'
+import { z } from 'zod'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { createJobFromBooking } from '@/lib/bookings/fulfill'
 import { sendBookingConfirmationEmail } from '@/lib/bookings/notify'
 
+const bodySchema = z.object({ action: z.enum(['confirm', 'cancel', 'no_show']) })
+
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const { action } = await req.json().catch(() => ({}))
-  if (!['confirm', 'cancel', 'no_show'].includes(action)) {
-    return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
-  }
+  const parsed = bodySchema.safeParse(await req.json().catch(() => ({})))
+  if (!parsed.success) return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
+  const { action } = parsed.data
 
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
