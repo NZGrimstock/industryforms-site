@@ -3,10 +3,78 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Industry Forms — Intelligent Job Management for Trades</title>
+<title>Industry Forms — Job Management Software for NZ & AU Tradies</title>
+<meta name="description" content="Industry Forms helps NZ and AU tradies quote faster, schedule cleaner, work offline, invoice sooner, take Stripe payments, and manage jobs from first enquiry to final payment. Start a free trial.">
+<meta name="keywords" content="job management software for tradies, NZ tradie software, AU tradie software, trade quoting software, field service management, contractor scheduling software, trade invoicing software">
+<link rel="canonical" href="https://industryforms.app/">
+<meta property="og:title" content="Industry Forms — Job Management Software for NZ & AU Tradies">
+<meta property="og:description" content="Paperwork should not be your second trade. Quote faster, schedule cleaner, invoice sooner, and keep every job moving.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://industryforms.app/">
+<meta name="twitter:card" content="summary_large_image">
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://unpkg.com/lucide@latest"></script>
 <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@300;400;500;600;700;800;900&family=Sora:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "SoftwareApplication",
+      "name": "Industry Forms",
+      "applicationCategory": "BusinessApplication",
+      "operatingSystem": "Web, iOS, Android",
+      "url": "https://industryforms.app/",
+      "description": "Job management software for NZ and AU tradies with quotes, bookings, job scheduling, offline mobile access, forms, invoicing, Stripe payments, reminders, reporting, and AI admin support.",
+      "areaServed": ["New Zealand", "Australia"],
+      "offers": {
+        "@type": "Offer",
+        "price": "29",
+        "priceCurrency": "NZD",
+        "availability": "https://schema.org/InStock",
+        "url": "https://app.industryforms.app/signup"
+      }
+    },
+    {
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "What does Industry Forms do for tradies?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Industry Forms gives NZ and AU tradies one place for web leads, AI-drafted quotes, bookings, jobs, forms, scheduling, offline mobile notes and photos, invoices, Stripe payments, reminders, messaging, and gross-profit reporting."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Can customers accept quotes and pay deposits online?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. Customers can accept quotes and pay deposits or invoices online without creating an account, reducing friction between quote sent, job booked, and payment received."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Does Industry Forms work offline?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. Field crews can log job notes, time, and photos offline, then sync when a connection returns."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Is Industry Forms built for New Zealand and Australia?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. Industry Forms is built specifically for NZ and AU trade businesses with transparent pricing and workflows for quotes, jobs, compliance forms, GST, scheduling, payments, and field crews."
+          }
+        }
+      ]
+    }
+  ]
+}
+</script>
 <script>
 tailwind.config = {
   theme: {
@@ -242,6 +310,17 @@ tailwind.config = {
     top: -8px;
     left: 24px;
   }
+
+  .pillar-tab.is-active {
+    background: #1C1C2E;
+    color: #fff;
+    box-shadow: 0 10px 30px -14px rgba(28,28,46,0.45);
+  }
+  .pillar-panel { display: none; }
+  .pillar-panel.is-active { display: block; }
+  .faq-panel { display: none; }
+  .faq-item.is-open .faq-panel { display: block; }
+  .faq-item.is-open .faq-icon { transform: rotate(45deg); }
 </style>
 </head>
 <body class="grain">
@@ -261,10 +340,12 @@ tailwind.config = {
     </a>
     <div class="hidden md:flex items-center gap-8">
       <a href="#features"    class="text-sm font-medium text-ink/55 hover:text-ink transition-colors duration-150">Features</a>
+      <a href="#workflow-pillars" class="text-sm font-medium text-ink/55 hover:text-ink transition-colors duration-150">Workflows</a>
       <a href="#how-it-works" class="text-sm font-medium text-ink/55 hover:text-ink transition-colors duration-150">How It Works</a>
       <a href="#pricing"     class="text-sm font-medium text-ink/55 hover:text-ink transition-colors duration-150">Pricing</a>
+      <a href="#faq"         class="text-sm font-medium text-ink/55 hover:text-ink transition-colors duration-150">FAQ</a>
       <a href="https://app.industryforms.app" class="text-sm font-medium text-ink/55 hover:text-ink transition-colors duration-150">Log In</a>
-      <a href="https://app.industryforms.app" class="btn-brand bg-brand text-white text-sm font-semibold px-5 py-2.5 rounded-full inline-flex items-center gap-1.5">
+      <a href="https://app.industryforms.app/signup" class="btn-brand bg-brand text-white text-sm font-semibold px-5 py-2.5 rounded-full inline-flex items-center gap-1.5">
         Start Free Trial <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
       </a>
     </div>
@@ -275,10 +356,12 @@ tailwind.config = {
   <div id="mobileMenu" class="hidden md:hidden border-t border-black/[0.05] bg-paper/96 backdrop-blur-2xl">
     <div class="px-6 py-5 flex flex-col gap-1">
       <a href="#features"     class="text-sm font-medium text-ink/70 py-2.5 px-3 rounded-lg hover:bg-black/[0.04]">Features</a>
+      <a href="#workflow-pillars" class="text-sm font-medium text-ink/70 py-2.5 px-3 rounded-lg hover:bg-black/[0.04]">Workflows</a>
       <a href="#how-it-works" class="text-sm font-medium text-ink/70 py-2.5 px-3 rounded-lg hover:bg-black/[0.04]">How It Works</a>
       <a href="#pricing"      class="text-sm font-medium text-ink/70 py-2.5 px-3 rounded-lg hover:bg-black/[0.04]">Pricing</a>
+      <a href="#faq"          class="text-sm font-medium text-ink/70 py-2.5 px-3 rounded-lg hover:bg-black/[0.04]">FAQ</a>
       <a href="https://app.industryforms.app" class="text-sm font-medium text-ink/70 py-2.5 px-3 rounded-lg hover:bg-black/[0.04]">Log In</a>
-      <a href="https://app.industryforms.app" class="btn-brand bg-brand text-white text-sm font-semibold px-5 py-3 rounded-full text-center mt-3">Start Free Trial</a>
+      <a href="https://app.industryforms.app/signup" class="btn-brand bg-brand text-white text-sm font-semibold px-5 py-3 rounded-full text-center mt-3">Start Free Trial</a>
     </div>
   </div>
 </nav>
@@ -288,45 +371,48 @@ tailwind.config = {
   <div class="max-w-7xl mx-auto">
     <div class="max-w-3xl">
       <div class="reveal flex items-center gap-3 mb-8">
-        <span class="tag-orange text-[11px] font-bold tracking-wide uppercase px-3.5 py-1.5 rounded-full">For Trades & SMEs</span>
+        <span class="tag-orange text-[11px] font-bold tracking-wide uppercase px-3.5 py-1.5 rounded-full">For NZ & AU Tradies</span>
         <span class="flex items-center gap-1.5 text-[11px] font-medium text-ink/40">
           <span class="w-1.5 h-1.5 rounded-full bg-green-400 inline-block"></span>
-          Now in Beta
+          Transparent pricing. No pushy sales.
         </span>
       </div>
 
       <h1 class="reveal reveal-d1 font-display font-bold text-[clamp(2.8rem,8vw,5.5rem)] leading-[0.93] tracking-tight text-ink mb-8">
-        You didn't start a trade<br>to do
-        <span class="grad-text">paperwork.</span>
+        Paperwork should not be<br>your second
+        <span class="grad-text">trade.</span>
       </h1>
 
-      <p class="reveal reveal-d2 text-lg md:text-xl text-ink/55 leading-relaxed max-w-lg mb-10">
-        Industry Forms automates your jobs, invoices, scheduling, and compliance so you can get back on the tools and grow your business.
+      <p class="reveal reveal-d2 text-lg md:text-xl text-ink/55 leading-relaxed max-w-2xl mb-10">
+        The job is hard enough. The admin should not be. Quote faster, schedule cleaner, invoice sooner, and keep every job moving from first enquiry to final payment without the paper chase.
       </p>
 
       <div class="reveal reveal-d3 flex flex-wrap items-center gap-4">
-        <a href="#pricing" class="btn-brand bg-brand text-white font-semibold px-8 py-4 rounded-full text-sm inline-flex items-center gap-2 shadow-brand">
-          Start Free — No Card Needed
+        <a href="https://app.industryforms.app/signup" class="btn-brand bg-brand text-white font-semibold px-8 py-4 rounded-full text-sm inline-flex items-center gap-2 shadow-brand">
+          Start Free Trial
           <i data-lucide="arrow-right" class="w-4 h-4"></i>
         </a>
-        <a href="#how-it-works" class="inline-flex items-center gap-2 text-sm font-medium text-ink/55 hover:text-ink transition-colors px-2 py-4 group">
+        <a href="#workflow-pillars" class="inline-flex items-center gap-2 text-sm font-medium text-ink/55 hover:text-ink transition-colors px-2 py-4 group">
           <span class="w-9 h-9 rounded-full bg-white/80 border border-black/[0.07] flex items-center justify-center shadow-glass group-hover:shadow-glass-lg transition-shadow">
-            <i data-lucide="play" class="w-3.5 h-3.5 text-ink fill-ink translate-x-[1px]"></i>
+            <i data-lucide="route" class="w-3.5 h-3.5 text-ink"></i>
           </span>
-          Watch 2-min demo
+          See the job workflow
         </a>
       </div>
 
-      <div class="reveal reveal-d4 mt-12 flex items-center gap-4">
-        <div class="flex -space-x-2.5">
-          <div class="w-9 h-9 rounded-full bg-gradient-to-br from-teal to-teal-light text-white text-xs font-bold flex items-center justify-center ring-2 ring-paper shadow-sm">J</div>
-          <div class="w-9 h-9 rounded-full bg-gradient-to-br from-grape to-grape-light text-white text-xs font-bold flex items-center justify-center ring-2 ring-paper shadow-sm">M</div>
-          <div class="w-9 h-9 rounded-full bg-gradient-to-br from-brand to-brand-light text-white text-xs font-bold flex items-center justify-center ring-2 ring-paper shadow-sm">S</div>
-          <div class="w-9 h-9 rounded-full bg-gradient-to-br from-ink to-ink-light text-white text-xs font-bold flex items-center justify-center ring-2 ring-paper shadow-sm">K</div>
+      <div class="reveal reveal-d4 mt-12 grid sm:grid-cols-3 gap-3 max-w-2xl">
+        <div class="bg-white/70 border border-black/[0.05] shadow-glass rounded-2xl p-4">
+          <p class="text-[10px] uppercase tracking-widest font-bold text-ink/35 mb-1">Know what is</p>
+          <p class="text-sm font-bold text-ink">booked, quoted, owed</p>
         </div>
-        <p class="text-xs text-ink/45">
-          <span class="font-semibold text-ink/70">the many</span> tradespeople already saving time
-        </p>
+        <div class="bg-white/70 border border-black/[0.05] shadow-glass rounded-2xl p-4">
+          <p class="text-[10px] uppercase tracking-widest font-bold text-ink/35 mb-1">Built for</p>
+          <p class="text-sm font-bold text-ink">NZ & AU trade crews</p>
+        </div>
+        <div class="bg-white/70 border border-black/[0.05] shadow-glass rounded-2xl p-4">
+          <p class="text-[10px] uppercase tracking-widest font-bold text-ink/35 mb-1">Trial</p>
+          <p class="text-sm font-bold text-ink">28 days, no card</p>
+        </div>
       </div>
     </div>
 
@@ -344,7 +430,7 @@ tailwind.config = {
           <div class="flex-1 mx-4">
             <div class="bg-black/[0.05] rounded-lg h-6 flex items-center px-3 max-w-xs">
               <i data-lucide="lock" class="w-2.5 h-2.5 text-ink/30 mr-1.5"></i>
-              <span class="text-[11px] text-ink/35 font-medium">industryforms.app</span>
+              <span class="text-[11px] text-ink/35 font-medium">app.industryforms.app</span>
             </div>
           </div>
         </div>
@@ -393,7 +479,7 @@ tailwind.config = {
               <div class="bg-white rounded-2xl p-4 border border-black/[0.04] shadow-glass">
                 <p class="text-[10px] text-ink/35 font-semibold uppercase tracking-wider">Pending</p>
                 <p class="text-2xl font-display font-bold text-ink mt-1.5 tabular-nums">$8.4k</p>
-                <p class="text-[10px] text-brand font-semibold mt-1">4 to send</p>
+                <p class="text-[10px] text-brand font-semibold mt-1">Stripe ready</p>
               </div>
               <div class="bg-white rounded-2xl p-4 border border-black/[0.04] shadow-glass hidden md:block">
                 <p class="text-[10px] text-ink/35 font-semibold uppercase tracking-wider">This Week</p>
@@ -403,7 +489,7 @@ tailwind.config = {
               <div class="bg-white rounded-2xl p-4 border border-black/[0.04] shadow-glass hidden md:block">
                 <p class="text-[10px] text-ink/35 font-semibold uppercase tracking-wider">Enquiries</p>
                 <p class="text-2xl font-display font-bold text-grape mt-1.5 tabular-nums">7</p>
-                <p class="text-[10px] text-grape/70 font-semibold mt-1">2 urgent</p>
+                <p class="text-[10px] text-grape/70 font-semibold mt-1">2 AI quotes</p>
               </div>
             </div>
             <!-- Schedule -->
@@ -416,8 +502,8 @@ tailwind.config = {
                 <div class="flex items-center gap-3 p-3 rounded-xl bg-brand/[0.06] border border-brand/[0.12]">
                   <div class="w-1 h-9 rounded-full bg-brand flex-shrink-0"></div>
                   <div class="flex-1 min-w-0">
-                    <p class="text-[11px] font-bold text-ink">Boiler Repair — Mrs. Thompson</p>
-                    <p class="text-[10px] text-ink/40 mt-0.5">9:00 AM · 14 Oak Lane</p>
+                    <p class="text-[11px] font-bold text-ink">Heat pump service - Thompson</p>
+                    <p class="text-[10px] text-ink/40 mt-0.5">9:00 AM · Auckland · signature required</p>
                   </div>
                   <div class="flex items-center gap-1.5">
                     <span class="text-[9px] font-semibold bg-brand/10 text-brand px-2 py-0.5 rounded-full">In Progress</span>
@@ -427,8 +513,8 @@ tailwind.config = {
                 <div class="flex items-center gap-3 p-3 rounded-xl hover:bg-black/[0.02] transition-colors">
                   <div class="w-1 h-9 rounded-full bg-teal flex-shrink-0"></div>
                   <div class="flex-1 min-w-0">
-                    <p class="text-[11px] font-bold text-ink">Bathroom Fit — New Build #4</p>
-                    <p class="text-[10px] text-ink/40 mt-0.5">1:00 PM · 22 Mill Street</p>
+                    <p class="text-[11px] font-bold text-ink">Switchboard upgrade - Unit 4</p>
+                    <p class="text-[10px] text-ink/40 mt-0.5">1:00 PM · offline forms synced</p>
                   </div>
                   <i data-lucide="navigation" class="w-3.5 h-3.5 text-ink/20 flex-shrink-0"></i>
                 </div>
@@ -476,12 +562,108 @@ tailwind.config = {
 </section>
 
 <!-- ============================================================ FEATURES -->
+<section id="workflow-pillars" class="relative z-10 py-24 md:py-32 px-6 bg-paper-dark/45">
+  <div class="max-w-7xl mx-auto">
+    <div class="reveal text-center max-w-3xl mx-auto mb-14">
+      <span class="tag-orange text-[11px] font-bold tracking-widest uppercase px-4 py-1.5 rounded-full">From Lead To Paid</span>
+      <h2 class="font-display font-bold text-3xl md:text-[2.75rem] leading-tight tracking-tight text-ink mt-6 mb-5">Stop running the business from texts, notebooks, and memory.</h2>
+      <p class="text-ink/50 text-lg leading-relaxed">Industry Forms is the single place for quotes, jobs, forms, bookings, invoices, and the next action that keeps cash moving.</p>
+    </div>
+
+    <div class="reveal grid lg:grid-cols-[0.85fr_1.15fr] gap-6 items-start">
+      <div class="bg-white/75 border border-black/[0.05] shadow-glass rounded-3xl p-4">
+        <button class="pillar-tab is-active w-full text-left rounded-2xl px-5 py-4 transition-all duration-200" data-pillar="winning">
+          <span class="text-[10px] font-bold tracking-widest uppercase opacity-60">Winning Work</span>
+          <span class="block font-display font-bold mt-1">Web leads into scheduled jobs</span>
+        </button>
+        <button class="pillar-tab w-full text-left rounded-2xl px-5 py-4 transition-all duration-200 text-ink/65 hover:bg-black/[0.04]" data-pillar="tools">
+          <span class="text-[10px] font-bold tracking-widest uppercase opacity-60">On The Tools</span>
+          <span class="block font-display font-bold mt-1">Offline crews, photos, time, evidence</span>
+        </button>
+        <button class="pillar-tab w-full text-left rounded-2xl px-5 py-4 transition-all duration-200 text-ink/65 hover:bg-black/[0.04]" data-pillar="paid">
+          <span class="text-[10px] font-bold tracking-widest uppercase opacity-60">Getting Paid</span>
+          <span class="block font-display font-bold mt-1">Invoice from the driveway</span>
+        </button>
+        <button class="pillar-tab w-full text-left rounded-2xl px-5 py-4 transition-all duration-200 text-ink/65 hover:bg-black/[0.04]" data-pillar="health">
+          <span class="text-[10px] font-bold tracking-widest uppercase opacity-60">Business Health</span>
+          <span class="block font-display font-bold mt-1">Reminders, reporting, AI to-dos</span>
+        </button>
+      </div>
+
+      <div class="bg-ink rounded-3xl p-6 md:p-9 text-white shadow-ink relative overflow-hidden">
+        <div class="absolute right-0 top-0 w-72 h-72 bg-brand/[0.08] rounded-full blur-3xl translate-x-1/3 -translate-y-1/3"></div>
+        <div class="absolute left-0 bottom-0 w-72 h-72 bg-teal/[0.08] rounded-full blur-3xl -translate-x-1/3 translate-y-1/3"></div>
+
+        <article class="pillar-panel is-active relative" data-panel="winning">
+          <div class="flex items-center gap-3 mb-5">
+            <div class="w-12 h-12 rounded-2xl bg-brand/20 flex items-center justify-center"><i data-lucide="mouse-pointer-click" class="w-5 h-5 text-brand"></i></div>
+            <div>
+              <p class="text-[10px] font-bold tracking-widest uppercase text-white/35">Winning Work</p>
+              <h3 class="font-display font-bold text-2xl">Capture the lead while the customer is ready.</h3>
+            </div>
+          </div>
+          <p class="text-white/45 leading-relaxed mb-6">Publish an instant website with a booking widget, draft quotes from your real price list with AI, let customers accept online, and trigger reminders when service intervals are due.</p>
+          <div class="grid sm:grid-cols-2 gap-3">
+            <div class="rounded-2xl bg-white/[0.05] border border-white/[0.07] p-4"><p class="text-sm font-semibold">Custom booking websites</p><p class="text-xs text-white/35 mt-1">Lead source tracking included.</p></div>
+            <div class="rounded-2xl bg-white/[0.05] border border-white/[0.07] p-4"><p class="text-sm font-semibold">Online quote acceptance</p><p class="text-xs text-white/35 mt-1">Deposits without customer accounts.</p></div>
+          </div>
+        </article>
+
+        <article class="pillar-panel relative" data-panel="tools">
+          <div class="flex items-center gap-3 mb-5">
+            <div class="w-12 h-12 rounded-2xl bg-teal/20 flex items-center justify-center"><i data-lucide="smartphone" class="w-5 h-5 text-teal-light"></i></div>
+            <div>
+              <p class="text-[10px] font-bold tracking-widest uppercase text-white/35">On The Tools</p>
+              <h3 class="font-display font-bold text-2xl">Keep crews moving, even without signal.</h3>
+            </div>
+          </div>
+          <p class="text-white/45 leading-relaxed mb-6">Offline-first mobile access captures notes, photos, timesheets, signatures, and on-site evidence. GPS travel logs run during scheduled trading hours so mileage is not rebuilt from memory.</p>
+          <div class="grid sm:grid-cols-2 gap-3">
+            <div class="rounded-2xl bg-white/[0.05] border border-white/[0.07] p-4"><p class="text-sm font-semibold">Multiple visits per job</p><p class="text-xs text-white/35 mt-1">No duplicated job data.</p></div>
+            <div class="rounded-2xl bg-white/[0.05] border border-white/[0.07] p-4"><p class="text-sm font-semibold">Custom job statuses</p><p class="text-xs text-white/35 mt-1">Match the way your crew works.</p></div>
+          </div>
+        </article>
+
+        <article class="pillar-panel relative" data-panel="paid">
+          <div class="flex items-center gap-3 mb-5">
+            <div class="w-12 h-12 rounded-2xl bg-grape/20 flex items-center justify-center"><i data-lucide="credit-card" class="w-5 h-5 text-grape-light"></i></div>
+            <div>
+              <p class="text-[10px] font-bold tracking-widest uppercase text-white/35">Getting Paid</p>
+              <h3 class="font-display font-bold text-2xl">Stop forgetting to bill the small jobs.</h3>
+            </div>
+          </div>
+          <p class="text-white/45 leading-relaxed mb-6">Convert completed job time and materials into invoices, send them before leaving site, accept Stripe payments online, and use progress invoicing on larger projects.</p>
+          <div class="grid sm:grid-cols-2 gap-3">
+            <div class="rounded-2xl bg-white/[0.05] border border-white/[0.07] p-4"><p class="text-sm font-semibold">True inventory tracking</p><p class="text-xs text-white/35 mt-1">Real stock levels, not guesswork.</p></div>
+            <div class="rounded-2xl bg-white/[0.05] border border-white/[0.07] p-4"><p class="text-sm font-semibold">Review requests after payment</p><p class="text-xs text-white/35 mt-1">Ask when customers are happiest.</p></div>
+          </div>
+        </article>
+
+        <article class="pillar-panel relative" data-panel="health">
+          <div class="flex items-center gap-3 mb-5">
+            <div class="w-12 h-12 rounded-2xl bg-brand/20 flex items-center justify-center"><i data-lucide="activity" class="w-5 h-5 text-brand"></i></div>
+            <div>
+              <p class="text-[10px] font-bold tracking-widest uppercase text-white/35">Business Health</p>
+              <h3 class="font-display font-bold text-2xl">Wake up to what needs doing next.</h3>
+            </div>
+          </div>
+          <p class="text-white/45 leading-relaxed mb-6">A unified inbox keeps SMS and web enquiries together. Daily 6 AM AI to-dos highlight stale jobs, overdue invoices, and quote follow-ups, while gross-profit reporting replaces guesswork.</p>
+          <div class="grid sm:grid-cols-2 gap-3">
+            <div class="rounded-2xl bg-white/[0.05] border border-white/[0.07] p-4"><p class="text-sm font-semibold">Two-way Google Calendar</p><p class="text-xs text-white/35 mt-1">Personal and business schedules aligned.</p></div>
+            <div class="rounded-2xl bg-white/[0.05] border border-white/[0.07] p-4"><p class="text-sm font-semibold">Role-based staff access</p><p class="text-xs text-white/35 mt-1">Owners keep financial control.</p></div>
+          </div>
+        </article>
+      </div>
+    </div>
+  </div>
+</section>
+
 <section id="features" class="relative z-10 py-24 md:py-32 px-6">
   <div class="max-w-7xl mx-auto">
     <div class="reveal text-center max-w-2xl mx-auto mb-20">
       <span class="tag-teal text-[11px] font-bold tracking-widest uppercase px-4 py-1.5 rounded-full">Everything in One Place</span>
-      <h2 class="font-display font-bold text-3xl md:text-[2.75rem] leading-tight tracking-tight text-ink mt-6 mb-5">One system. Every job,<br>end to end.</h2>
-      <p class="text-ink/50 text-lg">From first enquiry to final invoice: automated, tracked, and under control.</p>
+      <h2 class="font-display font-bold text-3xl md:text-[2.75rem] leading-tight tracking-tight text-ink mt-6 mb-5">A cleaner workflow for every job,<br>end to end.</h2>
+      <p class="text-ink/50 text-lg">Know exactly what is booked, what is quoted, what is owed, and what needs doing next.</p>
     </div>
 
     <!-- Bento grid -->
@@ -489,14 +671,14 @@ tailwind.config = {
       <!-- Large: Job Management -->
       <div class="reveal reveal-d1 md:col-span-2 card-lift bg-white/75 backdrop-blur-sm rounded-3xl p-8 md:p-10 border border-black/[0.05] shadow-glass relative overflow-hidden group">
         <div class="absolute top-0 right-0 w-72 h-72 bg-brand/[0.05] rounded-full blur-3xl -translate-y-1/3 translate-x-1/4 group-hover:bg-brand/[0.08] transition-colors duration-700"></div>
-        <span class="tag-orange text-[10px] font-bold tracking-widest uppercase px-3.5 py-1.5 rounded-full">Customers & Jobs</span>
-        <h3 class="font-display font-bold text-xl md:text-2xl text-ink mt-6 mb-3">Manage every job from enquiry to completion</h3>
-        <p class="text-sm text-ink/50 leading-relaxed max-w-md mb-7">Track enquiries, convert to projects, assign teams, and monitor progress, all from a single dashboard. Never lose track of a lead again.</p>
+        <span class="tag-orange text-[10px] font-bold tracking-widest uppercase px-3.5 py-1.5 rounded-full">Bookings & Quotes</span>
+        <h3 class="font-display font-bold text-xl md:text-2xl text-ink mt-6 mb-3">Turn web leads into priced, scheduled work</h3>
+        <p class="text-sm text-ink/50 leading-relaxed max-w-md mb-7">Capture enquiries through your booking website, draft quote line items from your real price list, take online acceptance, and follow up automatically.</p>
         <div class="flex flex-wrap gap-2">
-          <span class="text-[11px] font-semibold bg-black/[0.05] text-ink/55 px-3.5 py-1.5 rounded-full">Projects</span>
-          <span class="text-[11px] font-semibold bg-black/[0.05] text-ink/55 px-3.5 py-1.5 rounded-full">Enquiries</span>
-          <span class="text-[11px] font-semibold bg-black/[0.05] text-ink/55 px-3.5 py-1.5 rounded-full">Customers</span>
-          <span class="text-[11px] font-semibold bg-black/[0.05] text-ink/55 px-3.5 py-1.5 rounded-full">To-Do Lists</span>
+          <span class="text-[11px] font-semibold bg-black/[0.05] text-ink/55 px-3.5 py-1.5 rounded-full">Instant Website</span>
+          <span class="text-[11px] font-semibold bg-black/[0.05] text-ink/55 px-3.5 py-1.5 rounded-full">Booking Widget</span>
+          <span class="text-[11px] font-semibold bg-black/[0.05] text-ink/55 px-3.5 py-1.5 rounded-full">AI Quotes</span>
+          <span class="text-[11px] font-semibold bg-black/[0.05] text-ink/55 px-3.5 py-1.5 rounded-full">Deposits</span>
         </div>
       </div>
 
@@ -506,42 +688,42 @@ tailwind.config = {
         <div class="absolute top-0 left-0 w-48 h-48 bg-brand/[0.06] rounded-full blur-3xl -translate-x-1/3 -translate-y-1/3"></div>
         <div class="relative">
           <span class="text-[10px] font-bold tracking-widest uppercase px-3.5 py-1.5 rounded-full bg-teal/20 text-teal-light">Field Work</span>
-          <h3 class="font-display font-bold text-xl md:text-2xl text-white mt-6 mb-3">Smart scheduling & navigation</h3>
-          <p class="text-sm text-white/40 leading-relaxed mb-8">See every job on a map, optimise your routes, log time on-site, and track vehicle mileage automatically.</p>
+          <h3 class="font-display font-bold text-xl md:text-2xl text-white mt-6 mb-3">Offline mobile work that still syncs cleanly</h3>
+          <p class="text-sm text-white/40 leading-relaxed mb-8">Crews can log notes, photos, time, signatures, and travel while on-site. Scheduled visits, GPS logs, and custom statuses keep the office current.</p>
         </div>
         <div class="space-y-3 mt-auto relative">
           <div class="flex items-center gap-3 text-white/60 text-sm py-2 px-3 rounded-xl hover:bg-white/[0.04] transition-colors">
             <div class="w-7 h-7 rounded-lg bg-teal/20 flex items-center justify-center flex-shrink-0">
               <i data-lucide="map-pin" class="w-3.5 h-3.5 text-teal-light"></i>
             </div>
-            Job Map
+            Job Map & Visits
           </div>
           <div class="flex items-center gap-3 text-white/60 text-sm py-2 px-3 rounded-xl hover:bg-white/[0.04] transition-colors">
             <div class="w-7 h-7 rounded-lg bg-teal/20 flex items-center justify-center flex-shrink-0">
               <i data-lucide="calendar" class="w-3.5 h-3.5 text-teal-light"></i>
             </div>
-            Schedule
+            Offline Notes
           </div>
           <div class="flex items-center gap-3 text-white/60 text-sm py-2 px-3 rounded-xl hover:bg-white/[0.04] transition-colors">
             <div class="w-7 h-7 rounded-lg bg-teal/20 flex items-center justify-center flex-shrink-0">
               <i data-lucide="clock" class="w-3.5 h-3.5 text-teal-light"></i>
             </div>
-            Time Logs
+            Signatures
           </div>
           <div class="flex items-center gap-3 text-white/60 text-sm py-2 px-3 rounded-xl hover:bg-white/[0.04] transition-colors">
             <div class="w-7 h-7 rounded-lg bg-teal/20 flex items-center justify-center flex-shrink-0">
               <i data-lucide="car" class="w-3.5 h-3.5 text-teal-light"></i>
             </div>
-            Vehicle Logbook
+            GPS Logbook
           </div>
         </div>
       </div>
 
       <!-- Row 2: three small cards -->
       <div class="reveal reveal-d3 card-lift bg-white/75 backdrop-blur-sm rounded-3xl p-7 border border-black/[0.05] shadow-glass">
-        <span class="tag-grape text-[10px] font-bold tracking-widest uppercase px-3.5 py-1.5 rounded-full">Finance</span>
-        <h3 class="font-display font-bold text-lg text-ink mt-5 mb-2">Invoices that send themselves</h3>
-        <p class="text-sm text-ink/50 leading-relaxed mb-5">Auto-generate from completed jobs. Set reminders. Get paid faster with built-in tracking.</p>
+        <span class="tag-grape text-[10px] font-bold tracking-widest uppercase px-3.5 py-1.5 rounded-full">Invoicing & Cash Flow</span>
+        <h3 class="font-display font-bold text-lg text-ink mt-5 mb-2">Invoice from the driveway</h3>
+        <p class="text-sm text-ink/50 leading-relaxed mb-5">Pull timesheets and materials straight into invoices, take Stripe payments, and use progress invoices for larger projects.</p>
         <div class="flex items-center gap-2">
           <div class="w-8 h-8 rounded-xl bg-grape/[0.09] flex items-center justify-center"><i data-lucide="receipt" class="w-4 h-4 text-grape"></i></div>
           <div class="w-8 h-8 rounded-xl bg-grape/[0.09] flex items-center justify-center"><i data-lucide="credit-card" class="w-4 h-4 text-grape"></i></div>
@@ -553,14 +735,14 @@ tailwind.config = {
       <div class="reveal reveal-d3 card-lift bg-white/75 backdrop-blur-sm rounded-3xl p-7 border border-black/[0.05] shadow-glass md:col-span-2">
         <div class="flex flex-col md:flex-row md:items-start gap-6">
           <div class="flex-1">
-            <span class="tag-neutral text-[10px] font-bold tracking-widest uppercase px-3.5 py-1.5 rounded-full">Suppliers & Orders</span>
-            <h3 class="font-display font-bold text-lg text-ink mt-5 mb-2">Purchase orders & bills</h3>
-            <p class="text-sm text-ink/50 leading-relaxed">Manage suppliers, raise POs, track bills, and keep your price lists organised in one place.</p>
+            <span class="tag-neutral text-[10px] font-bold tracking-widest uppercase px-3.5 py-1.5 rounded-full">Stock & Profit</span>
+            <h3 class="font-display font-bold text-lg text-ink mt-5 mb-2">Know your real costs</h3>
+            <p class="text-sm text-ink/50 leading-relaxed">Manage suppliers, raise POs, track bills, watch inventory levels, and see gross profit instead of hoping the margin worked.</p>
           </div>
           <div class="flex-1">
-            <span class="tag-orange text-[10px] font-bold tracking-widest uppercase px-3.5 py-1.5 rounded-full">Compliance</span>
-            <h3 class="font-display font-bold text-lg text-ink mt-5 mb-2">Digital forms & certs</h3>
-            <p class="text-sm text-ink/50 leading-relaxed">Gas certs, electrical checks, risk assessments on-site. Signed, stored, and sent instantly.</p>
+            <span class="tag-orange text-[10px] font-bold tracking-widest uppercase px-3.5 py-1.5 rounded-full">Forms & Compliance</span>
+            <h3 class="font-display font-bold text-lg text-ink mt-5 mb-2">Do the proof before completion</h3>
+            <p class="text-sm text-ink/50 leading-relaxed">Capture required forms, signatures, and evidence photos before the job can be marked complete.</p>
           </div>
         </div>
       </div>
@@ -577,8 +759,8 @@ tailwind.config = {
   <div class="max-w-7xl mx-auto relative">
     <div class="reveal text-center max-w-2xl mx-auto mb-20">
       <span class="text-[10px] font-bold tracking-widest uppercase px-4 py-1.5 rounded-full bg-white/[0.08] text-white/55">How It Works</span>
-      <h2 class="font-display font-bold text-3xl md:text-[2.75rem] leading-tight tracking-tight text-white mt-6 mb-5">Three steps to reclaiming your time.</h2>
-      <p class="text-white/40 text-lg">Up and running in under 10 minutes. No IT degree required.</p>
+      <h2 class="font-display font-bold text-3xl md:text-[2.75rem] leading-tight tracking-tight text-white mt-6 mb-5">From first enquiry to final payment.</h2>
+      <p class="text-white/40 text-lg">One repeatable flow replaces the nightly paper chase.</p>
     </div>
 
     <div class="grid md:grid-cols-3 gap-8 md:gap-10 relative mb-20">
@@ -589,22 +771,22 @@ tailwind.config = {
         <div class="w-14 h-14 rounded-2xl bg-brand/20 border border-brand/20 flex items-center justify-center mb-6 mx-auto md:mx-0">
           <i data-lucide="upload" class="w-6 h-6 text-brand"></i>
         </div>
-        <h3 class="font-display font-bold text-lg text-white mb-3">Import or start fresh</h3>
-        <p class="text-sm text-white/40 leading-relaxed">Bring your existing customer list or start from scratch. Set up in under 10 minutes. No IT degree required.</p>
+        <h3 class="font-display font-bold text-lg text-white mb-3">Capture the enquiry</h3>
+        <p class="text-sm text-white/40 leading-relaxed">Website bookings, SMS, and web enquiries land in one inbox so leads do not disappear between phones and notebooks.</p>
       </div>
       <div class="reveal reveal-d2 text-center md:text-left">
         <div class="w-14 h-14 rounded-2xl bg-teal/20 border border-teal/20 flex items-center justify-center mb-6 mx-auto md:mx-0">
           <i data-lucide="zap" class="w-6 h-6 text-teal-light"></i>
         </div>
-        <h3 class="font-display font-bold text-lg text-white mb-3">Jobs flow automatically</h3>
-        <p class="text-sm text-white/40 leading-relaxed">Enquiries become jobs. Jobs trigger schedules. Completed work generates invoices, all hands-free once configured.</p>
+        <h3 class="font-display font-bold text-lg text-white mb-3">Quote, schedule, and complete</h3>
+        <p class="text-sm text-white/40 leading-relaxed">AI quote drafts, multiple job visits, offline mobile forms, and customer signatures keep the work moving cleanly.</p>
       </div>
       <div class="reveal reveal-d3 text-center md:text-left">
         <div class="w-14 h-14 rounded-2xl bg-grape/20 border border-grape/20 flex items-center justify-center mb-6 mx-auto md:mx-0">
           <i data-lucide="trending-up" class="w-6 h-6 text-grape-light"></i>
         </div>
-        <h3 class="font-display font-bold text-lg text-white mb-3">Watch your business grow</h3>
-        <p class="text-sm text-white/40 leading-relaxed">Real-time reports show revenue, job margins, and time efficiency. Make decisions with data, not guesswork.</p>
+        <h3 class="font-display font-bold text-lg text-white mb-3">Invoice and follow up</h3>
+        <p class="text-sm text-white/40 leading-relaxed">Turn time and materials into invoices, take online payment, request reviews, and wake up to AI to-dos for anything overdue.</p>
       </div>
     </div>
 
@@ -626,12 +808,12 @@ tailwind.config = {
         <i data-lucide="chevron-right" class="w-4 h-4 text-white/15 flex-shrink-0"></i>
         <div class="flex-shrink-0 bg-orange-500/15 border border-orange-500/25 rounded-2xl px-4 py-3.5 text-center min-w-[88px]">
           <i data-lucide="check-circle" class="w-5 h-5 text-orange-400 mx-auto mb-1.5"></i>
-          <p class="text-[10px] text-white/55 font-semibold">Quote Sent</p>
+          <p class="text-[10px] text-white/55 font-semibold">AI Quote</p>
         </div>
         <i data-lucide="chevron-right" class="w-4 h-4 text-white/15 flex-shrink-0"></i>
         <div class="flex-shrink-0 bg-yellow-500/15 border border-yellow-500/25 rounded-2xl px-4 py-3.5 text-center min-w-[88px]">
           <i data-lucide="folder-kanban" class="w-5 h-5 text-yellow-400 mx-auto mb-1.5"></i>
-          <p class="text-[10px] text-white/55 font-semibold">Job Created</p>
+          <p class="text-[10px] text-white/55 font-semibold">Job + Visits</p>
         </div>
         <i data-lucide="chevron-right" class="w-4 h-4 text-white/15 flex-shrink-0"></i>
         <div class="flex-shrink-0 bg-teal/15 border border-teal/25 rounded-2xl px-4 py-3.5 text-center min-w-[88px]">
@@ -641,12 +823,12 @@ tailwind.config = {
         <i data-lucide="chevron-right" class="w-4 h-4 text-white/15 flex-shrink-0"></i>
         <div class="flex-shrink-0 bg-blue-500/15 border border-blue-500/25 rounded-2xl px-4 py-3.5 text-center min-w-[88px]">
           <i data-lucide="clipboard-check" class="w-5 h-5 text-blue-400 mx-auto mb-1.5"></i>
-          <p class="text-[10px] text-white/55 font-semibold">Forms Done</p>
+          <p class="text-[10px] text-white/55 font-semibold">Proof Captured</p>
         </div>
         <i data-lucide="chevron-right" class="w-4 h-4 text-white/15 flex-shrink-0"></i>
         <div class="flex-shrink-0 bg-grape/15 border border-grape/25 rounded-2xl px-4 py-3.5 text-center min-w-[88px]">
           <i data-lucide="receipt" class="w-5 h-5 text-grape-light mx-auto mb-1.5"></i>
-          <p class="text-[10px] text-white/55 font-semibold">Invoice Sent</p>
+          <p class="text-[10px] text-white/55 font-semibold">Stripe Invoice</p>
         </div>
         <i data-lucide="chevron-right" class="w-4 h-4 text-white/15 flex-shrink-0"></i>
         <div class="flex-shrink-0 bg-green-500/15 border border-green-500/25 rounded-2xl px-4 py-3.5 text-center min-w-[88px]">
@@ -728,9 +910,9 @@ tailwind.config = {
 <section id="pricing" class="relative z-10 py-24 md:py-32 px-6">
   <div class="max-w-7xl mx-auto">
     <div class="reveal text-center max-w-2xl mx-auto mb-16">
-      <span class="tag-orange text-[11px] font-bold tracking-widest uppercase px-4 py-1.5 rounded-full">Simple Pricing</span>
-      <h2 class="font-display font-bold text-3xl md:text-[2.75rem] leading-tight tracking-tight text-ink mt-6 mb-4">Less than a cup of coffee a day.</h2>
-      <p class="text-ink/50 text-lg">No hidden fees. No contracts. Cancel anytime.</p>
+      <span class="tag-orange text-[11px] font-bold tracking-widest uppercase px-4 py-1.5 rounded-full">Transparent Pricing</span>
+      <h2 class="font-display font-bold text-3xl md:text-[2.75rem] leading-tight tracking-tight text-ink mt-6 mb-4">No pressure calls. No surprise fees.</h2>
+      <p class="text-ink/50 text-lg">Start free, know the monthly cost, and upgrade only when the workflow is earning its keep.</p>
     </div>
     <div class="grid md:grid-cols-3 gap-5 max-w-5xl mx-auto">
       <!-- Solo -->
@@ -750,7 +932,7 @@ tailwind.config = {
           <li class="flex items-center gap-3 text-sm text-ink/65"><div class="w-5 h-5 rounded-full bg-teal/10 flex items-center justify-center flex-shrink-0"><i data-lucide="check" class="w-3 h-3 text-teal"></i></div>Digital forms & compliance</li>
           <li class="flex items-center gap-3 text-sm text-ink/65"><div class="w-5 h-5 rounded-full bg-teal/10 flex items-center justify-center flex-shrink-0"><i data-lucide="check" class="w-3 h-3 text-teal"></i></div>Vehicle logbook</li>
         </ul>
-        <a href="https://app.industryforms.app" class="btn-ink block text-center bg-ink text-white font-semibold text-sm px-6 py-3.5 rounded-full hover:bg-ink-light">Start Free Trial</a>
+        <a href="https://app.industryforms.app/signup" class="btn-ink block text-center bg-ink text-white font-semibold text-sm px-6 py-3.5 rounded-full hover:bg-ink-light">Start Free Trial</a>
       </div>
       <!-- Team -->
       <div class="reveal reveal-d2 pricing-popular rounded-3xl p-8 md:p-10 relative overflow-hidden">
@@ -771,7 +953,7 @@ tailwind.config = {
           <li class="flex items-center gap-3 text-sm text-white/65"><div class="w-5 h-5 rounded-full bg-brand/20 flex items-center justify-center flex-shrink-0"><i data-lucide="check" class="w-3 h-3 text-brand"></i></div>Client-facing website builder</li>
           <li class="flex items-center gap-3 text-sm text-white/65"><div class="w-5 h-5 rounded-full bg-brand/20 flex items-center justify-center flex-shrink-0"><i data-lucide="check" class="w-3 h-3 text-brand"></i></div>Priority support</li>
         </ul>
-        <a href="https://app.industryforms.app" class="btn-brand bg-brand block text-center text-white font-semibold text-sm px-6 py-3.5 rounded-full shadow-brand">Start Free Trial</a>
+        <a href="https://app.industryforms.app/signup" class="btn-brand bg-brand block text-center text-white font-semibold text-sm px-6 py-3.5 rounded-full shadow-brand">Start Free Trial</a>
       </div>
       <!-- Pro -->
       <div class="reveal reveal-d3 card-lift bg-white/75 backdrop-blur-sm rounded-3xl p-8 md:p-10 border border-black/[0.05] shadow-glass">
@@ -790,8 +972,58 @@ tailwind.config = {
           <li class="flex items-center gap-3 text-sm text-ink/65"><div class="w-5 h-5 rounded-full bg-teal/10 flex items-center justify-center flex-shrink-0"><i data-lucide="check" class="w-3 h-3 text-teal"></i></div>Custom onboarding & training</li>
           <li class="flex items-center gap-3 text-sm text-ink/65"><div class="w-5 h-5 rounded-full bg-teal/10 flex items-center justify-center flex-shrink-0"><i data-lucide="check" class="w-3 h-3 text-teal"></i></div>Dedicated account manager</li>
         </ul>
-        <a href="https://app.industryforms.app" class="btn-ink block text-center bg-ink text-white font-semibold text-sm px-6 py-3.5 rounded-full hover:bg-ink-light">Start Free Trial</a>
+        <a href="https://app.industryforms.app/signup" class="btn-ink block text-center bg-ink text-white font-semibold text-sm px-6 py-3.5 rounded-full hover:bg-ink-light">Start Free Trial</a>
       </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ FAQ -->
+<section id="faq" class="relative z-10 py-24 md:py-32 px-6 bg-paper-dark/40">
+  <div class="max-w-4xl mx-auto">
+    <div class="reveal text-center mb-14">
+      <span class="tag-teal text-[11px] font-bold tracking-widest uppercase px-4 py-1.5 rounded-full">Questions Tradies Ask</span>
+      <h2 class="font-display font-bold text-3xl md:text-[2.75rem] leading-tight tracking-tight text-ink mt-6 mb-5">Short answers before you start.</h2>
+      <p class="text-ink/50 text-lg">Built for people who want the facts, not a sales ambush.</p>
+    </div>
+
+    <div class="space-y-3">
+      <article class="faq-item is-open reveal bg-white/75 border border-black/[0.05] shadow-glass rounded-2xl overflow-hidden">
+        <button class="faq-trigger w-full flex items-center justify-between gap-4 text-left p-6">
+          <span class="font-display font-bold text-ink">What is Industry Forms?</span>
+          <i data-lucide="plus" class="faq-icon w-5 h-5 text-brand transition-transform"></i>
+        </button>
+        <div class="faq-panel px-6 pb-6 text-sm text-ink/55 leading-relaxed">
+          Industry Forms is job management software for NZ and AU tradies. It brings quotes, jobs, bookings, forms, schedules, timesheets, invoices, payments, reminders, messaging, and reporting into one workflow.
+        </div>
+      </article>
+      <article class="faq-item reveal bg-white/75 border border-black/[0.05] shadow-glass rounded-2xl overflow-hidden">
+        <button class="faq-trigger w-full flex items-center justify-between gap-4 text-left p-6">
+          <span class="font-display font-bold text-ink">Can customers accept quotes and pay online?</span>
+          <i data-lucide="plus" class="faq-icon w-5 h-5 text-brand transition-transform"></i>
+        </button>
+        <div class="faq-panel px-6 pb-6 text-sm text-ink/55 leading-relaxed">
+          Yes. Customers can accept quotes, pay deposits, and pay invoices online through secure links without creating an account.
+        </div>
+      </article>
+      <article class="faq-item reveal bg-white/75 border border-black/[0.05] shadow-glass rounded-2xl overflow-hidden">
+        <button class="faq-trigger w-full flex items-center justify-between gap-4 text-left p-6">
+          <span class="font-display font-bold text-ink">Does the mobile app work without cell service?</span>
+          <i data-lucide="plus" class="faq-icon w-5 h-5 text-brand transition-transform"></i>
+        </button>
+        <div class="faq-panel px-6 pb-6 text-sm text-ink/55 leading-relaxed">
+          Yes. Crews can capture notes, photos, time, and job evidence offline. Updates sync when the device gets signal again.
+        </div>
+      </article>
+      <article class="faq-item reveal bg-white/75 border border-black/[0.05] shadow-glass rounded-2xl overflow-hidden">
+        <button class="faq-trigger w-full flex items-center justify-between gap-4 text-left p-6">
+          <span class="font-display font-bold text-ink">What makes it different from generic trade software?</span>
+          <i data-lucide="plus" class="faq-icon w-5 h-5 text-brand transition-transform"></i>
+        </button>
+        <div class="faq-panel px-6 pb-6 text-sm text-ink/55 leading-relaxed">
+          Industry Forms is built around practical NZ and AU trade workflows: multiple visits per job, offline field capture, real inventory, Google Calendar sync, Stripe payments, AI quote drafting from your price list, and transparent pricing.
+        </div>
+      </article>
     </div>
   </div>
 </section>
@@ -802,17 +1034,17 @@ tailwind.config = {
   <div class="max-w-2xl mx-auto text-center">
     <div class="reveal">
       <h2 class="font-display font-bold text-4xl md:text-[3.25rem] lg:text-[3.75rem] leading-[0.95] tracking-tight text-ink mb-6">
-        Stop losing hours.<br>
-        <span class="grad-text">Start gaining ground.</span>
+        Get your evenings back.<br>
+        <span class="grad-text">Start the free trial.</span>
       </h2>
-      <p class="text-lg text-ink/50 mb-10 max-w-md mx-auto leading-relaxed">Join the many tradespeople who've already reclaimed their time. Free for 28 days, no credit card needed.</p>
+      <p class="text-lg text-ink/50 mb-10 max-w-md mx-auto leading-relaxed">Turn messy job admin into a clean, repeatable workflow. Free for 28 days, no credit card needed.</p>
       <div class="flex flex-col sm:flex-row items-center justify-center gap-3 mb-5">
-        <div class="flex items-center bg-white/80 backdrop-blur-sm rounded-full border border-black/[0.07] shadow-glass p-1.5 w-full sm:w-auto">
-          <input type="email" placeholder="you@yourtrade.com" class="bg-transparent text-sm text-ink placeholder-ink/30 px-4 py-2.5 w-full sm:w-60 outline-none" autocomplete="email">
-          <button class="btn-brand bg-brand text-white font-semibold text-sm px-6 py-2.5 rounded-full whitespace-nowrap flex-shrink-0 shadow-brand">
+        <form action="https://app.industryforms.app/signup" method="get" class="flex items-center bg-white/80 backdrop-blur-sm rounded-full border border-black/[0.07] shadow-glass p-1.5 w-full sm:w-auto">
+          <input type="email" name="email" placeholder="you@yourtrade.com" class="bg-transparent text-sm text-ink placeholder-ink/30 px-4 py-2.5 w-full sm:w-60 outline-none" autocomplete="email" aria-label="Work email">
+          <button type="submit" class="btn-brand bg-brand text-white font-semibold text-sm px-6 py-2.5 rounded-full whitespace-nowrap flex-shrink-0 shadow-brand">
             Start Free Trial
           </button>
-        </div>
+        </form>
       </div>
       <p class="text-xs text-ink/30">Free 28-day trial · No credit card · Cancel anytime</p>
     </div>
@@ -946,6 +1178,29 @@ tailwind.config = {
   const mobileMenu = document.getElementById('mobileMenu');
   mobileBtn.addEventListener('click', () => mobileMenu.classList.toggle('hidden'));
   mobileMenu.querySelectorAll('a').forEach(a => a.addEventListener('click', () => mobileMenu.classList.add('hidden')));
+
+  // Workflow pillar tabs
+  const pillarTabs = document.querySelectorAll('.pillar-tab');
+  const pillarPanels = document.querySelectorAll('.pillar-panel');
+  pillarTabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      const key = tab.dataset.pillar;
+      pillarTabs.forEach(t => {
+        t.classList.remove('is-active');
+        t.classList.add('text-ink/65', 'hover:bg-black/[0.04]');
+      });
+      tab.classList.add('is-active');
+      tab.classList.remove('text-ink/65', 'hover:bg-black/[0.04]');
+      pillarPanels.forEach(panel => panel.classList.toggle('is-active', panel.dataset.panel === key));
+    });
+  });
+
+  // FAQ accordion
+  document.querySelectorAll('.faq-trigger').forEach(trigger => {
+    trigger.addEventListener('click', () => {
+      trigger.closest('.faq-item').classList.toggle('is-open');
+    });
+  });
 
   // Reveal on scroll
   const revealEls = document.querySelectorAll('.reveal');
