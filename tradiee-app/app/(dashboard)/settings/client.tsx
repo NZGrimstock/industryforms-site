@@ -1099,7 +1099,7 @@ const PLAN_DETAILS = [
   {
     key: 'solo',
     label: 'Solo',
-    price: '$49/mo',
+    price: '$29/mo',
     users: '1 user',
     desc: 'Perfect for sole traders',
     features: ['All core features', 'Unlimited jobs & quotes', 'Invoice payments', 'Customer portal', 'Price list & materials', 'Email included; SMS add-on'],
@@ -1108,16 +1108,16 @@ const PLAN_DETAILS = [
   {
     key: 'team',
     label: 'Team',
-    price: '$79/mo',
+    price: '$49/mo',
     users: 'Up to 10 users',
     desc: 'Grow your crew',
-    features: ['Everything in Solo', 'Team scheduling & GPS map', 'Role-based access', 'Timesheets & travel logs', 'Supplier/PO/Bills module', 'Projects add-on ($19/mo)', 'Instant website ($9/mo)'],
+    features: ['Everything in Solo', 'Team scheduling & GPS map', 'Role-based access', 'Timesheets & travel logs', 'Supplier/PO/Bills module', 'Projects add-on ($19/mo)', 'Instant website ($19/mo)'],
     highlight: true,
   },
   {
     key: 'pro',
     label: 'Pro',
-    price: '$149/mo',
+    price: '$99/mo',
     users: 'Unlimited users',
     desc: 'For larger operations',
     features: ['Everything in Team', 'Unlimited team members', 'Priority support', 'Advanced reporting', 'Bulk invoicing', 'Xero & accounting sync'],
@@ -1138,7 +1138,8 @@ function BillingTab({ company }: { company: Company }) {
 
   const currentPlan = company.subscription_plan ?? 'trial'
   const companyAddons = ((company as Company & { addons?: Record<string, { active?: boolean }> }).addons ?? {})
-  const initialSmsEnabled = (company as Company & { billing_exempt?: boolean }).billing_exempt === true || companyAddons.sms_usage?.active === true
+  const isExempt = (company as Company & { billing_exempt?: boolean }).billing_exempt === true
+  const initialSmsEnabled = isExempt || companyAddons.sms_usage?.active === true
   const [smsEnabled, setSmsEnabled] = useState(initialSmsEnabled)
 
   async function subscribe(plan: string) {
@@ -1180,6 +1181,24 @@ function BillingTab({ company }: { company: Company }) {
     router.refresh()
   }
 
+  // bookings_website / projects add-ons: enabling opens Stripe Checkout (card +
+  // recurring charge on the next bill); disabling opens the billing portal.
+  const [addonLoading, setAddonLoading] = useState<string>('')
+  async function toggleAddon(slug: 'bookings_website' | 'projects', next: boolean) {
+    setAddonLoading(slug)
+    const res = await fetch('/api/billing/addon', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ slug, active: next }),
+    })
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok) { toast(data.error ?? 'Failed to update add-on', 'error'); setAddonLoading(''); return }
+    if (data.url) { window.location.assign(data.url); return }
+    setAddonLoading('')
+    toast(next ? 'Add-on enabled' : 'Add-on cancelled')
+    router.refresh()
+  }
+
   const PLAN_ORDER = ['trial', 'solo', 'team', 'pro']
   const currentIdx = PLAN_ORDER.indexOf(currentPlan)
 
@@ -1218,6 +1237,37 @@ function BillingTab({ company }: { company: Company }) {
               <span className="block text-xs text-gray-500 mt-0.5">Billed monthly through Stripe from the outbound SMS usage ledger.</span>
             </span>
           </label>
+        </CardContent>
+      </Card>
+
+      {/* Paid add-ons */}
+      <Card>
+        <CardContent className="py-4 space-y-3">
+          <p className="text-base font-semibold text-gray-900">Add-ons</p>
+          {([
+            { slug: 'bookings_website' as const, name: 'Instant Bookings Website', price: '$19/mo', blurb: 'Build and preview your site free — a subscription is required to publish it and take online bookings.' },
+            { slug: 'projects' as const, name: 'Projects', price: '$19/mo', blurb: 'Multi-stage project management with progress tracking and money rollups.' },
+          ]).map(a => {
+            const active = isExempt || companyAddons[a.slug]?.active === true
+            return (
+              <div key={a.slug} className="flex items-start justify-between gap-3 rounded-lg border border-gray-200 bg-white px-3 py-3">
+                <div>
+                  <p className="text-sm font-medium text-gray-900">{a.name} <span className="text-gray-400">· {a.price}</span></p>
+                  <p className="text-xs text-gray-500 mt-0.5">{a.blurb}</p>
+                </div>
+                {active ? (
+                  <span className="flex items-center gap-2 shrink-0">
+                    <span className="text-xs font-medium text-green-600">Active</span>
+                    {!isExempt && (
+                      <Button variant="outline" size="sm" loading={addonLoading === a.slug} onClick={() => toggleAddon(a.slug, false)}>Manage</Button>
+                    )}
+                  </span>
+                ) : (
+                  <Button size="sm" className="shrink-0" loading={addonLoading === a.slug} onClick={() => toggleAddon(a.slug, true)}>Add</Button>
+                )}
+              </div>
+            )
+          })}
         </CardContent>
       </Card>
 

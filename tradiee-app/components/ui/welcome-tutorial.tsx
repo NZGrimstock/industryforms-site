@@ -86,6 +86,7 @@ export function WelcomeTutorial({ initiallyOpen }: { initiallyOpen: boolean }) {
   const [open, setOpen] = useState(initiallyOpen)
   const [phase, setPhase] = useState<'welcome' | 'tour' | 'features'>('welcome')
   const [step, setStep] = useState(0)
+  const [seeding, setSeeding] = useState(false)
   const confetti = useMemo(() => Array.from({ length: 42 }, (_, i) => i), [])
   const current = STEPS[step]
 
@@ -108,6 +109,21 @@ export function WelcomeTutorial({ initiallyOpen }: { initiallyOpen: boolean }) {
   async function complete() {
     setOpen(false)
     await fetch('/api/tutorial/seen', { method: 'POST' }).catch(() => null)
+  }
+
+  // Opt-in demo data: seeds sample records across every module and flips the
+  // account into test mode (caution-tape banner), reversible from Settings.
+  async function loadDemoAndComplete() {
+    setSeeding(true)
+    await fetch('/api/test-mode', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'enable' }),
+    }).catch(() => null)
+    setSeeding(false)
+    setOpen(false)
+    await fetch('/api/tutorial/seen', { method: 'POST' }).catch(() => null)
+    window.location.reload()
   }
 
   function next() {
@@ -213,9 +229,15 @@ export function WelcomeTutorial({ initiallyOpen }: { initiallyOpen: boolean }) {
                     </section>
                   ))}
                 </div>
-                <button type="button" onClick={complete} className="mt-6 w-full rounded-xl bg-gray-950 px-5 py-3 text-sm font-bold text-white shadow-sm hover:bg-gray-800">
-                  Start using IndustryForms
-                </button>
+                <div className="mt-6 space-y-2">
+                  <button type="button" onClick={loadDemoAndComplete} disabled={seeding} className="w-full rounded-xl border border-[var(--accent,#f97316)] bg-[var(--accent,#f97316)]/10 px-5 py-3 text-sm font-bold text-[var(--accent,#f97316)] shadow-sm hover:bg-[var(--accent,#f97316)]/15 disabled:opacity-60">
+                    {seeding ? 'Loading demo data…' : 'Explore with sample data first'}
+                  </button>
+                  <button type="button" onClick={complete} disabled={seeding} className="w-full rounded-xl bg-gray-950 px-5 py-3 text-sm font-bold text-white shadow-sm hover:bg-gray-800 disabled:opacity-60">
+                    Start with a clean account
+                  </button>
+                  <p className="text-center text-xs text-gray-400">Sample data drops customers, jobs and invoices in so you can look around — clear it anytime from Settings.</p>
+                </div>
               </div>
             )}
           </div>

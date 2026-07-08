@@ -12,11 +12,14 @@ export type Plan = {
   monthly: number
 }
 
+// Prices mirror the Stripe products (NZD). Stripe is the source of truth for
+// what's actually charged (checkout looks up by `<key>_monthly`); these are the
+// display values shown in-app and must be kept in sync with the dashboard.
 export const PLANS: Plan[] = [
-  { key: 'trial', label: 'Trial',              maxSeats: 1,        monthly: 0   },
-  { key: 'solo',  label: 'Solo (1 user)',      maxSeats: 1,        monthly: 49  },
-  { key: 'team',  label: 'Team (up to 10)',    maxSeats: 10,       monthly: 79  },
-  { key: 'pro',   label: 'Pro (unlimited)',    maxSeats: Infinity, monthly: 149 },
+  { key: 'trial', label: 'Trial',              maxSeats: 1,        monthly: 0  },
+  { key: 'solo',  label: 'Solo (1 user)',      maxSeats: 1,        monthly: 29 },
+  { key: 'team',  label: 'Team (up to 10)',    maxSeats: 10,       monthly: 49 },
+  { key: 'pro',   label: 'Pro (unlimited)',    maxSeats: Infinity, monthly: 99 },
 ]
 
 const BY_KEY: Record<PlanKey, Plan> = Object.fromEntries(PLANS.map(p => [p.key, p])) as Record<PlanKey, Plan>
