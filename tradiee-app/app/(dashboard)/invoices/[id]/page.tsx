@@ -27,7 +27,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
   if (!invoice) notFound()
 
   const [priceItemsRes, kitsRes] = await Promise.all([
-    supabase.from('price_list_items').select('id, name, unit, sell_price, cost_price, type, customer_group_prices(customer_group_id, sell_price)').eq('company_id', profile!.company_id).eq('is_active', true).order('name'),
+    supabase.from('price_list_items').select('id, code, name, unit, sell_price, cost_price, type, quantity_on_hand, customer_group_prices(customer_group_id, sell_price)').eq('company_id', profile!.company_id).eq('is_active', true).order('name'),
     supabase.from('kits').select('*, kit_items(*, price_list_items(*, customer_group_prices(customer_group_id, sell_price)))').eq('company_id', profile!.company_id).order('name'),
   ])
 

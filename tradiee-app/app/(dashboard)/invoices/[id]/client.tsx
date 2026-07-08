@@ -15,8 +15,8 @@ import { PrintInvoice } from '@/components/pdf/print-invoice'
 import type { InvoicePdfData } from '@/components/pdf/invoice-pdf'
 import { priceForCustomerGroup } from '@/lib/customer-pricing'
 
-type PriceItem = { id: string; name: string; unit: string; sell_price: number; cost_price: number; type: string; customer_group_prices?: { customer_group_id: string; sell_price: number }[] | null }
-type Kit = { id: string; name: string; kit_items: { quantity: number; price_list_items: PriceItem | null }[] }
+type PriceItem = { id: string; code?: string | null; name: string; unit: string; sell_price: number; cost_price: number; type: string; quantity_on_hand?: number | null; customer_group_prices?: { customer_group_id: string; sell_price: number }[] | null }
+type Kit = { id: string; code?: string | null; name: string; sell_price?: number | null; kit_items: { quantity: number; price_list_items: PriceItem | null }[] }
 
 interface Props {
   invoice: {
@@ -54,7 +54,7 @@ export function InvoiceDetailClient({ invoice, companyId, gstRate, pricesInclude
   const [activeDialog, setActiveDialog] = useState<Dialog>(null)
   const [loading, setLoading] = useState(false)
 
-  const [lineForm, setLineForm] = useState({ description: '', quantity: '1', unit: 'each', unit_price: '0', discount_value: '0', discount_type: 'amount' as 'amount' | 'percent', tax_rate: String(gstRate) })
+  const [lineForm, setLineForm] = useState({ price_list_item_id: '', type: 'misc', description: '', quantity: '1', unit: 'each', unit_price: '0', discount_value: '0', discount_type: 'amount' as 'amount' | 'percent', tax_rate: String(gstRate) })
   const [priceSearch, setPriceSearch] = useState('')
   const filteredPriceItems = priceItems.filter(p => p.name.toLowerCase().includes(priceSearch.toLowerCase()))
   const invoiceCustomer = { pricing_group_id: invoice.pricing_group_id ?? null }
@@ -88,8 +88,10 @@ export function InvoiceDetailClient({ invoice, companyId, gstRate, pricesInclude
 
   async function addLine(e: React.FormEvent) {
     e.preventDefault()
-    setLoading(true)
     const qty = parseFloat(lineForm.quantity) || 1
+    const item = priceItems.find(p => p.id === lineForm.price_list_item_id)
+    if (item && !confirmStock(item, qty)) return
+    setLoading(true)
     const price = parseFloat(lineForm.unit_price) || 0
     const lineDiscVal = parseFloat(lineForm.discount_value) || 0
     const lineDiscType: DiscountType = lineDiscVal > 0 ? lineForm.discount_type : null
@@ -97,7 +99,8 @@ export function InvoiceDetailClient({ invoice, companyId, gstRate, pricesInclude
 
     const { error } = await supabase.from('invoice_line_items').insert({
       invoice_id: invoice.id,
-      type: 'misc',
+      price_list_item_id: lineForm.price_list_item_id || null,
+      type: lineForm.type,
       description: lineForm.description,
       quantity: qty,
       unit: lineForm.unit,
@@ -109,20 +112,37 @@ export function InvoiceDetailClient({ invoice, companyId, gstRate, pricesInclude
       sort_order: 99,
     })
     if (error) { toast(error.message, 'error'); setLoading(false); return }
+    if (item) await consumeStock([{ item_id: item.id, quantity: qty }])
 
     await recompute(invoice.discount_type, invoice.discount_value)
     toast('Line added'); setActiveDialog(null)
-    setLineForm({ description: '', quantity: '1', unit: 'each', unit_price: '0', discount_value: '0', discount_type: 'amount', tax_rate: String(gstRate) })
+    setLineForm({ price_list_item_id: '', type: 'misc', description: '', quantity: '1', unit: 'each', unit_price: '0', discount_value: '0', discount_type: 'amount', tax_rate: String(gstRate) })
     router.refresh()
     setLoading(false)
   }
 
+  function confirmStock(item: PriceItem, qty: number) {
+    if (item.quantity_on_hand !== null && item.quantity_on_hand !== undefined && Number(item.quantity_on_hand) < qty) {
+      return confirm(`no stock of ${item.name} - do you wish to continue?`)
+    }
+    return true
+  }
+
+  async function consumeStock(lines: { item_id: string; quantity: number }[]) {
+    if (lines.length === 0) return
+    await supabase.rpc('consume_price_list_stock', { p_company_id: companyId, p_lines: lines })
+  }
+
   function pickPriceItem(item: PriceItem) {
-    setLineForm(f => ({ ...f, description: item.name, unit: item.unit, unit_price: String(priceForCustomerGroup(item, invoiceCustomer) || item.cost_price) }))
+    setLineForm(f => ({ ...f, price_list_item_id: item.id, type: item.type, description: item.name, unit: item.unit, unit_price: String(priceForCustomerGroup(item, invoiceCustomer) || item.cost_price) }))
     setPriceSearch('')
   }
 
   async function addKit(kit: Kit) {
+    const components = kit.kit_items.filter(ki => ki.price_list_items)
+    for (const component of components) {
+      if (!confirmStock(component.price_list_items!, Number(component.quantity))) return
+    }
     const rows = kit.kit_items.filter(ki => ki.price_list_items).map((ki, i) => {
       const item = ki.price_list_items!
       const price = priceForCustomerGroup(item, invoiceCustomer) || item.cost_price
@@ -143,6 +163,7 @@ export function InvoiceDetailClient({ invoice, companyId, gstRate, pricesInclude
     setLoading(true)
     const { error } = await supabase.from('invoice_line_items').insert(rows)
     if (error) { toast(error.message, 'error'); setLoading(false); return }
+    await consumeStock(components.map(ki => ({ item_id: ki.price_list_items!.id, quantity: Number(ki.quantity) })))
     await recompute(invoice.discount_type, invoice.discount_value)
     toast(`Added ${rows.length} line${rows.length === 1 ? '' : 's'} from ${kit.name}`)
     setActiveDialog(null)
@@ -344,7 +365,7 @@ export function InvoiceDetailClient({ invoice, companyId, gstRate, pricesInclude
                   {kits.map(kit => (
                     <button key={kit.id} type="button" onClick={() => addKit(kit)} disabled={loading} className="w-full text-left px-3 py-2 rounded-lg flex items-center justify-between text-sm hover:bg-gray-50 disabled:opacity-50">
                       <span className="text-gray-800">{kit.name}</span>
-                      <span className="text-xs text-gray-400">{kit.kit_items.length} item{kit.kit_items.length === 1 ? '' : 's'}</span>
+                      <span className="text-xs text-gray-400">{kit.code ? `${kit.code} · ` : ''}{formatCurrency(Number(kit.sell_price ?? 0))} · {kit.kit_items.length} item{kit.kit_items.length === 1 ? '' : 's'}</span>
                     </button>
                   ))}
                   <p className="px-1 pt-2 pb-1 text-[11px] font-semibold text-gray-400 uppercase tracking-wide">Items</p>

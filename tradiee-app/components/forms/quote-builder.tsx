@@ -17,6 +17,7 @@ import { Plus, Trash2, GripVertical, ChevronDown, ChevronRight, Package, Clock }
 
 type DraftSection = Omit<QuoteSection, 'id'> & { id: string; lines: DraftLine[] }
 type DraftLine = Omit<QuoteLineItem, 'id' | 'section_id' | 'quote_id' | 'created_at'> & { id: string }
+type KitWithItems = Kit & { kit_items: ({ price_list_items: PriceListItem; quantity: number; sort_order: number; id: string; kit_id: string; price_list_item_id: string })[] }
 
 interface EditQuoteData {
   id: string
@@ -83,8 +84,77 @@ function labourLine(): DraftLine {
   return emptyLine({ type: 'labour', description: 'Labour', unit: 'hr', quantity: 1, unit_price: 0, unit_cost: 0 })
 }
 
+function sundryLine(): DraftLine {
+  return emptyLine({ type: 'misc', description: 'Sundries', unit: 'item', quantity: 1, unit_price: 0, unit_cost: 0 })
+}
+
 function emptySection(): DraftSection {
   return { id: newId(), quote_id: '', title: 'New section', is_optional: false, customer_selected: null, sort_order: 0, lines: [emptyLine()] }
+}
+
+function LineDescriptionInput({
+  value,
+  placeholder,
+  priceItems,
+  onTextChange,
+  onPick,
+}: {
+  value: string
+  placeholder: string
+  priceItems: PriceListItem[]
+  onTextChange: (value: string) => void
+  onPick: (item: PriceListItem) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  const query = value.trim().toLowerCase()
+  const matches = query
+    ? priceItems
+        .filter(item =>
+          item.name.toLowerCase().includes(query) ||
+          (item.code ?? '').toLowerCase().includes(query) ||
+          (item.description ?? '').toLowerCase().includes(query)
+        )
+        .slice(0, 8)
+    : []
+
+  useEffect(() => {
+    function click(e: MouseEvent) {
+      if (!ref.current?.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', click)
+    return () => document.removeEventListener('mousedown', click)
+  }, [])
+
+  return (
+    <div ref={ref} className="relative flex-1">
+      <Input
+        value={value}
+        onFocus={() => setOpen(true)}
+        onChange={e => { onTextChange(e.target.value); setOpen(true) }}
+        className="h-7 text-sm"
+        placeholder={placeholder}
+      />
+      {open && matches.length > 0 && (
+        <div className="absolute z-40 mt-1 w-full overflow-hidden rounded-lg border border-gray-200 bg-white shadow-lg">
+          {matches.map(item => (
+            <button
+              key={item.id}
+              type="button"
+              onMouseDown={e => { e.preventDefault(); onPick(item); setOpen(false) }}
+              className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm hover:bg-gray-50"
+            >
+              <span>
+                <span className="font-medium text-gray-800">{item.name}</span>
+                <span className="ml-2 text-xs text-gray-400">{item.code || item.unit}</span>
+              </span>
+              <span className="text-xs font-medium text-gray-500">{formatCurrency(item.sell_price)}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
 }
 
 // Customer typeahead combobox
@@ -151,7 +221,7 @@ export function QuoteBuilder({ companyId, profileId, quoteNumber, gstRate, custo
   const supabase = createClient()
   const { toast } = useToast()
   const [saving, setSaving] = useState(false)
-  const [addItemOpen, setAddItemOpen] = useState<string | null>(null)
+  const [addItemOpen, setAddItemOpen] = useState<{ sectionId: string; mode: 'items' | 'kits' } | null>(null)
   const [priceSearch, setPriceSearch] = useState('')
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['main']))
 
@@ -245,6 +315,10 @@ export function QuoteBuilder({ companyId, profileId, quoteNumber, gstRate, custo
     setSections(ss => ss.map(s => s.id !== sectionId ? s : { ...s, lines: [...s.lines, labourLine()] }))
   }
 
+  function addSundry(sectionId: string) {
+    setSections(ss => ss.map(s => s.id !== sectionId ? s : { ...s, lines: [...s.lines, sundryLine()] }))
+  }
+
   function removeLine(sectionId: string, lineId: string) {
     setSections(ss => ss.map(s => s.id !== sectionId ? s : { ...s, lines: s.lines.filter(l => l.id !== lineId) }))
   }
@@ -265,22 +339,56 @@ export function QuoteBuilder({ companyId, profileId, quoteNumber, gstRate, custo
   }
 
   function toggleSection(id: string) {
-    setExpandedSections(e => { const n = new Set(e); n.has(id) ? n.delete(id) : n.add(id); return n })
+    setExpandedSections(e => {
+      const n = new Set(e)
+      if (n.has(id)) n.delete(id)
+      else n.add(id)
+      return n
+    })
+  }
+
+  function priceListLine(item: PriceListItem, quantity = 1): DraftLine {
+    const unitPrice = priceForCustomerGroup(item, selectedCustomer)
+    return emptyLine({
+      price_list_item_id: item.id, type: item.type, description: item.name,
+      unit: item.unit, unit_cost: item.cost_price, unit_price: unitPrice,
+      quantity, line_total: netOf(quantity, unitPrice, null, 0, gstRate),
+    })
+  }
+
+  function updateLineFromPriceList(sectionId: string, lineId: string, item: PriceListItem) {
+    setSections(ss => ss.map(s => s.id !== sectionId ? s : {
+      ...s,
+      lines: s.lines.map(l => l.id === lineId ? { ...l, ...priceListLine(item), id: l.id, sort_order: l.sort_order } : l),
+    }))
   }
 
   function addFromPriceList(sectionId: string, item: PriceListItem) {
-    const unitPrice = priceForCustomerGroup(item, selectedCustomer)
     setSections(ss => ss.map(s => s.id !== sectionId ? s : {
-      ...s, lines: [...s.lines, emptyLine({
-        price_list_item_id: item.id, type: item.type, description: item.name,
-        unit: item.unit, unit_cost: item.cost_price, unit_price: unitPrice,
-        line_total: netOf(1, unitPrice, null, 0, gstRate),
-      })]
+      ...s, lines: [...s.lines, priceListLine(item)]
     }))
     setAddItemOpen(null)
   }
 
-  function addFromKit(sectionId: string, kit: Kit & { kit_items: ({ price_list_items: PriceListItem; quantity: number; sort_order: number; id: string; kit_id: string; price_list_item_id: string })[] }) {
+  function addFromKit(sectionId: string, kit: KitWithItems) {
+    const kitSellPrice = Number(kit.sell_price ?? 0)
+    if (kitSellPrice > 0) {
+      const kitCost = kit.kit_items.reduce((sum, ki) => sum + Number(ki.quantity) * Number(ki.price_list_items?.cost_price ?? 0), 0)
+      setSections(ss => ss.map(s => s.id !== sectionId ? s : {
+        ...s,
+        lines: [...s.lines, emptyLine({
+          price_list_item_id: null,
+          type: 'material',
+          description: kit.name,
+          unit: 'kit',
+          unit_cost: kitCost,
+          unit_price: kitSellPrice,
+          line_total: netOf(1, kitSellPrice, null, 0, gstRate),
+        })],
+      }))
+      setAddItemOpen(null)
+      return
+    }
     const newLines = kit.kit_items
       .sort((a, b) => a.sort_order - b.sort_order)
       .filter(ki => ki.price_list_items)
@@ -359,7 +467,7 @@ export function QuoteBuilder({ companyId, profileId, quoteNumber, gstRate, custo
 
     toast(editQuote ? 'Quote updated' : 'Quote saved')
     router.push(`/quotes/${quoteId}`)
-  }, [meta, sections, subtotal, gstAmount, total, docDiscountType, docDiscountValue, docDiscountAmount, companyId, profileId, quoteNumber, supabase, toast, router, editQuote])
+  }, [meta, sections, subtotal, gstAmount, total, docDiscountType, docDiscountValue, docDiscountAmount, companyId, profileId, quoteNumber, supabase, toast, router, editQuote, gstRate])
 
   return (
     <div className="flex flex-col lg:flex-row gap-6 p-6 min-h-screen">
@@ -451,7 +559,17 @@ export function QuoteBuilder({ companyId, profileId, quoteNumber, gstRate, custo
                         <td className="px-4 py-2">
                           <div className="flex items-center gap-2">
                             {l.type === 'labour' && <Clock className="h-3.5 w-3.5 text-blue-400 shrink-0" />}
-                            <Input value={l.description} onChange={e => updateLine(s.id, l.id, 'description', e.target.value)} className="h-7 text-sm" placeholder={l.type === 'labour' ? 'Labour description…' : 'Description…'} />
+                            {l.type === 'labour' ? (
+                              <Input value={l.description} onChange={e => updateLine(s.id, l.id, 'description', e.target.value)} className="h-7 text-sm" placeholder="Labour description..." />
+                            ) : (
+                              <LineDescriptionInput
+                                value={l.description}
+                                placeholder="Description..."
+                                priceItems={priceItems}
+                                onTextChange={value => updateLine(s.id, l.id, 'description', value)}
+                                onPick={item => updateLineFromPriceList(s.id, l.id, item)}
+                              />
+                            )}
                             {l.type === 'labour' && billingRates.length > 0 && (
                               <select
                                 className="h-7 text-xs border border-gray-200 rounded px-1 text-gray-500 shrink-0"
@@ -515,9 +633,17 @@ export function QuoteBuilder({ companyId, profileId, quoteNumber, gstRate, custo
                   <Button variant="ghost" size="sm" onClick={() => addLabour(s.id)}>
                     <Clock className="h-3.5 w-3.5" /> Add labour
                   </Button>
-                  <Button variant="ghost" size="sm" onClick={() => setAddItemOpen(s.id)}>
+                  <Button variant="ghost" size="sm" onClick={() => addSundry(s.id)}>
+                    <Plus className="h-3.5 w-3.5" /> Add sundry
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={() => setAddItemOpen({ sectionId: s.id, mode: 'items' })}>
                     <Package className="h-3.5 w-3.5" /> From price list
                   </Button>
+                  {kits.length > 0 && (
+                    <Button variant="ghost" size="sm" onClick={() => setAddItemOpen({ sectionId: s.id, mode: 'kits' })}>
+                      <Package className="h-3.5 w-3.5" /> Add kit
+                    </Button>
+                  )}
                 </div>
               </div>
             )}
@@ -584,34 +710,33 @@ export function QuoteBuilder({ companyId, profileId, quoteNumber, gstRate, custo
       </div>
 
       {/* Price list dialog */}
-      <Dialog open={!!addItemOpen} onClose={() => { setAddItemOpen(null); setPriceSearch('') }} title="Add from price list" className="max-w-2xl">
+      <Dialog open={!!addItemOpen} onClose={() => { setAddItemOpen(null); setPriceSearch('') }} title={addItemOpen?.mode === 'kits' ? 'Add kit' : 'Add from price list'} className="max-w-2xl">
         <div className="space-y-4">
           <input
             autoFocus
             value={priceSearch}
             onChange={e => setPriceSearch(e.target.value)}
-            placeholder="Search items…"
+            placeholder={addItemOpen?.mode === 'kits' ? 'Search kits…' : 'Search items…'}
             className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-orange-400"
           />
-          {kits.length > 0 && !priceSearch && (
+          {addItemOpen?.mode === 'kits' && (
             <div>
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Kits</p>
               <div className="grid grid-cols-2 gap-2">
-                {kits.map(k => (
-                  <button key={k.id} onClick={() => addFromKit(addItemOpen!, k)}
+                {kits.filter(k => !priceSearch || k.name.toLowerCase().includes(priceSearch.toLowerCase()) || (k.code ?? '').toLowerCase().includes(priceSearch.toLowerCase())).map(k => (
+                  <button key={k.id} onClick={() => addFromKit(addItemOpen.sectionId, k as KitWithItems)}
                     className="text-left p-3 rounded-lg border border-gray-200 hover:border-[var(--accent,#f97316)]/40 hover:bg-orange-50 transition-colors">
                     <p className="text-sm font-medium text-gray-800">{k.name}</p>
-                    <p className="text-xs text-gray-400">{k.kit_items.length} items</p>
+                    <p className="text-xs text-gray-400">{k.code ? `${k.code} · ` : ''}{formatCurrency(Number(k.sell_price ?? 0))} · {k.kit_items.length} items</p>
                   </button>
                 ))}
               </div>
             </div>
           )}
-          <div>
+          {addItemOpen?.mode !== 'kits' && <div>
             {!priceSearch && <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Items</p>}
             <div className="space-y-1 max-h-96 overflow-y-auto">
               {priceItems.filter(i => !priceSearch || i.name.toLowerCase().includes(priceSearch.toLowerCase())).map(item => (
-                <button key={item.id} onClick={() => { addFromPriceList(addItemOpen!, item); setPriceSearch('') }}
+                <button key={item.id} onClick={() => { addFromPriceList(addItemOpen!.sectionId, item); setPriceSearch('') }}
                   className="w-full text-left px-3 py-2 rounded-lg hover:bg-gray-50 flex items-center justify-between">
                   <div>
                     <p className="text-sm text-gray-800">{item.name}</p>
@@ -621,7 +746,7 @@ export function QuoteBuilder({ companyId, profileId, quoteNumber, gstRate, custo
                 </button>
               ))}
             </div>
-          </div>
+          </div>}
         </div>
       </Dialog>
     </div>

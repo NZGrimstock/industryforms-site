@@ -111,8 +111,11 @@ export interface PriceListItem {
 export interface Kit {
   id: string
   company_id: string
+  code: string | null
   name: string
   description: string | null
+  sell_price: number
+  use_item_sell_total: boolean
   created_at: string
   kit_items?: KitItem[]
 }

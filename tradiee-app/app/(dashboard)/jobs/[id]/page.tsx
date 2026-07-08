@@ -54,7 +54,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
     supabase.from('invoices').select('id, invoice_number, status, total, amount_paid, subtotal').eq('job_id', id),
     supabase.from('profiles').select('id, full_name').eq('company_id', profile!.company_id).eq('is_active', true),
     supabase.from('job_materials').select('*').eq('job_id', id).order('created_at'),
-    supabase.from('price_list_items').select('id, name, unit, sell_price, cost_price, type').eq('company_id', profile!.company_id).eq('is_active', true).order('name'),
+    supabase.from('price_list_items').select('id, code, name, unit, sell_price, cost_price, type, quantity_on_hand').eq('company_id', profile!.company_id).eq('is_active', true).order('name'),
     supabase.from('kits').select('*, kit_items(*, price_list_items(*))').eq('company_id', profile!.company_id).order('name'),
     supabase.from('job_photos').select('id, storage_path, caption, created_at').eq('job_id', id).order('created_at'),
     supabase.from('form_templates').select('id, name, fields').eq('company_id', profile!.company_id).eq('is_active', true).order('name'),
@@ -284,16 +284,29 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
         {/* Tasks */}
         <JobTasksCard jobId={job.id} companyId={profile!.company_id} />
 
-        {/* Recurring */}
-        <RecurringJobCard
-          jobId={job.id}
-          initial={{
-            isRecurring: !!job.is_recurring,
-            rule: job.recurrence_rule ?? null,
-            next: job.recurrence_next ?? null,
-            end: job.recurrence_end ?? null,
-          }}
-        />
+        {/* Materials */}
+        <Card>
+          <CardHeader><CardTitle>Materials & parts</CardTitle></CardHeader>
+          <CardContent className="p-0">
+            <JobMaterials
+              jobId={id}
+              companyId={profile!.company_id}
+              profileId={user!.id}
+              materials={materialsRes.data ?? []}
+              priceItems={(priceItemsRes.data ?? []) as Array<{ id: string; code: string | null; name: string; unit: string; sell_price: number; cost_price: number; type: string; quantity_on_hand: number | null }>}
+              kits={kitsRes.data ?? []}
+              standardMarkupEnabled={!!companySettings?.standard_markup_enabled}
+              standardMarkupPct={Number(companySettings?.standard_markup_pct ?? 80)}
+              quoteLines={quoteFillLines}
+              quoteNumber={(job.quotes as { quote_number: string } | null)?.quote_number ?? null}
+            />
+            <SupplierInvoiceParser
+              jobId={id}
+              companyId={profile!.company_id}
+              priceItems={(priceItemsRes.data ?? []).map(p => ({ id: p.id, name: p.name, cost_price: Number(p.cost_price) }))}
+            />
+          </CardContent>
+        </Card>
 
         {/* Visits / Schedule */}
         <Card>
@@ -366,30 +379,6 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
           </CardContent>
         </Card>
 
-        {/* Materials */}
-        <Card>
-          <CardHeader><CardTitle>Materials & parts</CardTitle></CardHeader>
-          <CardContent className="p-0">
-            <JobMaterials
-              jobId={id}
-              companyId={profile!.company_id}
-              profileId={user!.id}
-              materials={materialsRes.data ?? []}
-              priceItems={(priceItemsRes.data ?? []) as Array<{ id: string; name: string; unit: string; sell_price: number; cost_price: number; type: string }>}
-              kits={kitsRes.data ?? []}
-              standardMarkupEnabled={!!companySettings?.standard_markup_enabled}
-              standardMarkupPct={Number(companySettings?.standard_markup_pct ?? 80)}
-              quoteLines={quoteFillLines}
-              quoteNumber={(job.quotes as { quote_number: string } | null)?.quote_number ?? null}
-            />
-            <SupplierInvoiceParser
-              jobId={id}
-              companyId={profile!.company_id}
-              priceItems={(priceItemsRes.data ?? []).map(p => ({ id: p.id, name: p.name, cost_price: Number(p.cost_price) }))}
-            />
-          </CardContent>
-        </Card>
-
         {/* Photos */}
         <Card>
           <CardHeader><CardTitle>Photos</CardTitle></CardHeader>
@@ -402,6 +391,17 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
             />
           </CardContent>
         </Card>
+
+        {/* Recurring */}
+        <RecurringJobCard
+          jobId={job.id}
+          initial={{
+            isRecurring: !!job.is_recurring,
+            rule: job.recurrence_rule ?? null,
+            next: job.recurrence_next ?? null,
+            end: job.recurrence_end ?? null,
+          }}
+        />
 
         {/* Site forms */}
         <Card>

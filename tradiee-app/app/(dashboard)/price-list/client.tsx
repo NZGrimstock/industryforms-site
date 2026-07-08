@@ -29,6 +29,8 @@ type CsvRow = { name: string; code: string; type: string; unit: string; cost_pri
 export function PriceListClient({ companyId, standardMarkupEnabled, standardMarkupPct, items, kits, customerGroups }: Props) {
   const [tab, setTab] = useState<'items' | 'kits' | 'groups'>('items')
   const [itemDialog, setItemDialog] = useState<PriceListItem | null | 'new'>(null)
+  const [kitDialog, setKitDialog] = useState<Kit | null | 'new'>(null)
+  const [availableItems, setAvailableItems] = useState(items)
   const [groups, setGroups] = useState(customerGroups)
   const [newGroup, setNewGroup] = useState('')
   const [selectedIds, setSelectedIds] = useState<string[]>([])
@@ -56,6 +58,13 @@ export function PriceListClient({ companyId, standardMarkupEnabled, standardMark
       setSelectedIds([])
       router.refresh()
     }
+  }
+
+  async function deleteKit(id: string) {
+    if (!confirm('Delete this kit? Standard price list items in the kit will be kept.')) return
+    const { error } = await supabase.from('kits').delete().eq('id', id)
+    if (error) toast(error.message, 'error')
+    else { toast('Kit deleted'); router.refresh() }
   }
 
   function toggleSelected(id: string) {
@@ -163,9 +172,14 @@ export function PriceListClient({ companyId, standardMarkupEnabled, standardMark
               <Upload className="h-3.5 w-3.5" /> CSV import
             </button>
           )}
-          {tab !== 'groups' && (
+          {tab === 'items' && (
             <Button onClick={() => setItemDialog('new')} size="sm">
               <Plus className="h-4 w-4" /> Add {tab === 'items' ? 'item' : 'kit'}
+            </Button>
+          )}
+          {tab === 'kits' && (
+            <Button onClick={() => setKitDialog('new')} size="sm">
+              <Plus className="h-4 w-4" /> Add kit
             </Button>
           )}
         </div>
@@ -293,29 +307,50 @@ export function PriceListClient({ companyId, standardMarkupEnabled, standardMark
 
       {tab === 'kits' && (
         kits.length === 0 ? (
-          <EmptyState icon={Package} title="No kits" description="Kits are reusable bundles of items — e.g. 'Install double powerpoint'" />
+          <EmptyState icon={Package} title="No kits" description="Kits are reusable bundles of items, e.g. Install double powerpoint" />
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <Card className="overflow-hidden">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-100 bg-gray-50">
+                  <th className="text-left px-6 py-3 font-medium text-gray-500">Kit</th>
+                  <th className="text-left px-6 py-3 font-medium text-gray-500">SKU / code</th>
+                  <th className="text-right px-6 py-3 font-medium text-gray-500">Cost</th>
+                  <th className="text-right px-6 py-3 font-medium text-gray-500">Sell price</th>
+                  <th className="text-left px-6 py-3 font-medium text-gray-500">Items</th>
+                  <th className="w-16"></th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
             {kits.map(k => (
-              <Card key={k.id} className="p-4">
-                <h3 className="font-medium text-gray-900 mb-1">{k.name}</h3>
-                {k.description && <p className="text-xs text-gray-400 mb-2">{k.description}</p>}
-                <ul className="space-y-0.5">
-                  {(k.kit_items ?? []).map((ki: {id: string; quantity: number; price_list_items?: PriceListItem}) => (
-                    <li key={ki.id} className="flex items-center justify-between text-xs text-gray-600">
-                      <span>{ki.price_list_items?.name ?? '—'}</span>
-                      <span className="text-gray-400">×{ki.quantity}</span>
-                    </li>
-                  ))}
-                </ul>
-              </Card>
+              <tr key={k.id} className="hover:bg-gray-50">
+                <td className="px-6 py-3">
+                  <p className="font-medium text-gray-900">{k.name}</p>
+                  {k.description && <p className="text-xs text-gray-400">{k.description}</p>}
+                </td>
+                <td className="px-6 py-3 text-gray-500">{k.code || <span className="text-gray-300">—</span>}</td>
+                <td className="px-6 py-3 text-right text-gray-600">{formatCurrency((k.kit_items ?? []).reduce((sum: number, ki: { quantity: number; price_list_items?: PriceListItem }) => sum + Number(ki.quantity) * Number(ki.price_list_items?.cost_price ?? 0), 0))}</td>
+                <td className="px-6 py-3 text-right font-medium text-gray-900">{formatCurrency(Number(k.sell_price ?? 0))}</td>
+                <td className="px-6 py-3 text-gray-500">{(k.kit_items ?? []).length} item{(k.kit_items ?? []).length === 1 ? '' : 's'}</td>
+                <td className="px-6 py-3">
+                  <div className="flex gap-1">
+                    <button onClick={() => setKitDialog(k)} className="p-1 text-gray-400 hover:text-gray-600"><Pencil className="h-3.5 w-3.5" /></button>
+                    <button onClick={() => deleteKit(k.id)} className="p-1 text-gray-400 hover:text-red-500"><Trash2 className="h-3.5 w-3.5" /></button>
+                  </div>
+                </td>
+              </tr>
             ))}
-          </div>
+              </tbody>
+            </table>
+          </Card>
         )
       )}
 
       {tab === 'groups' && (
         <Card className="p-4">
+          <div className="mb-4 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-sm text-blue-900">
+            Create pricing groups here, assign a customer to a group on their customer record, then open any standard price-list item and set that group&apos;s override under Pricing levels. Quotes, jobs, and invoices use the customer&apos;s group price automatically.
+          </div>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end mb-4">
             <div className="flex-1">
               <Label>New pricing group</Label>
@@ -347,6 +382,19 @@ export function PriceListClient({ companyId, standardMarkupEnabled, standardMark
             standardMarkupPct={standardMarkupPct}
             customerGroups={groups}
             onSuccess={() => { setItemDialog(null); router.refresh() }}
+          />
+        )}
+      </Dialog>
+      <Dialog open={!!kitDialog} onClose={() => setKitDialog(null)} title={kitDialog === 'new' ? 'Add kit' : 'Edit kit'} className="max-w-3xl">
+        {kitDialog && (
+          <KitForm
+            companyId={companyId}
+            kit={kitDialog === 'new' ? undefined : kitDialog}
+            items={availableItems}
+            standardMarkupEnabled={standardMarkupEnabled}
+            standardMarkupPct={standardMarkupPct}
+            onItemCreated={item => setAvailableItems(prev => [...prev, item].sort((a, b) => a.name.localeCompare(b.name)))}
+            onSuccess={() => { setKitDialog(null); router.refresh() }}
           />
         )}
       </Dialog>
@@ -514,6 +562,193 @@ function PriceItemForm({ companyId, item, standardMarkupEnabled, standardMarkupP
         <Label htmlFor="active" className="mb-0">Active</Label>
       </div>
       <Button type="submit" loading={loading}>{item ? 'Save changes' : 'Add item'}</Button>
+    </form>
+  )
+}
+
+function KitForm({
+  companyId,
+  kit,
+  items,
+  standardMarkupEnabled,
+  standardMarkupPct,
+  onItemCreated,
+  onSuccess,
+}: {
+  companyId: string
+  kit?: Kit
+  items: PriceListItem[]
+  standardMarkupEnabled: boolean
+  standardMarkupPct: number
+  onItemCreated: (item: PriceListItem) => void
+  onSuccess: () => void
+}) {
+  const supabase = createClient()
+  const { toast } = useToast()
+  const [loading, setLoading] = useState(false)
+  const [showNewItem, setShowNewItem] = useState(false)
+  const [form, setForm] = useState({
+    code: kit?.code ?? '',
+    name: kit?.name ?? '',
+    description: kit?.description ?? '',
+    sell_price: String(kit?.sell_price ?? 0),
+    use_item_sell_total: !!kit?.use_item_sell_total,
+  })
+  const [components, setComponents] = useState<Array<{ price_list_item_id: string; quantity: string }>>(
+    (kit?.kit_items ?? []).map(ki => ({ price_list_item_id: ki.price_list_item_id, quantity: String(ki.quantity) }))
+  )
+  const [newItem, setNewItem] = useState({
+    type: 'material',
+    code: '',
+    name: '',
+    unit: 'each',
+    cost_price: '0',
+    sell_price: '0',
+    quantity_on_hand: '',
+  })
+
+  function itemSell(item: PriceListItem) {
+    return Number(item.sell_price) || (standardMarkupEnabled ? Number((Number(item.cost_price) * (1 + standardMarkupPct / 100)).toFixed(2)) : 0)
+  }
+
+  const selected = components
+    .map(component => ({ ...component, item: items.find(item => item.id === component.price_list_item_id) }))
+    .filter((component): component is { price_list_item_id: string; quantity: string; item: PriceListItem } => !!component.item)
+  const componentCost = selected.reduce((sum, component) => sum + (parseFloat(component.quantity) || 0) * Number(component.item.cost_price), 0)
+  const componentSell = selected.reduce((sum, component) => sum + (parseFloat(component.quantity) || 0) * itemSell(component.item), 0)
+  const effectiveSell = form.use_item_sell_total ? componentSell : (parseFloat(form.sell_price) || 0)
+
+  function updateComponent(index: number, key: 'price_list_item_id' | 'quantity', value: string) {
+    setComponents(prev => prev.map((component, i) => i === index ? { ...component, [key]: value } : component))
+  }
+
+  async function createStandardItem() {
+    if (!newItem.name.trim()) return
+    const cost = parseFloat(newItem.cost_price) || 0
+    const payload = {
+      company_id: companyId,
+      type: newItem.type as PriceListItem['type'],
+      code: newItem.code || null,
+      name: newItem.name.trim(),
+      unit: newItem.unit || 'each',
+      cost_price: cost,
+      sell_price: parseFloat(newItem.sell_price) || (standardMarkupEnabled ? Number((cost * (1 + standardMarkupPct / 100)).toFixed(2)) : 0),
+      quantity_on_hand: newItem.quantity_on_hand !== '' ? parseFloat(newItem.quantity_on_hand) : null,
+      is_active: true,
+    }
+    const { data, error } = await supabase.from('price_list_items').insert(payload).select('*').single()
+    if (error) { toast(error.message, 'error'); return }
+    onItemCreated(data as PriceListItem)
+    setComponents(prev => [...prev, { price_list_item_id: data.id, quantity: '1' }])
+    setNewItem({ type: 'material', code: '', name: '', unit: 'each', cost_price: '0', sell_price: '0', quantity_on_hand: '' })
+    setShowNewItem(false)
+    toast('Standard item added')
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!form.name.trim()) return
+    const validComponents = components.filter(component => component.price_list_item_id && (parseFloat(component.quantity) || 0) > 0)
+    setLoading(true)
+    const payload = {
+      company_id: companyId,
+      code: form.code || null,
+      name: form.name.trim(),
+      description: form.description || null,
+      sell_price: form.use_item_sell_total ? componentSell : (parseFloat(form.sell_price) || 0),
+      use_item_sell_total: form.use_item_sell_total,
+    }
+    const saved = kit
+      ? await supabase.from('kits').update(payload).eq('id', kit.id).select('id').single()
+      : await supabase.from('kits').insert(payload).select('id').single()
+    if (saved.error) { toast(saved.error.message, 'error'); setLoading(false); return }
+
+    const kitId = saved.data!.id
+    if (kit) await supabase.from('kit_items').delete().eq('kit_id', kitId)
+    if (validComponents.length > 0) {
+      const { error } = await supabase.from('kit_items').insert(validComponents.map((component, index) => ({
+        kit_id: kitId,
+        price_list_item_id: component.price_list_item_id,
+        quantity: parseFloat(component.quantity) || 1,
+        sort_order: index,
+      })))
+      if (error) { toast(error.message, 'error'); setLoading(false); return }
+    }
+    toast(kit ? 'Kit updated' : 'Kit added')
+    onSuccess()
+    setLoading(false)
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <Label>Kit name <span className="text-red-400">*</span></Label>
+          <Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} required />
+        </div>
+        <div>
+          <Label>SKU / code</Label>
+          <Input value={form.code} onChange={e => setForm(f => ({ ...f, code: e.target.value }))} placeholder="KIT-001" />
+        </div>
+      </div>
+      <div>
+        <Label>Description</Label>
+        <Textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={2} />
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div>
+          <Label>Kit cost</Label>
+          <div className="rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-600">{formatCurrency(componentCost)}</div>
+        </div>
+        <div>
+          <Label>Kit sell price</Label>
+          <Input type="number" step="0.01" value={form.use_item_sell_total ? componentSell.toFixed(2) : form.sell_price} disabled={form.use_item_sell_total} onChange={e => setForm(f => ({ ...f, sell_price: e.target.value }))} />
+        </div>
+        <label className="flex items-end gap-2 pb-2 text-sm text-gray-600">
+          <input type="checkbox" checked={form.use_item_sell_total} onChange={e => setForm(f => ({ ...f, use_item_sell_total: e.target.checked }))} className="rounded" />
+          Sum item sell prices
+        </label>
+      </div>
+      <div className="rounded-lg border border-gray-200 p-3">
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <Label>Kit items</Label>
+            <p className="text-xs text-gray-500">Choose standard price-list items. Their costs make up the kit cost and their stock is consumed when the kit is used.</p>
+          </div>
+          <Button type="button" variant="outline" size="sm" onClick={() => setShowNewItem(v => !v)}>
+            <Plus className="h-4 w-4" /> New standard item
+          </Button>
+        </div>
+        <div className="space-y-2">
+          {components.map((component, index) => (
+            <div key={index} className="grid grid-cols-[1fr_6rem_2rem] gap-2">
+              <Select value={component.price_list_item_id} onChange={e => updateComponent(index, 'price_list_item_id', e.target.value)} options={[{ value: '', label: 'Select item...' }, ...items.map(item => ({ value: item.id, label: `${item.name}${item.code ? ` (${item.code})` : ''}` }))]} />
+              <Input type="number" step="0.01" value={component.quantity} onChange={e => updateComponent(index, 'quantity', e.target.value)} />
+              <button type="button" onClick={() => setComponents(prev => prev.filter((_, i) => i !== index))} className="text-gray-300 hover:text-red-500"><Trash2 className="h-4 w-4" /></button>
+            </div>
+          ))}
+          <Button type="button" variant="outline" size="sm" onClick={() => setComponents(prev => [...prev, { price_list_item_id: '', quantity: '1' }])}>Add existing item</Button>
+        </div>
+      </div>
+      {showNewItem && (
+        <div className="rounded-lg border border-dashed border-gray-300 p-3 space-y-3">
+          <p className="text-sm font-medium text-gray-700">Create a standard price-list item</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Input placeholder="Name" value={newItem.name} onChange={e => setNewItem(f => ({ ...f, name: e.target.value }))} />
+            <Input placeholder="Code" value={newItem.code} onChange={e => setNewItem(f => ({ ...f, code: e.target.value }))} />
+            <Select value={newItem.type} onChange={e => setNewItem(f => ({ ...f, type: e.target.value }))} options={[{ value: 'material', label: 'Material' }, { value: 'labour', label: 'Labour' }, { value: 'misc', label: 'Misc' }]} />
+            <Input placeholder="Unit" value={newItem.unit} onChange={e => setNewItem(f => ({ ...f, unit: e.target.value }))} />
+            <Input type="number" step="0.01" placeholder="Cost price" value={newItem.cost_price} onChange={e => setNewItem(f => ({ ...f, cost_price: e.target.value }))} />
+            <Input type="number" step="0.01" placeholder="Sell price" value={newItem.sell_price} onChange={e => setNewItem(f => ({ ...f, sell_price: e.target.value }))} />
+            <Input type="number" step="0.01" placeholder="Qty on hand" value={newItem.quantity_on_hand} onChange={e => setNewItem(f => ({ ...f, quantity_on_hand: e.target.value }))} />
+          </div>
+          <Button type="button" size="sm" onClick={createStandardItem}>Create item and add to kit</Button>
+        </div>
+      )}
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-sm text-gray-500">Kit sell price: <span className="font-semibold text-gray-900">{formatCurrency(effectiveSell)}</span></p>
+        <Button type="submit" loading={loading}>{kit ? 'Save kit' : 'Add kit'}</Button>
+      </div>
     </form>
   )
 }
