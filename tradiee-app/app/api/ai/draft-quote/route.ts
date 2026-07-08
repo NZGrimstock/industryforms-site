@@ -15,8 +15,8 @@ export const runtime = 'nodejs'
 
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
-import Anthropic from '@anthropic-ai/sdk'
 import { resolveCompanyUser } from '@/lib/api-auth'
+import { createOpenAIText, OPENAI_MODEL_MINI, parseJsonObject } from '@/lib/openai'
 import { createServiceClient } from '@/lib/supabase/server'
 
 const bodySchema = z.object({ description: z.string().trim().min(5).max(4000) })
@@ -70,22 +70,21 @@ export async function POST(req: Request) {
     description.trim(),
   ].join('\n')
 
-  const apiKey = process.env.ANTHROPIC_API_KEY
-  if (!apiKey) {
-    return NextResponse.json({ error: 'AI drafting not configured — set ANTHROPIC_API_KEY in Vercel environment variables' }, { status: 503 })
+  if (!process.env.OPENAI_API_KEY) {
+    return NextResponse.json({ error: 'AI drafting not configured — set OPENAI_API_KEY in Vercel environment variables' }, { status: 503 })
   }
 
   try {
-    const client = new Anthropic({ apiKey })
-    const msg = await client.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 1500,
-      messages: [{ role: 'user', content: prompt }],
+    // Customer-facing and money-facing: use the quality mini model, then
+    // re-validate line ids/prices below before anything reaches the quote.
+    const raw = await createOpenAIText({
+      model: OPENAI_MODEL_MINI,
+      input: prompt,
+      maxOutputTokens: 1500,
     })
-    const raw = msg.content[0]?.type === 'text' ? msg.content[0].text.trim() : ''
-    const json = JSON.parse(raw.replace(/^```json?\s*|\s*```$/g, '')) as {
+    const json = parseJsonObject<{
       title?: string; summary?: string; lines?: AiLine[]
-    }
+    }>(raw)
 
     // Re-validate each line against the catalogue so the AI can't smuggle bad ids/prices.
     const lookup = new Map(catalogue.map(c => [c.id, c]))

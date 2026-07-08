@@ -924,14 +924,7 @@ tailwind.config = {
           <span class="text-sm text-ink/40 mb-1">/month</span>
         </div>
         <p class="text-[11px] font-semibold text-teal mb-6">Intro price, locked in for 2026</p>
-        <p class="text-sm text-ink/45 mb-8">Perfect for one-person trades.</p>
-        <ul class="space-y-3 mb-8">
-          <li class="flex items-center gap-3 text-sm text-ink/65"><div class="w-5 h-5 rounded-full bg-teal/10 flex items-center justify-center flex-shrink-0"><i data-lucide="check" class="w-3 h-3 text-teal"></i></div>Unlimited jobs & customers</li>
-          <li class="flex items-center gap-3 text-sm text-ink/65"><div class="w-5 h-5 rounded-full bg-teal/10 flex items-center justify-center flex-shrink-0"><i data-lucide="check" class="w-3 h-3 text-teal"></i></div>Invoicing & payment tracking</li>
-          <li class="flex items-center gap-3 text-sm text-ink/65"><div class="w-5 h-5 rounded-full bg-teal/10 flex items-center justify-center flex-shrink-0"><i data-lucide="check" class="w-3 h-3 text-teal"></i></div>Job map & scheduling</li>
-          <li class="flex items-center gap-3 text-sm text-ink/65"><div class="w-5 h-5 rounded-full bg-teal/10 flex items-center justify-center flex-shrink-0"><i data-lucide="check" class="w-3 h-3 text-teal"></i></div>Digital forms & compliance</li>
-          <li class="flex items-center gap-3 text-sm text-ink/65"><div class="w-5 h-5 rounded-full bg-teal/10 flex items-center justify-center flex-shrink-0"><i data-lucide="check" class="w-3 h-3 text-teal"></i></div>Vehicle logbook</li>
-        </ul>
+        <p class="text-sm text-ink/45 mb-8 min-h-[48px]">Perfect for one-person trades.</p>
         <a href="https://app.industryforms.app/signup" class="btn-ink block text-center bg-ink text-white font-semibold text-sm px-6 py-3.5 rounded-full hover:bg-ink-light">Start Free Trial</a>
       </div>
       <!-- Team -->
@@ -944,15 +937,7 @@ tailwind.config = {
           <span class="text-sm text-white/40 mb-1">/month</span>
         </div>
         <p class="text-[11px] font-semibold text-brand mb-6">Intro price, locked in for 2026</p>
-        <p class="text-sm text-white/40 mb-8">For growing businesses with a crew.</p>
-        <ul class="space-y-3 mb-8">
-          <li class="flex items-center gap-3 text-sm text-white/65"><div class="w-5 h-5 rounded-full bg-brand/20 flex items-center justify-center flex-shrink-0"><i data-lucide="check" class="w-3 h-3 text-brand"></i></div>Everything in Solo</li>
-          <li class="flex items-center gap-3 text-sm text-white/65"><div class="w-5 h-5 rounded-full bg-brand/20 flex items-center justify-center flex-shrink-0"><i data-lucide="check" class="w-3 h-3 text-brand"></i></div>Up to 10 team members</li>
-          <li class="flex items-center gap-3 text-sm text-white/65"><div class="w-5 h-5 rounded-full bg-brand/20 flex items-center justify-center flex-shrink-0"><i data-lucide="check" class="w-3 h-3 text-brand"></i></div>Purchase orders & supplier mgmt</li>
-          <li class="flex items-center gap-3 text-sm text-white/65"><div class="w-5 h-5 rounded-full bg-brand/20 flex items-center justify-center flex-shrink-0"><i data-lucide="check" class="w-3 h-3 text-brand"></i></div>Advanced reports & analytics</li>
-          <li class="flex items-center gap-3 text-sm text-white/65"><div class="w-5 h-5 rounded-full bg-brand/20 flex items-center justify-center flex-shrink-0"><i data-lucide="check" class="w-3 h-3 text-brand"></i></div>Client-facing website builder</li>
-          <li class="flex items-center gap-3 text-sm text-white/65"><div class="w-5 h-5 rounded-full bg-brand/20 flex items-center justify-center flex-shrink-0"><i data-lucide="check" class="w-3 h-3 text-brand"></i></div>Priority support</li>
-        </ul>
+        <p class="text-sm text-white/40 mb-8 min-h-[48px]">Up to 10 team members.</p>
         <a href="https://app.industryforms.app/signup" class="btn-brand bg-brand block text-center text-white font-semibold text-sm px-6 py-3.5 rounded-full shadow-brand">Start Free Trial</a>
       </div>
       <!-- Pro -->
@@ -964,15 +949,50 @@ tailwind.config = {
           <span class="text-sm text-ink/40 mb-1">/month</span>
         </div>
         <p class="text-[11px] font-semibold text-teal mb-6">Intro price, locked in for 2026</p>
-        <p class="text-sm text-ink/45 mb-8">For multi-crew operations at scale.</p>
-        <ul class="space-y-3 mb-8">
-          <li class="flex items-center gap-3 text-sm text-ink/65"><div class="w-5 h-5 rounded-full bg-teal/10 flex items-center justify-center flex-shrink-0"><i data-lucide="check" class="w-3 h-3 text-teal"></i></div>Everything in Team</li>
-          <li class="flex items-center gap-3 text-sm text-ink/65"><div class="w-5 h-5 rounded-full bg-teal/10 flex items-center justify-center flex-shrink-0"><i data-lucide="check" class="w-3 h-3 text-teal"></i></div>Unlimited team members</li>
-          <li class="flex items-center gap-3 text-sm text-ink/65"><div class="w-5 h-5 rounded-full bg-teal/10 flex items-center justify-center flex-shrink-0"><i data-lucide="check" class="w-3 h-3 text-teal"></i></div>Multi-location & multi-brand</li>
-          <li class="flex items-center gap-3 text-sm text-ink/65"><div class="w-5 h-5 rounded-full bg-teal/10 flex items-center justify-center flex-shrink-0"><i data-lucide="check" class="w-3 h-3 text-teal"></i></div>Custom onboarding & training</li>
-          <li class="flex items-center gap-3 text-sm text-ink/65"><div class="w-5 h-5 rounded-full bg-teal/10 flex items-center justify-center flex-shrink-0"><i data-lucide="check" class="w-3 h-3 text-teal"></i></div>Dedicated account manager</li>
+        <p class="text-sm text-ink/45 mb-5">Up to 25 team members.</p>
+        <ul class="space-y-3 mb-8 min-h-[48px]">
+          <li class="flex items-center gap-3 text-sm text-ink/65"><div class="w-5 h-5 rounded-full bg-teal/10 flex items-center justify-center flex-shrink-0"><i data-lucide="check" class="w-3 h-3 text-teal"></i></div>Includes Projects module to manage staged projects</li>
         </ul>
         <a href="https://app.industryforms.app/signup" class="btn-ink block text-center bg-ink text-white font-semibold text-sm px-6 py-3.5 rounded-full hover:bg-ink-light">Start Free Trial</a>
+      </div>
+    </div>
+
+    <div class="reveal mt-8 grid md:grid-cols-2 gap-5 max-w-5xl mx-auto">
+      <div class="bg-white/75 backdrop-blur-sm rounded-3xl p-7 border border-black/[0.05] shadow-glass">
+        <p class="text-[10px] font-bold tracking-widest uppercase text-ink/35 mb-3">Add-on</p>
+        <div class="flex items-baseline justify-between gap-4">
+          <h3 class="font-display font-bold text-xl text-ink">Hosted website with online bookings</h3>
+          <p class="font-display font-bold text-2xl text-ink whitespace-nowrap">$19<span class="text-sm text-ink/40 font-sans">/mo</span></p>
+        </div>
+        <p class="text-sm text-ink/50 mt-3">Publish a hosted trade website with built-in booking requests and lead capture.</p>
+      </div>
+      <div class="bg-white/75 backdrop-blur-sm rounded-3xl p-7 border border-black/[0.05] shadow-glass">
+        <p class="text-[10px] font-bold tracking-widest uppercase text-ink/35 mb-3">Add-on</p>
+        <div class="flex items-baseline justify-between gap-4">
+          <h3 class="font-display font-bold text-xl text-ink">SMS messaging</h3>
+          <p class="font-display font-bold text-2xl text-ink whitespace-nowrap">13c<span class="text-sm text-ink/40 font-sans">/message</span></p>
+        </div>
+        <p class="text-sm text-ink/50 mt-3">Send customer reminders, booking updates, and job messages by SMS when you need it.</p>
+      </div>
+    </div>
+
+    <div class="reveal mt-8 max-w-5xl mx-auto bg-white/75 backdrop-blur-sm rounded-3xl p-8 md:p-10 border border-black/[0.05] shadow-glass">
+      <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-6 mb-8">
+        <div>
+          <p class="text-[10px] font-bold tracking-widest uppercase text-ink/35 mb-3">Included in all plans</p>
+          <h3 class="font-display font-bold text-2xl text-ink">The core trade admin workflow, whichever tier you choose.</h3>
+        </div>
+        <a href="https://app.industryforms.app/signup" class="btn-brand bg-brand text-white text-sm font-semibold px-5 py-3 rounded-full inline-flex items-center justify-center gap-2 shadow-brand whitespace-nowrap">
+          Start Free Trial <i data-lucide="arrow-right" class="w-4 h-4"></i>
+        </a>
+      </div>
+      <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        <div class="rounded-2xl bg-paper-dark/45 p-4 text-sm text-ink/65">Quotes, jobs, scheduling, timesheets, and invoices in one place</div>
+        <div class="rounded-2xl bg-paper-dark/45 p-4 text-sm text-ink/65">Customer records, job sites, notes, photos, and communication history</div>
+        <div class="rounded-2xl bg-paper-dark/45 p-4 text-sm text-ink/65">Online quote acceptance, invoice links, and Stripe payment support</div>
+        <div class="rounded-2xl bg-paper-dark/45 p-4 text-sm text-ink/65">Mobile field access for notes, photos, signatures, and time capture</div>
+        <div class="rounded-2xl bg-paper-dark/45 p-4 text-sm text-ink/65">Price lists, materials, inventory visibility, and job profitability</div>
+        <div class="rounded-2xl bg-paper-dark/45 p-4 text-sm text-ink/65">Reminders, review requests, reports, and AI admin prompts</div>
       </div>
     </div>
   </div>

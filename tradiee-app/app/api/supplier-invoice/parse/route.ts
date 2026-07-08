@@ -1,15 +1,28 @@
 export const runtime = 'nodejs'
 
 import { NextRequest, NextResponse } from 'next/server'
-import Anthropic from '@anthropic-ai/sdk'
+import { createOpenAIText, OPENAI_MODEL_MINI, OPENAI_MODEL_NANO, parseJsonObject } from '@/lib/openai'
+
+type ParsedSupplierInvoice = {
+  supplier?: string | null
+  invoice_number?: string | null
+  invoice_date?: string | null
+  total?: number | null
+  items?: Array<{
+    description?: string
+    quantity?: number
+    unit?: string
+    unit_cost?: number
+    line_total?: number
+    part_number?: string | null
+  }>
+}
 
 export async function POST(req: NextRequest) {
-  const apiKey = process.env.ANTHROPIC_API_KEY
-  if (!apiKey) {
-    return NextResponse.json({ error: 'AI parsing not configured — set ANTHROPIC_API_KEY in Vercel environment variables' }, { status: 503 })
+  if (!process.env.OPENAI_API_KEY) {
+    return NextResponse.json({ error: 'AI parsing not configured — set OPENAI_API_KEY in Vercel environment variables' }, { status: 503 })
   }
   try {
-    const client = new Anthropic({ apiKey })
     const formData = await req.formData()
     const file = formData.get('file') as File | null
     if (!file) return NextResponse.json({ error: 'No file provided' }, { status: 400 })
@@ -22,24 +35,11 @@ export async function POST(req: NextRequest) {
     const buffer = await file.arrayBuffer()
     const base64 = Buffer.from(buffer).toString('base64')
     const mediaType = file.type as 'application/pdf' | 'image/jpeg' | 'image/png' | 'image/webp'
+    const fileInput = mediaType === 'application/pdf'
+      ? { type: 'input_file' as const, filename: file.name || 'supplier-invoice.pdf', file_data: `data:${mediaType};base64,${base64}` }
+      : { type: 'input_image' as const, image_url: `data:${mediaType};base64,${base64}`, detail: 'high' as const }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const docBlock: any = {
-      type: mediaType === 'application/pdf' ? 'document' : 'image',
-      source: { type: 'base64', media_type: mediaType, data: base64 },
-    }
-
-    const message = await client.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 2048,
-      messages: [
-        {
-          role: 'user',
-          content: [
-            docBlock,
-            {
-              type: 'text',
-              text: `Extract all line items from this supplier invoice. Return ONLY a JSON object with this exact structure:
+    const prompt = `Extract all line items from this supplier invoice. Return ONLY a JSON object with this exact structure:
 {
   "supplier": "supplier name",
   "invoice_number": "invoice number or null",
@@ -58,25 +58,81 @@ export async function POST(req: NextRequest) {
 }
 
 Rules:
-- quantity and unit_cost must be numbers (not strings)
+- quantity, unit_cost, line_total, and total must be numbers, not strings
 - unit should be "each", "m", "m2", "L", "kg", "hr" or similar
-- If GST is included on a line, strip it out — return ex-GST unit costs
-- Include all product lines; skip freight, delivery fees, and GST summary lines
-- Return ONLY the JSON, no other text`,
-            },
-          ],
-        },
-      ],
-    })
+- If GST is included on a line, strip it out and return ex-GST unit costs
+- Include all product/material lines
+- Skip freight, delivery fees, card fees, payment fees, and GST summary lines
+- If a value is absent, use null rather than guessing
+- Return ONLY the JSON, no markdown and no prose`
 
-    const text = message.content[0]?.type === 'text' ? message.content[0].text : ''
-    const jsonMatch = text.match(/\{[\s\S]*\}/)
-    if (!jsonMatch) return NextResponse.json({ error: 'Could not extract data from document', raw: text }, { status: 422 })
+    let parsed: ParsedSupplierInvoice
+    try {
+      const raw = await createOpenAIText({
+        model: OPENAI_MODEL_NANO,
+        maxOutputTokens: 2048,
+        input: [
+          {
+            role: 'user',
+            content: [
+              fileInput,
+              { type: 'input_text', text: prompt },
+            ],
+          },
+        ],
+      })
+      parsed = parseJsonObject<ParsedSupplierInvoice>(raw)
+      if (!hasUsableLineItems(parsed)) throw new Error('No usable invoice line items found')
+    } catch (nanoError) {
+      console.warn('[supplier-invoice/parse] nano parse fallback', nanoError)
+      const raw = await createOpenAIText({
+        model: OPENAI_MODEL_MINI,
+        maxOutputTokens: 2048,
+        input: [
+          {
+            role: 'user',
+            content: [
+              fileInput,
+              { type: 'input_text', text: prompt },
+            ],
+          },
+        ],
+      })
+      parsed = parseJsonObject<ParsedSupplierInvoice>(raw)
+    }
 
-    const parsed = JSON.parse(jsonMatch[0])
-    return NextResponse.json(parsed)
+    if (!hasUsableLineItems(parsed)) {
+      return NextResponse.json({ error: 'Could not extract usable line items from document' }, { status: 422 })
+    }
+
+    return NextResponse.json(normalizeSupplierInvoice(parsed))
   } catch (e: unknown) {
     console.error('[supplier-invoice/parse]', e)
     return NextResponse.json({ error: e instanceof Error ? e.message : 'Parse failed' }, { status: 500 })
+  }
+}
+
+function hasUsableLineItems(parsed: ParsedSupplierInvoice): boolean {
+  return Array.isArray(parsed.items) && parsed.items.some(item => {
+    return !!item.description?.trim() && Number(item.quantity) > 0 && Number(item.unit_cost) >= 0
+  })
+}
+
+function normalizeSupplierInvoice(parsed: ParsedSupplierInvoice) {
+  return {
+    supplier: parsed.supplier ?? null,
+    invoice_number: parsed.invoice_number ?? null,
+    invoice_date: parsed.invoice_date ?? null,
+    total: typeof parsed.total === 'number' ? parsed.total : null,
+    items: (parsed.items ?? [])
+      .map(item => ({
+        description: item.description?.trim() ?? '',
+        quantity: Number(item.quantity) || 0,
+        unit: item.unit?.trim() || 'each',
+        unit_cost: Number(item.unit_cost) || 0,
+        line_total: Number(item.line_total) || (Number(item.quantity) || 0) * (Number(item.unit_cost) || 0),
+        part_number: item.part_number ?? null,
+      }))
+      .filter(item => item.description && item.quantity > 0),
   }
 }

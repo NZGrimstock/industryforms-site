@@ -22,6 +22,7 @@ export const maxDuration = 60
 export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
+import { createOpenAIText, openAiConfigured, OPENAI_MODEL_NANO, parseJsonObject } from '@/lib/openai'
 import { createServiceClient } from '@/lib/supabase/server'
 
 type SourceType = 'visit_today' | 'quote_followup' | 'invoice_overdue' | 'enquiry_followup' | 'job_stalled'
@@ -188,11 +189,16 @@ async function run() {
     })
   }
 
-  // ── 3. Upsert candidates ──────────────────────────────────────────────────
+  // ── 3. Let the cheap utility model polish the morning list wording ────────
+  // Source selection stays deterministic above; AI may only tighten title,
+  // description, and priority for the already-selected task.
+  const finalCandidates = await refineDailyTodoText(candidates)
+
+  // ── 4. Upsert candidates ──────────────────────────────────────────────────
   // Partial unique index on (assigned_to, source_type, source_id) handles dupes;
   // we explicitly skip when a non-pending row already exists so we don't
   // resurrect a manually-completed item.
-  for (const c of candidates) {
+  for (const c of finalCandidates) {
     const { data: existingRow } = await svc.from('todos')
       .select('id, status').eq('assigned_to', c.assignedTo)
       .eq('source_type', c.sourceType).eq('source_id', c.sourceId)
@@ -213,6 +219,71 @@ async function run() {
   }
 
   return NextResponse.json({ date: today, created: created.length, completed: completed.length })
+}
+
+async function refineDailyTodoText(candidates: Candidate[]): Promise<Candidate[]> {
+  if (!candidates.length || !openAiConfigured()) return candidates
+
+  try {
+    const raw = await createOpenAIText({
+      model: OPENAI_MODEL_NANO,
+      maxOutputTokens: 3000,
+      input: [
+        {
+          role: 'developer',
+          content: [
+            'You polish a morning to-do list for NZ/AU trade businesses.',
+            'Only rewrite title, description, and priority for tasks already selected by deterministic business logic.',
+            'Do not add, remove, reorder, or invent tasks. Do not invent customer names, dollar values, dates, job numbers, or technical details.',
+            'Keep titles short and actionable. Keep descriptions one sentence or null.',
+            'Priority must be one of low, medium, high, urgent.',
+            'Return strict JSON only: { "items": [ { "index": 0, "title": "...", "description": "...", "priority": "medium" } ] }',
+          ].join('\n'),
+        },
+        {
+          role: 'user',
+          content: JSON.stringify({
+            items: candidates.map((candidate, index) => ({
+              index,
+              title: candidate.title,
+              description: candidate.description,
+              priority: candidate.priority,
+              sourceType: candidate.sourceType,
+            })),
+          }),
+        },
+      ],
+    })
+
+    const parsed = parseJsonObject<{
+      items?: Array<{
+        index?: number
+        title?: string
+        description?: string | null
+        priority?: Candidate['priority']
+      }>
+    }>(raw)
+    const byIndex = new Map((parsed.items ?? []).map(item => [item.index, item]))
+
+    return candidates.map((candidate, index) => {
+      const polished = byIndex.get(index)
+      if (!polished?.title?.trim()) return candidate
+      const priority = ['low', 'medium', 'high', 'urgent'].includes(polished.priority ?? '')
+        ? polished.priority as Candidate['priority']
+        : candidate.priority
+      return {
+        ...candidate,
+        title: polished.title.trim().slice(0, 120),
+        description: typeof polished.description === 'string'
+          ? polished.description.trim().slice(0, 500) || null
+          : candidate.description,
+        priority,
+      }
+    })
+  } catch (error) {
+    console.error('[daily-todos] AI todo polish skipped', error)
+    return candidates
+  }
 }
 
 async function sourceStillApplies(svc: ReturnType<typeof createServiceClient>, source: SourceType, id: string): Promise<boolean> {

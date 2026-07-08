@@ -54,6 +54,12 @@ credential setup. Run `cd tradiee-mobile && npx eas build --platform ios
   Settings replay button. Persistence flag is
   `profiles.welcome_tutorial_seen_at` via migration
   `20260708021858_welcome_tutorial_seen.sql`.
+- Switched the highest-value AI workflows to OpenAI Responses API model
+  routing: supplier invoice parsing uses `gpt-5.4-nano` first with
+  `gpt-5.4-mini` fallback, AI quote drafting uses `gpt-5.4-mini`, and the
+  daily to-do cron keeps deterministic DB task selection but lets
+  `gpt-5.4-nano` polish the morning list wording. Shared helper:
+  `tradiee-app/lib/openai.ts`.
 
 **Sprint E (automations + growth reporting) shipped 2026-07-06.** New
 `automation_events` table (migration `20260704090000_automation_events.sql`)
@@ -205,8 +211,8 @@ against live traffic, not just go-live prep.
 ## Env vars (NEVER commit real secret values)
 **Set in Vercel → Project Settings → Environment Variables** (Production +
 Preview), then redeploy. Mirror non-secret ones in `tradiee-app/.env.local`
-for local dev. Settings → Integrations now shows a green-tick / amber-warning
-on each of these so the owner sees what's missing without peeking at env vars.
+for local dev. Provider/admin health belongs in the admin console; end-user
+Settings → Integrations only shows customer-relevant integrations.
 
 - `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY`
 - `R2_ACCOUNT_ID`, `R2_PUBLIC_BUCKET`, `R2_PRIVATE_BUCKET`, `R2_PUBLIC_*`/`R2_PRIVATE_*` keys, `NEXT_PUBLIC_R2_PUBLIC_BASE_URL=https://cdn.industryforms.app`
@@ -225,7 +231,14 @@ on each of these so the owner sees what's missing without peeking at env vars.
   `bookings_website_monthly`, and `sms_usage_metered`. `sms_usage_metered`
   must be a usage/metered price at **13c per SMS event** using meter event name
   `tradiee_sms_message` unless `STRIPE_SMS_METER_EVENT_NAME` is set.
-- **Anthropic (live)** — `ANTHROPIC_API_KEY` for SmartWrite / AI quote drafting / daily AI to-dos.
+- **OpenAI** — `OPENAI_API_KEY` is now required for the main AI value paths:
+  supplier invoice parsing (`gpt-5.4-nano`, falling back to `gpt-5.4-mini`),
+  AI quote drafting (`gpt-5.4-mini`), and optional daily to-do wording polish
+  (`gpt-5.4-nano`). Optional overrides: `OPENAI_MODEL_NANO`,
+  `OPENAI_MODEL_MINI`.
+- **Anthropic (legacy/live)** — `ANTHROPIC_API_KEY` still powers remaining
+  legacy AI helpers until migrated (SmartWrite/AI rewrite, AI assistant, and
+  VoiceFill parse paths).
 - **Xero (real value present, 2026-07-07)** — `XERO_CLIENT_ID`/`XERO_CLIENT_SECRET` now set in `.env.local`. Not yet mirrored in Vercel — do that before relying on Xero sync in prod.
 - **MYOB / QuickBooks** — not production-wired yet because both need developer
   apps, OAuth redirect URLs, client IDs/secrets, scopes, and approval/production
@@ -523,9 +536,9 @@ routes, etc.).
 Team / My profile / Integrations / Subscription**. Workflow owns the lists
 (Job statuses, Tax rates, **Hourly rates** — renamed from "Billing rates"
 because it collided with the subscription tab — Payment methods, Enquiry
-inbox). Integrations tab gains live green-tick / amber-warning status cards
-for Resend, Twilio, Stripe and Anthropic, showing exactly which env vars to
-set.
+inbox). Integrations is now end-user focused (Google Calendar, Xero, import);
+provider/admin health for Resend, Twilio, Stripe and Anthropic belongs in the
+admin console, not customer Settings.
 
 **Website builder Theme card** — Shows uploaded logo as a click-to-sample
 target. **Native EyeDropper** button (Chrome/Edge; feature-detected, hides
@@ -542,9 +555,13 @@ reassign jobs/invoices to a stage. Web-only — staff redirected to dashboard.
 todos from today's visits, quote follow-ups, overdue invoices, stale
 enquiries, 7d+ stalled jobs. Persists incompletes (yesterday rolls forward),
 auto-completes when source resolves, manually-completed never resurrected.
+Source selection is deterministic; if `OPENAI_API_KEY` is present,
+`gpt-5.4-nano` only polishes task title/description/priority.
 
 **AI rewrite + AI-draft-quote** — `/api/ai/rewrite` (tone presets) +
 `/api/ai/draft-quote` (price-list-grounded, server-side re-validated).
+Draft quote uses `gpt-5.4-mini`; rewrite is still on the legacy Anthropic
+path until migrated.
 `AIRewriteButton` on the New Enquiry modal; existing `SmartWriteButton`
 elsewhere.
 
@@ -598,8 +615,9 @@ company's terminal status.
 - **Customer communications history**. **Enquiry email inbox**
   (`/api/inbound/email`).
 - Customers + multi-site (geocode-on-save), **Job Map** (web Leaflet),
-  **Timesheets** (+travel logs), Job costing, Materials (+AI supplier-invoice
-  parser "SmartRead"), **SmartWrite** + **VoiceFill**, Price list (+CSV
+  **Timesheets** (+travel logs), Job costing, Materials (+OpenAI nano-first
+  supplier-invoice parser "SmartRead" with mini fallback), **SmartWrite** +
+  **VoiceFill**, Price list (+CSV
   import, low-stock), Suppliers/POs/Bills (AP), Forms/Compliance (NZ
   PS1–PS4, electrical certs), To-Do, Reports, Subcontractor invites,
   Customer portal (`/portal`), photos (R2), 28-day trial + paywall,
