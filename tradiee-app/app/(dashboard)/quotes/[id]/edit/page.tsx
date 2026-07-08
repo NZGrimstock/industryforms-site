@@ -19,9 +19,9 @@ export default async function EditQuotePage({ params }: { params: Promise<{ id: 
   if (!quote || quote.status !== 'draft') notFound()
 
   const [customersRes, priceItemsRes, kitsRes, ratesRes] = await Promise.all([
-    supabase.from('customers').select('id, name, customer_sites(id, label, address)').eq('company_id', profile!.company_id).order('name'),
-    supabase.from('price_list_items').select('*').eq('company_id', profile!.company_id).eq('is_active', true).order('name'),
-    supabase.from('kits').select('*, kit_items(*, price_list_items(*))').eq('company_id', profile!.company_id).order('name'),
+    supabase.from('customers').select('id, name, pricing_group_id, customer_sites(id, label, address)').eq('company_id', profile!.company_id).order('name'),
+    supabase.from('price_list_items').select('*, customer_group_prices(customer_group_id, sell_price)').eq('company_id', profile!.company_id).eq('is_active', true).order('name'),
+    supabase.from('kits').select('*, kit_items(*, price_list_items(*, customer_group_prices(customer_group_id, sell_price)))').eq('company_id', profile!.company_id).order('name'),
     supabase.from('billing_rates').select('id, name, rate').eq('company_id', profile!.company_id).order('name'),
   ])
   const { data: taxRatesData } = await supabase.from('tax_rates').select('id, name, rate').eq('company_id', profile!.company_id).eq('is_active', true).order('sort_order')

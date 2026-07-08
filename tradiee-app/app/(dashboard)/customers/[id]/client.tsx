@@ -14,9 +14,10 @@ import { Pencil, MapPin, Plus, Trash2, ExternalLink } from 'lucide-react'
 interface Props {
   customer: Customer & { customer_sites: CustomerSite[] }
   companyId: string
+  pricingGroups: { id: string; name: string }[]
 }
 
-export function CustomerDetailClient({ customer, companyId }: Props) {
+export function CustomerDetailClient({ customer, companyId, pricingGroups }: Props) {
   const [editOpen, setEditOpen] = useState(false)
   const [siteOpen, setSiteOpen] = useState(false)
   const [sendingPortal, setSendingPortal] = useState(false)
@@ -129,7 +130,7 @@ export function CustomerDetailClient({ customer, companyId }: Props) {
       </Card>
 
       <Dialog open={editOpen} onClose={() => setEditOpen(false)} title="Edit customer">
-        <CustomerForm companyId={companyId} customer={customer} onSuccess={() => { setEditOpen(false); router.refresh() }} />
+        <CustomerForm companyId={companyId} customer={customer} pricingGroups={pricingGroups} onSuccess={() => { setEditOpen(false); router.refresh() }} />
       </Dialog>
 
       <Dialog open={siteOpen} onClose={() => setSiteOpen(false)} title="Add job site">

@@ -30,6 +30,8 @@ streams:
       - SELECT form_submissions.*   FROM form_submissions   INNER JOIN profiles ON profiles.company_id = form_submissions.company_id   WHERE profiles.id = auth.user_id() AND (profiles.role = 'owner' OR profiles.role = 'admin')
       - SELECT price_list_items.*   FROM price_list_items   INNER JOIN profiles ON profiles.company_id = price_list_items.company_id   WHERE profiles.id = auth.user_id() AND (profiles.role = 'owner' OR profiles.role = 'admin')
       - SELECT travel_logs.*        FROM travel_logs        INNER JOIN profiles ON profiles.company_id = travel_logs.company_id        WHERE profiles.id = auth.user_id() AND (profiles.role = 'owner' OR profiles.role = 'admin')
+      - SELECT projects.*           FROM projects           INNER JOIN profiles ON profiles.company_id = projects.company_id           WHERE profiles.id = auth.user_id() AND (profiles.role = 'owner' OR profiles.role = 'admin')
+      - SELECT project_stages.*     FROM project_stages     INNER JOIN projects ON projects.id = project_stages.project_id INNER JOIN profiles ON profiles.company_id = projects.company_id WHERE profiles.id = auth.user_id() AND (profiles.role = 'owner' OR profiles.role = 'admin')
       - SELECT quotes.*             FROM quotes             INNER JOIN profiles ON profiles.company_id = quotes.company_id             WHERE profiles.id = auth.user_id() AND (profiles.role = 'owner' OR profiles.role = 'admin')
       - SELECT quote_sections.*     FROM quote_sections     INNER JOIN profiles ON profiles.company_id = quote_sections.company_id     WHERE profiles.id = auth.user_id() AND (profiles.role = 'owner' OR profiles.role = 'admin')
       - SELECT quote_line_items.*   FROM quote_line_items   INNER JOIN profiles ON profiles.company_id = quote_line_items.company_id   WHERE profiles.id = auth.user_id() AND (profiles.role = 'owner' OR profiles.role = 'admin')
@@ -45,6 +47,10 @@ streams:
       - SELECT customer_sites.*   FROM customer_sites   INNER JOIN profiles ON profiles.company_id = customer_sites.company_id   WHERE profiles.id = auth.user_id() AND profiles.role = 'staff'
       - SELECT price_list_items.* FROM price_list_items INNER JOIN profiles ON profiles.company_id = price_list_items.company_id WHERE profiles.id = auth.user_id() AND profiles.role = 'staff'
       - SELECT form_templates.*   FROM form_templates   INNER JOIN profiles ON profiles.company_id = form_templates.company_id   WHERE profiles.id = auth.user_id() AND profiles.role = 'staff'
+      - SELECT projects.*         FROM projects         INNER JOIN jobs ON jobs.project_id = projects.id WHERE jobs.assigned_to = auth.user_id()
+      - SELECT projects.*         FROM projects         INNER JOIN jobs ON jobs.project_id = projects.id INNER JOIN job_assignees ON job_assignees.job_id = jobs.id WHERE job_assignees.profile_id = auth.user_id()
+      - SELECT project_stages.*   FROM project_stages   INNER JOIN projects ON projects.id = project_stages.project_id INNER JOIN jobs ON jobs.project_id = projects.id WHERE jobs.assigned_to = auth.user_id()
+      - SELECT project_stages.*   FROM project_stages   INNER JOIN projects ON projects.id = project_stages.project_id INNER JOIN jobs ON jobs.project_id = projects.id INNER JOIN job_assignees ON job_assignees.job_id = jobs.id WHERE job_assignees.profile_id = auth.user_id()
 
   # ── Staff: assigned jobs + their children ───────────────────────────────
   staff_jobs:

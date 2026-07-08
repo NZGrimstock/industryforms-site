@@ -3,586 +3,901 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Industry Forms — Intelligent Job Management for Trades</title>
+<title>Industry Forms — Job Management Software for NZ & AU Tradies</title>
+<meta name="description" content="Industry Forms helps NZ and AU tradies quote faster, schedule cleaner, work offline, invoice sooner, take Stripe payments, and manage jobs from first enquiry to final payment. Start a free trial.">
+<meta name="keywords" content="job management software for tradies, NZ tradie software, AU tradie software, trade quoting software, field service management, contractor scheduling software, trade invoicing software">
+<link rel="canonical" href="https://industryforms.app/">
+<meta property="og:title" content="Industry Forms — Job Management Software for NZ & AU Tradies">
+<meta property="og:description" content="Paperwork should not be your second trade. Quote faster, schedule cleaner, invoice sooner, and keep every job moving.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://industryforms.app/">
+<meta name="twitter:card" content="summary_large_image">
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://unpkg.com/lucide@latest"></script>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@300;400;500;600;700;800;900&family=Sora:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "SoftwareApplication",
+      "name": "Industry Forms",
+      "applicationCategory": "BusinessApplication",
+      "operatingSystem": "Web, iOS, Android",
+      "url": "https://industryforms.app/",
+      "description": "Job management software for NZ and AU tradies with quotes, bookings, job scheduling, offline mobile access, forms, invoicing, Stripe payments, reminders, reporting, and AI admin support.",
+      "areaServed": ["New Zealand", "Australia"],
+      "offers": {
+        "@type": "Offer",
+        "price": "29",
+        "priceCurrency": "NZD",
+        "availability": "https://schema.org/InStock",
+        "url": "https://app.industryforms.app/signup"
+      }
+    },
+    {
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "What does Industry Forms do for tradies?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Industry Forms gives NZ and AU tradies one place for web leads, AI-drafted quotes, bookings, jobs, forms, scheduling, offline mobile notes and photos, invoices, Stripe payments, reminders, messaging, and gross-profit reporting."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Can customers accept quotes and pay deposits online?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. Customers can accept quotes and pay deposits or invoices online without creating an account, reducing friction between quote sent, job booked, and payment received."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Does Industry Forms work offline?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. Field crews can log job notes, time, and photos offline, then sync when a connection returns."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Is Industry Forms built for New Zealand and Australia?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. Industry Forms is built specifically for NZ and AU trade businesses with transparent pricing and workflows for quotes, jobs, compliance forms, GST, scheduling, payments, and field crews."
+          }
+        }
+      ]
+    }
+  ]
+}
+</script>
 <script>
 tailwind.config = {
   theme: {
     extend: {
       colors: {
-        paper: '#F5F1EB',
+        paper: '#F6F2EC',
         'paper-dark': '#EDE8E0',
         brand: '#E8722A',
         'brand-dark': '#C95D1A',
+        'brand-light': '#F08040',
         teal: '#0D9488',
         'teal-light': '#14B8A6',
         grape: '#7C3AED',
         'grape-light': '#8B5CF6',
-        ink: '#1A1A2E',
+        ink: '#1C1C2E',
         'ink-light': '#2D2D44',
+        'ink-faint': '#F0EEF8',
       },
       fontFamily: {
-        sans: ['Inter', 'sans-serif'],
-        display: ['Space Grotesk', 'sans-serif'],
+        sans: ['Figtree', 'sans-serif'],
+        display: ['Sora', 'sans-serif'],
+      },
+      boxShadow: {
+        'glass': '0 4px 24px -4px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04)',
+        'glass-lg': '0 20px 60px -12px rgba(0,0,0,0.12), 0 4px 16px -4px rgba(0,0,0,0.06)',
+        'brand': '0 8px 32px -6px rgba(232,114,42,0.35)',
+        'ink': '0 8px 32px -6px rgba(28,28,46,0.3)',
       }
     }
   }
 }
 </script>
 <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  html { scroll-behavior: smooth; }
-  body { font-family: 'Inter', sans-serif; background: #F5F1EB; color: #1A1A2E; overflow-x: hidden; }
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; }
+  body { font-family: 'Figtree', sans-serif; background: #F6F2EC; color: #1C1C2E; overflow-x: hidden; }
 
-  /* Paper texture overlay */
-  .paper-texture {
-    position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: 0.35;
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
+  /* Grain texture */
+  .grain::after {
+    content: '';
+    position: fixed;
+    inset: -200%;
+    width: 400%;
+    height: 400%;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.4'/%3E%3C/svg%3E");
     background-size: 256px 256px;
+    opacity: 0.28;
+    pointer-events: none;
+    z-index: 0;
+    animation: grain 8s steps(10) infinite;
+  }
+  @keyframes grain {
+    0%, 100% { transform: translate(0, 0); }
+    10% { transform: translate(-2%, -3%); }
+    20% { transform: translate(3%, 2%); }
+    30% { transform: translate(-1%, 4%); }
+    40% { transform: translate(4%, -1%); }
+    50% { transform: translate(-3%, 1%); }
+    60% { transform: translate(1%, -4%); }
+    70% { transform: translate(-4%, 3%); }
+    80% { transform: translate(2%, -2%); }
+    90% { transform: translate(-2%, 4%); }
   }
 
-  /* Scroll-triggered animations */
+  /* Ambient orbs */
+  @keyframes orb1 {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    33% { transform: translate(40px, -30px) scale(1.08); }
+    66% { transform: translate(-20px, 20px) scale(0.95); }
+  }
+  @keyframes orb2 {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    33% { transform: translate(-30px, 30px) scale(0.92); }
+    66% { transform: translate(25px, -15px) scale(1.06); }
+  }
+  @keyframes orb3 {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    50% { transform: translate(20px, -40px) scale(1.1); }
+  }
+  .orb-1 { animation: orb1 16s ease-in-out infinite; }
+  .orb-2 { animation: orb2 20s ease-in-out infinite; }
+  .orb-3 { animation: orb3 13s ease-in-out infinite; }
+
+  /* Reveal animations */
   .reveal {
-    opacity: 0; transform: translateY(40px);
-    transition: opacity 0.9s cubic-bezier(0.16, 1, 0.3, 1), transform 0.9s cubic-bezier(0.16, 1, 0.3, 1);
+    opacity: 0;
+    transform: translateY(32px);
+    transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1), transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
   }
-  .reveal.visible { opacity: 1; transform: translateY(0); }
-  .reveal-delay-1 { transition-delay: 0.1s; }
-  .reveal-delay-2 { transition-delay: 0.2s; }
-  .reveal-delay-3 { transition-delay: 0.3s; }
-  .reveal-delay-4 { transition-delay: 0.4s; }
-  .reveal-delay-5 { transition-delay: 0.5s; }
+  .reveal.in { opacity: 1; transform: translateY(0); }
+  .reveal-d1 { transition-delay: 0.08s; }
+  .reveal-d2 { transition-delay: 0.16s; }
+  .reveal-d3 { transition-delay: 0.24s; }
+  .reveal-d4 { transition-delay: 0.32s; }
+  .reveal-d5 { transition-delay: 0.40s; }
+  .reveal-d6 { transition-delay: 0.48s; }
 
-  /* Floating ambient shapes */
-  @keyframes float1 {
-    0%, 100% { transform: translate(0, 0) rotate(0deg); }
-    33% { transform: translate(30px, -20px) rotate(5deg); }
-    66% { transform: translate(-15px, 15px) rotate(-3deg); }
+  /* Nav */
+  .nav-blur {
+    backdrop-filter: blur(24px) saturate(1.4);
+    -webkit-backdrop-filter: blur(24px) saturate(1.4);
+    background: rgba(246,242,236,0.82);
   }
-  @keyframes float2 {
-    0%, 100% { transform: translate(0, 0) rotate(0deg); }
-    33% { transform: translate(-25px, 25px) rotate(-4deg); }
-    66% { transform: translate(20px, -10px) rotate(6deg); }
-  }
-  @keyframes float3 {
-    0%, 100% { transform: translate(0, 0) rotate(0deg); }
-    50% { transform: translate(15px, -30px) rotate(8deg); }
-  }
-  .float-1 { animation: float1 12s ease-in-out infinite; }
-  .float-2 { animation: float2 15s ease-in-out infinite; }
-  .float-3 { animation: float3 10s ease-in-out infinite; }
 
-  /* Sticky footer scroll */
-  .sticky-footer-track {
+  /* Buttons */
+  .btn-brand {
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.25s cubic-bezier(0.16,1,0.3,1), box-shadow 0.25s ease;
+  }
+  .btn-brand::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, transparent 60%);
+    pointer-events: none;
+  }
+  .btn-brand:hover { transform: translateY(-2px); box-shadow: 0 10px 36px -6px rgba(232,114,42,0.45); }
+  .btn-brand:active { transform: translateY(0); }
+
+  .btn-ink {
+    transition: transform 0.25s cubic-bezier(0.16,1,0.3,1), box-shadow 0.25s ease, background 0.2s;
+  }
+  .btn-ink:hover { transform: translateY(-2px); box-shadow: 0 10px 36px -8px rgba(28,28,46,0.4); }
+
+  /* Cards */
+  .card-lift {
+    transition: transform 0.4s cubic-bezier(0.16,1,0.3,1), box-shadow 0.4s ease;
+  }
+  .card-lift:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 24px 64px -16px rgba(0,0,0,0.13);
+  }
+
+  /* Dashboard mockup */
+  .mockup-wrap {
+    transition: transform 0.6s cubic-bezier(0.16,1,0.3,1);
+  }
+  .mockup-wrap:hover { transform: translateY(-6px) rotate(-0.3deg) scale(1.005); }
+
+  /* Accent line */
+  .accent-line {
+    width: 40px; height: 3px; border-radius: 100px;
+    background: linear-gradient(90deg, #E8722A, #F08040);
+  }
+
+  /* Stats ticker */
+  .ticker-track {
     display: flex; gap: 0; white-space: nowrap; will-change: transform;
   }
-  .sticky-footer-item {
-    flex-shrink: 0; display: flex; align-items: center; gap: 12px;
-    padding: 0 48px; border-right: 1px solid rgba(255,255,255,0.1);
+  .ticker-item {
+    flex-shrink: 0; display: flex; align-items: center; gap: 10px;
+    padding: 0 44px; border-right: 1px solid rgba(255,255,255,0.08);
   }
 
-  /* Feature card hover */
-  .feature-card {
-    transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.5s ease;
-  }
-  .feature-card:hover {
-    transform: translateY(-6px);
-    box-shadow: 0 20px 60px -15px rgba(0,0,0,0.12);
-  }
+  /* Tag variants */
+  .tag-orange { background: rgba(232,114,42,0.1); color: #D4611E; }
+  .tag-teal   { background: rgba(13,148,136,0.1); color: #0D9488; }
+  .tag-grape  { background: rgba(124,58,237,0.1); color: #6D28D9; }
+  .tag-neutral { background: rgba(28,28,46,0.07); color: #4B4B6A; }
 
-  /* Hero dashboard mockup */
-  .dashboard-mockup {
-    transition: transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
-  }
-  .dashboard-mockup:hover { transform: scale(1.02) rotate(-0.5deg); }
-
-  /* Magnetic button effect */
-  .mag-btn {
-    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease;
-  }
-  .mag-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 30px -5px rgba(232,114,42,0.4); }
-
-  /* Module tag colors */
-  .tag-orange { background: rgba(232,114,42,0.1); color: #E8722A; }
-  .tag-teal { background: rgba(13,148,136,0.1); color: #0D9488; }
-  .tag-grape { background: rgba(124,58,237,0.1); color: #7C3AED; }
-  .tag-ink { background: rgba(26,26,46,0.08); color: #1A1A2E; }
-
-  /* Subtle line decoration */
-  .line-accent {
-    width: 48px; height: 3px; border-radius: 2px; background: #E8722A;
+  /* Step connector */
+  .step-connector {
+    position: absolute; top: 28px; left: calc(50% + 28px);
+    width: calc(100% - 56px); height: 1px;
+    background: linear-gradient(90deg, rgba(232,114,42,0.3), rgba(13,148,136,0.3));
   }
 
-  /* Number counter */
-  .counter-value {
-    font-variant-numeric: tabular-nums;
+  /* Pricing card glow */
+  .pricing-popular {
+    background: linear-gradient(145deg, #1C1C2E 0%, #252538 100%);
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.06), 0 24px 64px -16px rgba(0,0,0,0.4);
   }
 
-  /* Custom scrollbar */
-  ::-webkit-scrollbar { width: 6px; }
-  ::-webkit-scrollbar-track { background: #F5F1EB; }
-  ::-webkit-scrollbar-thumb { background: #C4BDB3; border-radius: 3px; }
-  ::-webkit-scrollbar-thumb:hover { background: #A69E94; }
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: #F6F2EC; }
+  ::-webkit-scrollbar-thumb { background: #C8C0B4; border-radius: 10px; }
+  ::-webkit-scrollbar-thumb:hover { background: #A89E92; }
 
-  /* Nav blur */
-  .nav-blur {
-    backdrop-filter: blur(20px) saturate(1.2);
-    -webkit-backdrop-filter: blur(20px) saturate(1.2);
-    background: rgba(245,241,235,0.85);
+  /* Pipeline animation */
+  @keyframes pulse-dot {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.85); }
   }
+  .pulse-dot { animation: pulse-dot 1.8s ease-in-out infinite; }
+  .pulse-dot:nth-child(2) { animation-delay: 0.3s; }
+  .pulse-dot:nth-child(3) { animation-delay: 0.6s; }
 
   @media (max-width: 768px) {
-    .sticky-footer-item { padding: 0 24px; font-size: 13px; }
+    .ticker-item { padding: 0 22px; font-size: 12px; }
+    .step-connector { display: none; }
   }
+
+  /* CTA glow ring */
+  .cta-ring {
+    position: absolute;
+    inset: -40px;
+    border-radius: 50%;
+    background: radial-gradient(ellipse, rgba(232,114,42,0.08) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  /* Gradient text */
+  .grad-text {
+    background: linear-gradient(135deg, #E8722A 0%, #F0A050 50%, #E8722A 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Feature icon rings */
+  .icon-ring {
+    position: relative;
+  }
+  .icon-ring::after {
+    content: '';
+    position: absolute;
+    inset: -4px;
+    border-radius: 16px;
+    border: 1px solid currentColor;
+    opacity: 0.12;
+  }
+
+  /* Testimonial quote mark */
+  .quote-mark {
+    font-family: 'Sora', sans-serif;
+    font-size: 5rem;
+    line-height: 1;
+    font-weight: 800;
+    color: rgba(232,114,42,0.12);
+    position: absolute;
+    top: -8px;
+    left: 24px;
+  }
+
+  .pillar-tab.is-active {
+    background: #1C1C2E;
+    color: #fff;
+    box-shadow: 0 10px 30px -14px rgba(28,28,46,0.45);
+  }
+  .pillar-panel { display: none; }
+  .pillar-panel.is-active { display: block; }
+  .faq-panel { display: none; }
+  .faq-item.is-open .faq-panel { display: block; }
+  .faq-item.is-open .faq-icon { transform: rotate(45deg); }
 </style>
 </head>
-<body>
+<body class="grain">
 
-<!-- Paper Texture Overlay -->
-<div class="paper-texture"></div>
-
-<!-- Floating Ambient Shapes -->
-<div class="fixed inset-0 pointer-events-none z-0 overflow-hidden">
-  <div class="float-1 absolute top-[15%] left-[8%] w-64 h-64 rounded-full bg-brand/[0.04] blur-3xl"></div>
-  <div class="float-2 absolute top-[40%] right-[5%] w-80 h-80 rounded-full bg-teal/[0.04] blur-3xl"></div>
-  <div class="float-3 absolute bottom-[25%] left-[20%] w-72 h-72 rounded-full bg-grape/[0.03] blur-3xl"></div>
+<!-- Ambient background orbs -->
+<div class="fixed inset-0 pointer-events-none z-0 overflow-hidden" aria-hidden="true">
+  <div class="orb-1 absolute top-[10%] left-[5%] w-[500px] h-[500px] rounded-full bg-brand/[0.055] blur-[80px]"></div>
+  <div class="orb-2 absolute top-[45%] right-[3%] w-[600px] h-[600px] rounded-full bg-teal/[0.045] blur-[90px]"></div>
+  <div class="orb-3 absolute bottom-[20%] left-[25%] w-[500px] h-[500px] rounded-full bg-grape/[0.035] blur-[80px]"></div>
 </div>
 
-<!-- Navigation -->
-<nav class="fixed top-0 left-0 right-0 z-50 nav-blur border-b border-black/[0.06]">
-  <div class="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-    <!-- Logo -->
-    <a href="#" class="flex items-center gap-3 group">
-      <svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" class="transition-transform duration-300 group-hover:scale-105">
-        <rect x="2" y="2" width="24" height="32" rx="4" fill="#1A1A2E" opacity="0.9"/>
-        <rect x="10" y="2" width="24" height="32" rx="4" fill="#E8722A"/>
-        <rect x="16" y="10" width="12" height="2" rx="1" fill="white" opacity="0.9"/>
-        <rect x="16" y="15" width="8" height="2" rx="1" fill="white" opacity="0.6"/>
-        <rect x="16" y="20" width="12" height="2" rx="1" fill="white" opacity="0.9"/>
-        <rect x="16" y="25" width="6" height="2" rx="1" fill="white" opacity="0.6"/>
-        <path d="M7 12L10 9L13 12" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.7"/>
-        <path d="M10 9V17" stroke="white" stroke-width="1.5" stroke-linecap="round" opacity="0.7"/>
-      </svg>
-      <span class="font-display font-bold text-lg tracking-tight text-ink">Industry Forms</span>
+<!-- ============================================================ NAV -->
+<nav class="fixed top-0 left-0 right-0 z-50 nav-blur border-b border-black/[0.05]" role="navigation">
+  <div class="max-w-7xl mx-auto px-6 h-24 flex items-center justify-between">
+    <a href="#" class="flex items-center gap-2.5 group" aria-label="Industry Forms home">
+      <img src="Logo/Logo.png" alt="Industry Forms" class="h-[72px] w-auto transition-transform duration-300 group-hover:scale-105">
     </a>
-    <!-- Nav Links (Desktop) -->
     <div class="hidden md:flex items-center gap-8">
-      <a href="#features" class="text-sm font-medium text-ink/60 hover:text-ink transition-colors duration-200">Features</a>
-      <a href="#how-it-works" class="text-sm font-medium text-ink/60 hover:text-ink transition-colors duration-200">How It Works</a>
-      <a href="#pricing" class="text-sm font-medium text-ink/60 hover:text-ink transition-colors duration-200">Pricing</a>
-      <a href="#" class="text-sm font-medium text-ink/60 hover:text-ink transition-colors duration-200">Log In</a>
-      <a href="#cta" class="mag-btn bg-ink text-white text-sm font-semibold px-5 py-2.5 rounded-full">Start Free Trial</a>
+      <a href="#features"    class="text-sm font-medium text-ink/55 hover:text-ink transition-colors duration-150">Features</a>
+      <a href="#workflow-pillars" class="text-sm font-medium text-ink/55 hover:text-ink transition-colors duration-150">Workflows</a>
+      <a href="#how-it-works" class="text-sm font-medium text-ink/55 hover:text-ink transition-colors duration-150">How It Works</a>
+      <a href="#pricing"     class="text-sm font-medium text-ink/55 hover:text-ink transition-colors duration-150">Pricing</a>
+      <a href="#faq"         class="text-sm font-medium text-ink/55 hover:text-ink transition-colors duration-150">FAQ</a>
+      <a href="https://app.industryforms.app" class="text-sm font-medium text-ink/55 hover:text-ink transition-colors duration-150">Log In</a>
+      <a href="https://app.industryforms.app/signup" class="btn-brand bg-brand text-white text-sm font-semibold px-5 py-2.5 rounded-full inline-flex items-center gap-1.5">
+        Start Free Trial <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+      </a>
     </div>
-    <!-- Mobile Menu Button -->
-    <button id="mobileMenuBtn" class="md:hidden p-2 rounded-lg hover:bg-black/5 transition-colors">
+    <button id="mobileMenuBtn" class="md:hidden p-2 rounded-xl hover:bg-black/[0.06] transition-colors" aria-label="Menu">
       <i data-lucide="menu" class="w-5 h-5 text-ink"></i>
     </button>
   </div>
-  <!-- Mobile Menu -->
-  <div id="mobileMenu" class="hidden md:hidden border-t border-black/[0.06] bg-paper/95 backdrop-blur-xl">
-    <div class="px-6 py-4 flex flex-col gap-3">
-      <a href="#features" class="text-sm font-medium text-ink/70 py-2">Features</a>
-      <a href="#how-it-works" class="text-sm font-medium text-ink/70 py-2">How It Works</a>
-      <a href="#pricing" class="text-sm font-medium text-ink/70 py-2">Pricing</a>
-      <a href="#" class="text-sm font-medium text-ink/70 py-2">Log In</a>
-      <a href="#cta" class="mag-btn bg-ink text-white text-sm font-semibold px-5 py-2.5 rounded-full text-center mt-2">Start Free Trial</a>
+  <div id="mobileMenu" class="hidden md:hidden border-t border-black/[0.05] bg-paper/96 backdrop-blur-2xl">
+    <div class="px-6 py-5 flex flex-col gap-1">
+      <a href="#features"     class="text-sm font-medium text-ink/70 py-2.5 px-3 rounded-lg hover:bg-black/[0.04]">Features</a>
+      <a href="#workflow-pillars" class="text-sm font-medium text-ink/70 py-2.5 px-3 rounded-lg hover:bg-black/[0.04]">Workflows</a>
+      <a href="#how-it-works" class="text-sm font-medium text-ink/70 py-2.5 px-3 rounded-lg hover:bg-black/[0.04]">How It Works</a>
+      <a href="#pricing"      class="text-sm font-medium text-ink/70 py-2.5 px-3 rounded-lg hover:bg-black/[0.04]">Pricing</a>
+      <a href="#faq"          class="text-sm font-medium text-ink/70 py-2.5 px-3 rounded-lg hover:bg-black/[0.04]">FAQ</a>
+      <a href="https://app.industryforms.app" class="text-sm font-medium text-ink/70 py-2.5 px-3 rounded-lg hover:bg-black/[0.04]">Log In</a>
+      <a href="https://app.industryforms.app/signup" class="btn-brand bg-brand text-white text-sm font-semibold px-5 py-3 rounded-full text-center mt-3">Start Free Trial</a>
     </div>
   </div>
 </nav>
 
-<!-- ===== HERO ===== -->
-<section class="relative z-10 pt-36 md:pt-44 pb-20 md:pb-32 px-6">
+<!-- ============================================================ HERO -->
+<section class="relative z-10 pt-36 md:pt-48 pb-20 md:pb-32 px-6">
   <div class="max-w-7xl mx-auto">
     <div class="max-w-3xl">
       <div class="reveal flex items-center gap-3 mb-8">
-        <span class="tag-orange text-xs font-semibold tracking-wider uppercase px-3 py-1.5 rounded-full">For Trades & SMEs</span>
-        <span class="text-ink/30 text-xs">•</span>
-        <span class="text-ink/50 text-xs font-medium">Now in Beta</span>
+        <span class="tag-orange text-[11px] font-bold tracking-wide uppercase px-3.5 py-1.5 rounded-full">For NZ & AU Tradies</span>
+        <span class="flex items-center gap-1.5 text-[11px] font-medium text-ink/40">
+          <span class="w-1.5 h-1.5 rounded-full bg-green-400 inline-block"></span>
+          Transparent pricing. No pushy sales.
+        </span>
       </div>
-      <h1 class="reveal reveal-delay-1 font-display font-bold text-5xl md:text-7xl lg:text-8xl tracking-tight leading-[0.95] text-ink mb-8">
-        You didn't start a trade to do
-        <span class="text-brand">paperwork.</span>
+
+      <h1 class="reveal reveal-d1 font-display font-bold text-[clamp(2.8rem,8vw,5.5rem)] leading-[0.93] tracking-tight text-ink mb-8">
+        Paperwork should not be<br>your second
+        <span class="grad-text">trade.</span>
       </h1>
-      <p class="reveal reveal-delay-2 text-lg md:text-xl text-ink/60 leading-relaxed max-w-xl mb-10">
-        Industry Forms automates your jobs, invoices, scheduling, and compliance — so you can get back on the tools and grow your business.
+
+      <p class="reveal reveal-d2 text-lg md:text-xl text-ink/55 leading-relaxed max-w-2xl mb-10">
+        The job is hard enough. The admin should not be. Quote faster, schedule cleaner, invoice sooner, and keep every job moving from first enquiry to final payment without the paper chase.
       </p>
-      <div class="reveal reveal-delay-3 flex flex-wrap items-center gap-4">
-        <a href="#cta" class="mag-btn bg-brand text-white font-semibold px-8 py-4 rounded-full text-sm inline-flex items-center gap-2">
-          Start Free — No Card Needed
+
+      <div class="reveal reveal-d3 flex flex-wrap items-center gap-4">
+        <a href="https://app.industryforms.app/signup" class="btn-brand bg-brand text-white font-semibold px-8 py-4 rounded-full text-sm inline-flex items-center gap-2 shadow-brand">
+          Start Free Trial
           <i data-lucide="arrow-right" class="w-4 h-4"></i>
         </a>
-        <a href="#how-it-works" class="inline-flex items-center gap-2 text-sm font-medium text-ink/60 hover:text-ink transition-colors px-4 py-4">
-          <i data-lucide="play-circle" class="w-5 h-5"></i>
-          Watch 2-min demo
+        <a href="#workflow-pillars" class="inline-flex items-center gap-2 text-sm font-medium text-ink/55 hover:text-ink transition-colors px-2 py-4 group">
+          <span class="w-9 h-9 rounded-full bg-white/80 border border-black/[0.07] flex items-center justify-center shadow-glass group-hover:shadow-glass-lg transition-shadow">
+            <i data-lucide="route" class="w-3.5 h-3.5 text-ink"></i>
+          </span>
+          See the job workflow
         </a>
       </div>
-      <div class="reveal reveal-delay-4 mt-12 flex items-center gap-6">
-        <div class="flex -space-x-2">
-          <div class="w-8 h-8 rounded-full bg-teal text-white text-xs font-bold flex items-center justify-center ring-2 ring-paper">J</div>
-          <div class="w-8 h-8 rounded-full bg-grape text-white text-xs font-bold flex items-center justify-center ring-2 ring-paper">M</div>
-          <div class="w-8 h-8 rounded-full bg-brand text-white text-xs font-bold flex items-center justify-center ring-2 ring-paper">S</div>
-          <div class="w-8 h-8 rounded-full bg-ink text-white text-xs font-bold flex items-center justify-center ring-2 ring-paper">K</div>
+
+      <div class="reveal reveal-d4 mt-12 grid sm:grid-cols-3 gap-3 max-w-2xl">
+        <div class="bg-white/70 border border-black/[0.05] shadow-glass rounded-2xl p-4">
+          <p class="text-[10px] uppercase tracking-widest font-bold text-ink/35 mb-1">Know what is</p>
+          <p class="text-sm font-bold text-ink">booked, quoted, owed</p>
         </div>
-        <p class="text-xs text-ink/50"><span class="font-semibold text-ink/70">2,400+</span> tradespeople already saving time</p>
+        <div class="bg-white/70 border border-black/[0.05] shadow-glass rounded-2xl p-4">
+          <p class="text-[10px] uppercase tracking-widest font-bold text-ink/35 mb-1">Built for</p>
+          <p class="text-sm font-bold text-ink">NZ & AU trade crews</p>
+        </div>
+        <div class="bg-white/70 border border-black/[0.05] shadow-glass rounded-2xl p-4">
+          <p class="text-[10px] uppercase tracking-widest font-bold text-ink/35 mb-1">Trial</p>
+          <p class="text-sm font-bold text-ink">28 days, no card</p>
+        </div>
       </div>
     </div>
 
     <!-- Dashboard Mockup -->
-    <div class="reveal reveal-delay-5 mt-16 md:mt-20 dashboard-mockup relative">
-      <div class="bg-white rounded-2xl shadow-[0_25px_80px_-20px_rgba(0,0,0,0.15)] border border-black/[0.06] overflow-hidden">
-        <!-- Mockup Top Bar -->
-        <div class="flex items-center gap-2 px-5 py-3.5 border-b border-black/[0.06] bg-paper-dark/50">
-          <div class="w-3 h-3 rounded-full bg-red-400/70"></div>
-          <div class="w-3 h-3 rounded-full bg-yellow-400/70"></div>
-          <div class="w-3 h-3 rounded-full bg-green-400/70"></div>
-          <span class="ml-3 text-xs text-ink/30 font-medium">app.industryforms.com</span>
-        </div>
-        <!-- Mockup Content -->
-        <div class="flex min-h-[400px] md:min-h-[480px]">
-          <!-- Sidebar -->
-          <div class="hidden md:flex flex-col w-56 border-r border-black/[0.06] bg-paper-dark/30 p-3 gap-0.5 flex-shrink-0">
-            <div class="bg-brand text-white text-xs font-semibold px-3 py-2.5 rounded-lg flex items-center gap-2.5 mb-2">
-              <i data-lucide="layout-dashboard" class="w-4 h-4"></i>Dashboard
+    <div class="reveal reveal-d5 mt-20 md:mt-24 mockup-wrap relative max-w-5xl">
+      <!-- Glow -->
+      <div class="absolute -inset-8 bg-gradient-to-br from-brand/[0.08] via-transparent to-teal/[0.08] rounded-[40px] blur-3xl -z-10"></div>
+      <!-- Window -->
+      <div class="bg-white rounded-3xl shadow-glass-lg border border-black/[0.05] overflow-hidden">
+        <!-- Title bar -->
+        <div class="flex items-center gap-2 px-5 py-3.5 border-b border-black/[0.05] bg-paper-dark/40">
+          <div class="w-3 h-3 rounded-full bg-red-400/80 hover:bg-red-500 transition-colors cursor-default"></div>
+          <div class="w-3 h-3 rounded-full bg-yellow-400/80 hover:bg-yellow-500 transition-colors cursor-default"></div>
+          <div class="w-3 h-3 rounded-full bg-green-400/80 hover:bg-green-500 transition-colors cursor-default"></div>
+          <div class="flex-1 mx-4">
+            <div class="bg-black/[0.05] rounded-lg h-6 flex items-center px-3 max-w-xs">
+              <i data-lucide="lock" class="w-2.5 h-2.5 text-ink/30 mr-1.5"></i>
+              <span class="text-[11px] text-ink/35 font-medium">app.industryforms.app</span>
             </div>
-            <p class="text-[9px] font-bold tracking-widest text-ink/30 uppercase px-3 pt-3 pb-1">Customers & Jobs</p>
-            <div class="text-xs text-ink/60 px-3 py-2 rounded-md hover:bg-black/[0.03] flex items-center gap-2.5"><i data-lucide="folder-kanban" class="w-3.5 h-3.5"></i>Projects</div>
-            <div class="text-xs text-ink/60 px-3 py-2 rounded-md hover:bg-black/[0.03] flex items-center gap-2.5"><i data-lucide="message-circle" class="w-3.5 h-3.5"></i>Enquiries</div>
-            <div class="text-xs text-ink/60 px-3 py-2 rounded-md hover:bg-black/[0.03] flex items-center gap-2.5"><i data-lucide="users" class="w-3.5 h-3.5"></i>Customers</div>
-            <p class="text-[9px] font-bold tracking-widest text-ink/30 uppercase px-3 pt-4 pb-1">Field Work</p>
-            <div class="text-xs text-ink/60 px-3 py-2 rounded-md hover:bg-black/[0.03] flex items-center gap-2.5"><i data-lucide="map-pin" class="w-3.5 h-3.5"></i>Job Map</div>
-            <div class="text-xs text-ink/60 px-3 py-2 rounded-md hover:bg-black/[0.03] flex items-center gap-2.5"><i data-lucide="calendar" class="w-3.5 h-3.5"></i>Schedule</div>
-            <div class="text-xs text-ink/60 px-3 py-2 rounded-md hover:bg-black/[0.03] flex items-center gap-2.5"><i data-lucide="clock" class="w-3.5 h-3.5"></i>Time Logs</div>
-            <div class="bg-teal/10 text-teal text-xs font-semibold px-3 py-2 rounded-lg flex items-center gap-2.5"><i data-lucide="car" class="w-3.5 h-3.5"></i>Vehicle Logbook</div>
-            <p class="text-[9px] font-bold tracking-widest text-ink/30 uppercase px-3 pt-4 pb-1">Finance</p>
-            <div class="text-xs text-ink/60 px-3 py-2 rounded-md hover:bg-black/[0.03] flex items-center gap-2.5"><i data-lucide="receipt" class="w-3.5 h-3.5"></i>Invoices</div>
-            <div class="text-xs text-ink/60 px-3 py-2 rounded-md hover:bg-black/[0.03] flex items-center gap-2.5"><i data-lucide="file-text" class="w-3.5 h-3.5"></i>Forms</div>
-            <div class="bg-grape/10 text-grape text-xs font-semibold px-3 py-2 rounded-lg flex items-center gap-2.5"><i data-lucide="bar-chart-3" class="w-3.5 h-3.5"></i>Reports</div>
           </div>
-          <!-- Main Content Area -->
-          <div class="flex-1 p-6 md:p-8">
+        </div>
+        <!-- App shell -->
+        <div class="flex min-h-[420px] md:min-h-[500px]">
+          <!-- Sidebar -->
+          <div class="hidden md:flex flex-col w-52 border-r border-black/[0.05] bg-paper-dark/25 p-3 gap-0.5 flex-shrink-0">
+            <div class="bg-brand text-white text-xs font-semibold px-3 py-2.5 rounded-xl flex items-center gap-2.5 mb-3 shadow-brand/30 shadow-md">
+              <i data-lucide="layout-dashboard" class="w-3.5 h-3.5"></i>Dashboard
+            </div>
+            <p class="text-[9px] font-bold tracking-widest text-ink/30 uppercase px-3 pt-2 pb-1.5">Customers & Jobs</p>
+            <div class="text-[11px] text-ink/55 px-3 py-2 rounded-lg hover:bg-black/[0.04] flex items-center gap-2.5 cursor-default transition-colors"><i data-lucide="folder-kanban" class="w-3.5 h-3.5 opacity-60"></i>Projects</div>
+            <div class="text-[11px] text-ink/55 px-3 py-2 rounded-lg hover:bg-black/[0.04] flex items-center gap-2.5 cursor-default transition-colors"><i data-lucide="message-circle" class="w-3.5 h-3.5 opacity-60"></i>Enquiries</div>
+            <div class="text-[11px] text-ink/55 px-3 py-2 rounded-lg hover:bg-black/[0.04] flex items-center gap-2.5 cursor-default transition-colors"><i data-lucide="users" class="w-3.5 h-3.5 opacity-60"></i>Customers</div>
+            <p class="text-[9px] font-bold tracking-widest text-ink/30 uppercase px-3 pt-3 pb-1.5">Field Work</p>
+            <div class="text-[11px] text-ink/55 px-3 py-2 rounded-lg hover:bg-black/[0.04] flex items-center gap-2.5 cursor-default transition-colors"><i data-lucide="map-pin" class="w-3.5 h-3.5 opacity-60"></i>Job Map</div>
+            <div class="text-[11px] text-ink/55 px-3 py-2 rounded-lg hover:bg-black/[0.04] flex items-center gap-2.5 cursor-default transition-colors"><i data-lucide="calendar" class="w-3.5 h-3.5 opacity-60"></i>Schedule</div>
+            <div class="text-[11px] text-ink/55 px-3 py-2 rounded-lg hover:bg-black/[0.04] flex items-center gap-2.5 cursor-default transition-colors"><i data-lucide="clock" class="w-3.5 h-3.5 opacity-60"></i>Time Logs</div>
+            <div class="bg-teal/[0.09] text-teal text-[11px] font-semibold px-3 py-2 rounded-lg flex items-center gap-2.5 cursor-default"><i data-lucide="car" class="w-3.5 h-3.5"></i>Vehicle Logbook</div>
+            <p class="text-[9px] font-bold tracking-widest text-ink/30 uppercase px-3 pt-3 pb-1.5">Finance</p>
+            <div class="text-[11px] text-ink/55 px-3 py-2 rounded-lg hover:bg-black/[0.04] flex items-center gap-2.5 cursor-default transition-colors"><i data-lucide="receipt" class="w-3.5 h-3.5 opacity-60"></i>Invoices</div>
+            <div class="text-[11px] text-ink/55 px-3 py-2 rounded-lg hover:bg-black/[0.04] flex items-center gap-2.5 cursor-default transition-colors"><i data-lucide="file-text" class="w-3.5 h-3.5 opacity-60"></i>Forms</div>
+            <div class="bg-grape/[0.09] text-grape text-[11px] font-semibold px-3 py-2 rounded-lg flex items-center gap-2.5 cursor-default"><i data-lucide="bar-chart-3" class="w-3.5 h-3.5"></i>Reports</div>
+          </div>
+          <!-- Main panel -->
+          <div class="flex-1 p-6 md:p-8 bg-paper/20">
             <div class="flex items-center justify-between mb-6">
               <div>
-                <p class="text-xs text-ink/40 font-medium">Good morning,</p>
-                <p class="text-lg font-display font-bold text-ink">James Plumbing</p>
+                <p class="text-[11px] text-ink/35 font-medium">Good morning,</p>
+                <p class="text-xl font-display font-bold text-ink">James Plumbing</p>
               </div>
               <div class="flex gap-2">
-                <div class="w-8 h-8 rounded-lg bg-black/[0.04] flex items-center justify-center"><i data-lucide="bell" class="w-4 h-4 text-ink/40"></i></div>
-                <div class="w-8 h-8 rounded-lg bg-brand/10 flex items-center justify-center text-brand text-xs font-bold">J</div>
-              </div>
-            </div>
-            <!-- Stat Cards -->
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-              <div class="bg-paper-dark/60 rounded-xl p-4 border border-black/[0.04]">
-                <p class="text-[10px] text-ink/40 font-medium uppercase tracking-wider">Active Jobs</p>
-                <p class="text-2xl font-display font-bold text-ink mt-1">12</p>
-                <p class="text-[10px] text-teal font-medium mt-1">+3 this week</p>
-              </div>
-              <div class="bg-paper-dark/60 rounded-xl p-4 border border-black/[0.04]">
-                <p class="text-[10px] text-ink/40 font-medium uppercase tracking-wider">Pending Invoices</p>
-                <p class="text-2xl font-display font-bold text-ink mt-1">£8.4k</p>
-                <p class="text-[10px] text-brand font-medium mt-1">4 to send</p>
-              </div>
-              <div class="bg-paper-dark/60 rounded-xl p-4 border border-black/[0.04] hidden md:block">
-                <p class="text-[10px] text-ink/40 font-medium uppercase tracking-wider">This Week</p>
-                <p class="text-2xl font-display font-bold text-ink mt-1">38h</p>
-                <p class="text-[10px] text-ink/40 font-medium mt-1">logged</p>
-              </div>
-              <div class="bg-paper-dark/60 rounded-xl p-4 border border-black/[0.04] hidden md:block">
-                <p class="text-[10px] text-ink/40 font-medium uppercase tracking-wider">Enquiries</p>
-                <p class="text-2xl font-display font-bold text-grape mt-1">7</p>
-                <p class="text-[10px] text-grape font-medium mt-1">2 urgent</p>
-              </div>
-            </div>
-            <!-- Mini Schedule -->
-            <div class="bg-paper-dark/60 rounded-xl p-4 border border-black/[0.04]">
-              <p class="text-xs font-semibold text-ink mb-3">Today's Schedule</p>
-              <div class="space-y-2">
-                <div class="flex items-center gap-3 p-2.5 rounded-lg bg-brand/[0.06] border border-brand/10">
-                  <div class="w-1 h-8 rounded-full bg-brand"></div>
-                  <div class="flex-1">
-                    <p class="text-xs font-semibold text-ink">Boiler Repair — Mrs. Thompson</p>
-                    <p class="text-[10px] text-ink/40">9:00 AM · 14 Oak Lane</p>
-                  </div>
-                  <i data-lucide="navigation" class="w-3.5 h-3.5 text-brand"></i>
+                <div class="w-8 h-8 rounded-xl bg-white/80 border border-black/[0.05] flex items-center justify-center shadow-glass cursor-default">
+                  <i data-lucide="bell" class="w-3.5 h-3.5 text-ink/35"></i>
                 </div>
-                <div class="flex items-center gap-3 p-2.5 rounded-lg hover:bg-black/[0.02] transition-colors">
-                  <div class="w-1 h-8 rounded-full bg-teal"></div>
-                  <div class="flex-1">
-                    <p class="text-xs font-semibold text-ink">Bathroom Fit — New Build #4</p>
-                    <p class="text-[10px] text-ink/40">1:00 PM · 22 Mill Street</p>
+                <div class="w-8 h-8 rounded-xl bg-brand/10 flex items-center justify-center text-brand text-xs font-bold cursor-default">J</div>
+              </div>
+            </div>
+            <!-- Stat cards -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+              <div class="bg-white rounded-2xl p-4 border border-black/[0.04] shadow-glass">
+                <p class="text-[10px] text-ink/35 font-semibold uppercase tracking-wider">Active Jobs</p>
+                <p class="text-2xl font-display font-bold text-ink mt-1.5 tabular-nums">12</p>
+                <p class="text-[10px] text-teal font-semibold mt-1">↑ 3 this week</p>
+              </div>
+              <div class="bg-white rounded-2xl p-4 border border-black/[0.04] shadow-glass">
+                <p class="text-[10px] text-ink/35 font-semibold uppercase tracking-wider">Pending</p>
+                <p class="text-2xl font-display font-bold text-ink mt-1.5 tabular-nums">$8.4k</p>
+                <p class="text-[10px] text-brand font-semibold mt-1">Stripe ready</p>
+              </div>
+              <div class="bg-white rounded-2xl p-4 border border-black/[0.04] shadow-glass hidden md:block">
+                <p class="text-[10px] text-ink/35 font-semibold uppercase tracking-wider">This Week</p>
+                <p class="text-2xl font-display font-bold text-ink mt-1.5 tabular-nums">38h</p>
+                <p class="text-[10px] text-ink/35 font-medium mt-1">logged</p>
+              </div>
+              <div class="bg-white rounded-2xl p-4 border border-black/[0.04] shadow-glass hidden md:block">
+                <p class="text-[10px] text-ink/35 font-semibold uppercase tracking-wider">Enquiries</p>
+                <p class="text-2xl font-display font-bold text-grape mt-1.5 tabular-nums">7</p>
+                <p class="text-[10px] text-grape/70 font-semibold mt-1">2 AI quotes</p>
+              </div>
+            </div>
+            <!-- Schedule -->
+            <div class="bg-white rounded-2xl p-5 border border-black/[0.04] shadow-glass">
+              <div class="flex items-center justify-between mb-4">
+                <p class="text-xs font-bold text-ink">Today's Schedule</p>
+                <span class="text-[10px] text-ink/35 font-medium">Fri, 27 Jun</span>
+              </div>
+              <div class="space-y-2.5">
+                <div class="flex items-center gap-3 p-3 rounded-xl bg-brand/[0.06] border border-brand/[0.12]">
+                  <div class="w-1 h-9 rounded-full bg-brand flex-shrink-0"></div>
+                  <div class="flex-1 min-w-0">
+                    <p class="text-[11px] font-bold text-ink">Heat pump service - Thompson</p>
+                    <p class="text-[10px] text-ink/40 mt-0.5">9:00 AM · Auckland · signature required</p>
                   </div>
-                  <i data-lucide="navigation" class="w-3.5 h-3.5 text-ink/20"></i>
+                  <div class="flex items-center gap-1.5">
+                    <span class="text-[9px] font-semibold bg-brand/10 text-brand px-2 py-0.5 rounded-full">In Progress</span>
+                    <i data-lucide="navigation" class="w-3.5 h-3.5 text-brand flex-shrink-0"></i>
+                  </div>
+                </div>
+                <div class="flex items-center gap-3 p-3 rounded-xl hover:bg-black/[0.02] transition-colors">
+                  <div class="w-1 h-9 rounded-full bg-teal flex-shrink-0"></div>
+                  <div class="flex-1 min-w-0">
+                    <p class="text-[11px] font-bold text-ink">Switchboard upgrade - Unit 4</p>
+                    <p class="text-[10px] text-ink/40 mt-0.5">1:00 PM · offline forms synced</p>
+                  </div>
+                  <i data-lucide="navigation" class="w-3.5 h-3.5 text-ink/20 flex-shrink-0"></i>
                 </div>
               </div>
             </div>
           </div>
         </div>
       </div>
-      <!-- Decorative glow behind mockup -->
-      <div class="absolute -inset-4 bg-gradient-to-br from-brand/[0.06] via-transparent to-teal/[0.06] rounded-3xl -z-10 blur-2xl"></div>
     </div>
   </div>
 </section>
 
-<!-- ===== PAIN POINTS ===== -->
-<section class="relative z-10 py-20 px-6">
+<!-- ============================================================ PAIN POINTS -->
+<section class="relative z-10 py-20 md:py-28 px-6">
   <div class="max-w-7xl mx-auto">
     <div class="reveal text-center max-w-2xl mx-auto mb-16">
-      <div class="line-accent mx-auto mb-6"></div>
-      <h2 class="font-display font-bold text-3xl md:text-5xl tracking-tight text-ink mb-5">Every hour on admin is an hour not earning.</h2>
-      <p class="text-ink/50 text-lg">Spreadsheets, lost invoices, forgotten follow-ups — the hidden costs that eat into your margins every single week.</p>
+      <div class="accent-line mx-auto mb-6"></div>
+      <h2 class="font-display font-bold text-3xl md:text-[2.75rem] leading-tight tracking-tight text-ink mb-5">Every hour on admin is<br>an hour not earning.</h2>
+      <p class="text-ink/50 text-lg leading-relaxed">Spreadsheets, lost invoices, forgotten follow-ups: the hidden costs eating into your margins every single week.</p>
     </div>
-    <div class="grid md:grid-cols-3 gap-6">
-      <div class="reveal reveal-delay-1 feature-card bg-white/60 backdrop-blur-sm rounded-2xl p-8 border border-black/[0.05]">
-        <div class="w-12 h-12 rounded-xl bg-red-50 flex items-center justify-center mb-5">
-          <i data-lucide="file-x" class="w-6 h-6 text-red-400"></i>
+    <div class="grid md:grid-cols-3 gap-5">
+      <div class="reveal reveal-d1 card-lift bg-white/70 backdrop-blur-sm rounded-2xl p-8 border border-black/[0.05] shadow-glass">
+        <div class="w-11 h-11 rounded-2xl bg-red-50 flex items-center justify-center mb-5 icon-ring text-red-400">
+          <i data-lucide="file-x" class="w-5 h-5"></i>
         </div>
         <h3 class="font-display font-bold text-lg text-ink mb-2">Lost Paperwork</h3>
         <p class="text-sm text-ink/50 leading-relaxed">Job sheets left in the van. Invoices that never get sent. Compliance forms that expire. Sound familiar?</p>
       </div>
-      <div class="reveal reveal-delay-2 feature-card bg-white/60 backdrop-blur-sm rounded-2xl p-8 border border-black/[0.05]">
-        <div class="w-12 h-12 rounded-xl bg-amber-50 flex items-center justify-center mb-5">
-          <i data-lucide="clock" class="w-6 h-6 text-amber-500"></i>
+      <div class="reveal reveal-d2 card-lift bg-white/70 backdrop-blur-sm rounded-2xl p-8 border border-black/[0.05] shadow-glass">
+        <div class="w-11 h-11 rounded-2xl bg-amber-50 flex items-center justify-center mb-5 icon-ring text-amber-500">
+          <i data-lucide="clock" class="w-5 h-5"></i>
         </div>
         <h3 class="font-display font-bold text-lg text-ink mb-2">12 Hours a Week on Admin</h3>
         <p class="text-sm text-ink/50 leading-relaxed">The average tradesperson loses 12+ hours weekly to scheduling, invoicing, and chasing payments manually.</p>
       </div>
-      <div class="reveal reveal-delay-3 feature-card bg-white/60 backdrop-blur-sm rounded-2xl p-8 border border-black/[0.05]">
-        <div class="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center mb-5">
-          <i data-lucide="puzzle" class="w-6 h-6 text-blue-400"></i>
+      <div class="reveal reveal-d3 card-lift bg-white/70 backdrop-blur-sm rounded-2xl p-8 border border-black/[0.05] shadow-glass">
+        <div class="w-11 h-11 rounded-2xl bg-blue-50 flex items-center justify-center mb-5 icon-ring text-blue-400">
+          <i data-lucide="puzzle" class="w-5 h-5"></i>
         </div>
         <h3 class="font-display font-bold text-lg text-ink mb-2">Too Many Tools</h3>
-        <p class="text-sm text-ink/50 leading-relaxed">Calendar here, invoices there, maps somewhere else. Nothing talks to anything and you pay for 5 apps.</p>
+        <p class="text-sm text-ink/50 leading-relaxed">Calendar here, invoices there, maps somewhere else. Nothing talks to anything, and you pay for 5 apps.</p>
       </div>
     </div>
   </div>
 </section>
 
-<!-- ===== FEATURES ===== -->
-<section id="features" class="relative z-10 py-24 px-6">
+<!-- ============================================================ FEATURES -->
+<section id="workflow-pillars" class="relative z-10 py-24 md:py-32 px-6 bg-paper-dark/45">
+  <div class="max-w-7xl mx-auto">
+    <div class="reveal text-center max-w-3xl mx-auto mb-14">
+      <span class="tag-orange text-[11px] font-bold tracking-widest uppercase px-4 py-1.5 rounded-full">From Lead To Paid</span>
+      <h2 class="font-display font-bold text-3xl md:text-[2.75rem] leading-tight tracking-tight text-ink mt-6 mb-5">Stop running the business from texts, notebooks, and memory.</h2>
+      <p class="text-ink/50 text-lg leading-relaxed">Industry Forms is the single place for quotes, jobs, forms, bookings, invoices, and the next action that keeps cash moving.</p>
+    </div>
+
+    <div class="reveal grid lg:grid-cols-[0.85fr_1.15fr] gap-6 items-start">
+      <div class="bg-white/75 border border-black/[0.05] shadow-glass rounded-3xl p-4">
+        <button class="pillar-tab is-active w-full text-left rounded-2xl px-5 py-4 transition-all duration-200" data-pillar="winning">
+          <span class="text-[10px] font-bold tracking-widest uppercase opacity-60">Winning Work</span>
+          <span class="block font-display font-bold mt-1">Web leads into scheduled jobs</span>
+        </button>
+        <button class="pillar-tab w-full text-left rounded-2xl px-5 py-4 transition-all duration-200 text-ink/65 hover:bg-black/[0.04]" data-pillar="tools">
+          <span class="text-[10px] font-bold tracking-widest uppercase opacity-60">On The Tools</span>
+          <span class="block font-display font-bold mt-1">Offline crews, photos, time, evidence</span>
+        </button>
+        <button class="pillar-tab w-full text-left rounded-2xl px-5 py-4 transition-all duration-200 text-ink/65 hover:bg-black/[0.04]" data-pillar="paid">
+          <span class="text-[10px] font-bold tracking-widest uppercase opacity-60">Getting Paid</span>
+          <span class="block font-display font-bold mt-1">Invoice from the driveway</span>
+        </button>
+        <button class="pillar-tab w-full text-left rounded-2xl px-5 py-4 transition-all duration-200 text-ink/65 hover:bg-black/[0.04]" data-pillar="health">
+          <span class="text-[10px] font-bold tracking-widest uppercase opacity-60">Business Health</span>
+          <span class="block font-display font-bold mt-1">Reminders, reporting, AI to-dos</span>
+        </button>
+      </div>
+
+      <div class="bg-ink rounded-3xl p-6 md:p-9 text-white shadow-ink relative overflow-hidden">
+        <div class="absolute right-0 top-0 w-72 h-72 bg-brand/[0.08] rounded-full blur-3xl translate-x-1/3 -translate-y-1/3"></div>
+        <div class="absolute left-0 bottom-0 w-72 h-72 bg-teal/[0.08] rounded-full blur-3xl -translate-x-1/3 translate-y-1/3"></div>
+
+        <article class="pillar-panel is-active relative" data-panel="winning">
+          <div class="flex items-center gap-3 mb-5">
+            <div class="w-12 h-12 rounded-2xl bg-brand/20 flex items-center justify-center"><i data-lucide="mouse-pointer-click" class="w-5 h-5 text-brand"></i></div>
+            <div>
+              <p class="text-[10px] font-bold tracking-widest uppercase text-white/35">Winning Work</p>
+              <h3 class="font-display font-bold text-2xl">Capture the lead while the customer is ready.</h3>
+            </div>
+          </div>
+          <p class="text-white/45 leading-relaxed mb-6">Publish an instant website with a booking widget, draft quotes from your real price list with AI, let customers accept online, and trigger reminders when service intervals are due.</p>
+          <div class="grid sm:grid-cols-2 gap-3">
+            <div class="rounded-2xl bg-white/[0.05] border border-white/[0.07] p-4"><p class="text-sm font-semibold">Custom booking websites</p><p class="text-xs text-white/35 mt-1">Lead source tracking included.</p></div>
+            <div class="rounded-2xl bg-white/[0.05] border border-white/[0.07] p-4"><p class="text-sm font-semibold">Online quote acceptance</p><p class="text-xs text-white/35 mt-1">Deposits without customer accounts.</p></div>
+          </div>
+        </article>
+
+        <article class="pillar-panel relative" data-panel="tools">
+          <div class="flex items-center gap-3 mb-5">
+            <div class="w-12 h-12 rounded-2xl bg-teal/20 flex items-center justify-center"><i data-lucide="smartphone" class="w-5 h-5 text-teal-light"></i></div>
+            <div>
+              <p class="text-[10px] font-bold tracking-widest uppercase text-white/35">On The Tools</p>
+              <h3 class="font-display font-bold text-2xl">Keep crews moving, even without signal.</h3>
+            </div>
+          </div>
+          <p class="text-white/45 leading-relaxed mb-6">Offline-first mobile access captures notes, photos, timesheets, signatures, and on-site evidence. GPS travel logs run during scheduled trading hours so mileage is not rebuilt from memory.</p>
+          <div class="grid sm:grid-cols-2 gap-3">
+            <div class="rounded-2xl bg-white/[0.05] border border-white/[0.07] p-4"><p class="text-sm font-semibold">Multiple visits per job</p><p class="text-xs text-white/35 mt-1">No duplicated job data.</p></div>
+            <div class="rounded-2xl bg-white/[0.05] border border-white/[0.07] p-4"><p class="text-sm font-semibold">Custom job statuses</p><p class="text-xs text-white/35 mt-1">Match the way your crew works.</p></div>
+          </div>
+        </article>
+
+        <article class="pillar-panel relative" data-panel="paid">
+          <div class="flex items-center gap-3 mb-5">
+            <div class="w-12 h-12 rounded-2xl bg-grape/20 flex items-center justify-center"><i data-lucide="credit-card" class="w-5 h-5 text-grape-light"></i></div>
+            <div>
+              <p class="text-[10px] font-bold tracking-widest uppercase text-white/35">Getting Paid</p>
+              <h3 class="font-display font-bold text-2xl">Stop forgetting to bill the small jobs.</h3>
+            </div>
+          </div>
+          <p class="text-white/45 leading-relaxed mb-6">Convert completed job time and materials into invoices, send them before leaving site, accept Stripe payments online, and use progress invoicing on larger projects.</p>
+          <div class="grid sm:grid-cols-2 gap-3">
+            <div class="rounded-2xl bg-white/[0.05] border border-white/[0.07] p-4"><p class="text-sm font-semibold">True inventory tracking</p><p class="text-xs text-white/35 mt-1">Real stock levels, not guesswork.</p></div>
+            <div class="rounded-2xl bg-white/[0.05] border border-white/[0.07] p-4"><p class="text-sm font-semibold">Review requests after payment</p><p class="text-xs text-white/35 mt-1">Ask when customers are happiest.</p></div>
+          </div>
+        </article>
+
+        <article class="pillar-panel relative" data-panel="health">
+          <div class="flex items-center gap-3 mb-5">
+            <div class="w-12 h-12 rounded-2xl bg-brand/20 flex items-center justify-center"><i data-lucide="activity" class="w-5 h-5 text-brand"></i></div>
+            <div>
+              <p class="text-[10px] font-bold tracking-widest uppercase text-white/35">Business Health</p>
+              <h3 class="font-display font-bold text-2xl">Wake up to what needs doing next.</h3>
+            </div>
+          </div>
+          <p class="text-white/45 leading-relaxed mb-6">A unified inbox keeps SMS and web enquiries together. Daily 6 AM AI to-dos highlight stale jobs, overdue invoices, and quote follow-ups, while gross-profit reporting replaces guesswork.</p>
+          <div class="grid sm:grid-cols-2 gap-3">
+            <div class="rounded-2xl bg-white/[0.05] border border-white/[0.07] p-4"><p class="text-sm font-semibold">Two-way Google Calendar</p><p class="text-xs text-white/35 mt-1">Personal and business schedules aligned.</p></div>
+            <div class="rounded-2xl bg-white/[0.05] border border-white/[0.07] p-4"><p class="text-sm font-semibold">Role-based staff access</p><p class="text-xs text-white/35 mt-1">Owners keep financial control.</p></div>
+          </div>
+        </article>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="features" class="relative z-10 py-24 md:py-32 px-6">
   <div class="max-w-7xl mx-auto">
     <div class="reveal text-center max-w-2xl mx-auto mb-20">
-      <span class="tag-teal text-xs font-semibold tracking-wider uppercase px-3 py-1.5 rounded-full">Everything in One Place</span>
-      <h2 class="font-display font-bold text-3xl md:text-5xl tracking-tight text-ink mt-6 mb-5">One system. Every job, end to end.</h2>
-      <p class="text-ink/50 text-lg">From first enquiry to final invoice — automated, tracked, and under control.</p>
+      <span class="tag-teal text-[11px] font-bold tracking-widest uppercase px-4 py-1.5 rounded-full">Everything in One Place</span>
+      <h2 class="font-display font-bold text-3xl md:text-[2.75rem] leading-tight tracking-tight text-ink mt-6 mb-5">A cleaner workflow for every job,<br>end to end.</h2>
+      <p class="text-ink/50 text-lg">Know exactly what is booked, what is quoted, what is owed, and what needs doing next.</p>
     </div>
 
-    <!-- Feature Grid - Bento Style -->
+    <!-- Bento grid -->
     <div class="grid md:grid-cols-3 gap-5">
-      <!-- Large Card: Job Management -->
-      <div class="reveal reveal-delay-1 md:col-span-2 feature-card bg-white/70 backdrop-blur-sm rounded-2xl p-8 md:p-10 border border-black/[0.05] relative overflow-hidden">
-        <div class="absolute top-0 right-0 w-64 h-64 bg-brand/[0.04] rounded-full blur-3xl -translate-y-1/2 translate-x-1/3"></div>
-        <span class="tag-orange text-[10px] font-bold tracking-widest uppercase px-3 py-1 rounded-full">Customers & Jobs</span>
-        <h3 class="font-display font-bold text-xl md:text-2xl text-ink mt-5 mb-3">Manage every job from enquiry to completion</h3>
-        <p class="text-sm text-ink/50 leading-relaxed max-w-md mb-6">Track enquiries, convert to projects, assign teams, and monitor progress — all from a single dashboard. Never lose track of a lead again.</p>
+      <!-- Large: Job Management -->
+      <div class="reveal reveal-d1 md:col-span-2 card-lift bg-white/75 backdrop-blur-sm rounded-3xl p-8 md:p-10 border border-black/[0.05] shadow-glass relative overflow-hidden group">
+        <div class="absolute top-0 right-0 w-72 h-72 bg-brand/[0.05] rounded-full blur-3xl -translate-y-1/3 translate-x-1/4 group-hover:bg-brand/[0.08] transition-colors duration-700"></div>
+        <span class="tag-orange text-[10px] font-bold tracking-widest uppercase px-3.5 py-1.5 rounded-full">Bookings & Quotes</span>
+        <h3 class="font-display font-bold text-xl md:text-2xl text-ink mt-6 mb-3">Turn web leads into priced, scheduled work</h3>
+        <p class="text-sm text-ink/50 leading-relaxed max-w-md mb-7">Capture enquiries through your booking website, draft quote line items from your real price list, take online acceptance, and follow up automatically.</p>
         <div class="flex flex-wrap gap-2">
-          <span class="text-[11px] font-medium bg-black/[0.04] text-ink/60 px-3 py-1.5 rounded-full">Projects</span>
-          <span class="text-[11px] font-medium bg-black/[0.04] text-ink/60 px-3 py-1.5 rounded-full">Enquiries</span>
-          <span class="text-[11px] font-medium bg-black/[0.04] text-ink/60 px-3 py-1.5 rounded-full">Customers</span>
-          <span class="text-[11px] font-medium bg-black/[0.04] text-ink/60 px-3 py-1.5 rounded-full">To-Do Lists</span>
+          <span class="text-[11px] font-semibold bg-black/[0.05] text-ink/55 px-3.5 py-1.5 rounded-full">Instant Website</span>
+          <span class="text-[11px] font-semibold bg-black/[0.05] text-ink/55 px-3.5 py-1.5 rounded-full">Booking Widget</span>
+          <span class="text-[11px] font-semibold bg-black/[0.05] text-ink/55 px-3.5 py-1.5 rounded-full">AI Quotes</span>
+          <span class="text-[11px] font-semibold bg-black/[0.05] text-ink/55 px-3.5 py-1.5 rounded-full">Deposits</span>
         </div>
       </div>
 
-      <!-- Tall Card: Scheduling -->
-      <div class="reveal reveal-delay-2 md:row-span-2 feature-card bg-ink rounded-2xl p-8 md:p-10 border border-white/[0.06] relative overflow-hidden flex flex-col justify-between">
-        <div>
-          <span class="text-[10px] font-bold tracking-widest uppercase px-3 py-1 rounded-full bg-teal/20 text-teal-light">Field Work</span>
-          <h3 class="font-display font-bold text-xl md:text-2xl text-white mt-5 mb-3">Smart scheduling & navigation</h3>
-          <p class="text-sm text-white/40 leading-relaxed mb-8">See every job on a map, optimise your routes, log time on-site, and track vehicle mileage automatically.</p>
+      <!-- Tall: Scheduling -->
+      <div class="reveal reveal-d2 md:row-span-2 card-lift bg-ink rounded-3xl p-8 md:p-10 border border-white/[0.05] shadow-ink relative overflow-hidden flex flex-col">
+        <div class="absolute bottom-0 right-0 w-64 h-64 bg-teal/[0.1] rounded-full blur-3xl translate-x-1/3 translate-y-1/3"></div>
+        <div class="absolute top-0 left-0 w-48 h-48 bg-brand/[0.06] rounded-full blur-3xl -translate-x-1/3 -translate-y-1/3"></div>
+        <div class="relative">
+          <span class="text-[10px] font-bold tracking-widest uppercase px-3.5 py-1.5 rounded-full bg-teal/20 text-teal-light">Field Work</span>
+          <h3 class="font-display font-bold text-xl md:text-2xl text-white mt-6 mb-3">Offline mobile work that still syncs cleanly</h3>
+          <p class="text-sm text-white/40 leading-relaxed mb-8">Crews can log notes, photos, time, signatures, and travel while on-site. Scheduled visits, GPS logs, and custom statuses keep the office current.</p>
         </div>
-        <div class="space-y-3">
-          <div class="flex items-center gap-3 text-white/60 text-sm">
-            <i data-lucide="map-pin" class="w-4 h-4 text-teal-light"></i>Job Map
+        <div class="space-y-3 mt-auto relative">
+          <div class="flex items-center gap-3 text-white/60 text-sm py-2 px-3 rounded-xl hover:bg-white/[0.04] transition-colors">
+            <div class="w-7 h-7 rounded-lg bg-teal/20 flex items-center justify-center flex-shrink-0">
+              <i data-lucide="map-pin" class="w-3.5 h-3.5 text-teal-light"></i>
+            </div>
+            Job Map & Visits
           </div>
-          <div class="flex items-center gap-3 text-white/60 text-sm">
-            <i data-lucide="calendar" class="w-4 h-4 text-teal-light"></i>Schedule
+          <div class="flex items-center gap-3 text-white/60 text-sm py-2 px-3 rounded-xl hover:bg-white/[0.04] transition-colors">
+            <div class="w-7 h-7 rounded-lg bg-teal/20 flex items-center justify-center flex-shrink-0">
+              <i data-lucide="calendar" class="w-3.5 h-3.5 text-teal-light"></i>
+            </div>
+            Offline Notes
           </div>
-          <div class="flex items-center gap-3 text-white/60 text-sm">
-            <i data-lucide="clock" class="w-4 h-4 text-teal-light"></i>Time Logs
+          <div class="flex items-center gap-3 text-white/60 text-sm py-2 px-3 rounded-xl hover:bg-white/[0.04] transition-colors">
+            <div class="w-7 h-7 rounded-lg bg-teal/20 flex items-center justify-center flex-shrink-0">
+              <i data-lucide="clock" class="w-3.5 h-3.5 text-teal-light"></i>
+            </div>
+            Signatures
           </div>
-          <div class="flex items-center gap-3 text-white/60 text-sm">
-            <i data-lucide="car" class="w-4 h-4 text-teal-light"></i>Vehicle Logbook
+          <div class="flex items-center gap-3 text-white/60 text-sm py-2 px-3 rounded-xl hover:bg-white/[0.04] transition-colors">
+            <div class="w-7 h-7 rounded-lg bg-teal/20 flex items-center justify-center flex-shrink-0">
+              <i data-lucide="car" class="w-3.5 h-3.5 text-teal-light"></i>
+            </div>
+            GPS Logbook
           </div>
         </div>
-        <div class="absolute bottom-0 right-0 w-48 h-48 bg-teal/[0.08] rounded-full blur-3xl translate-x-1/3 translate-y-1/3"></div>
       </div>
 
-      <!-- Card: Invoicing -->
-      <div class="reveal reveal-delay-3 feature-card bg-white/70 backdrop-blur-sm rounded-2xl p-8 border border-black/[0.05]">
-        <span class="tag-grape text-[10px] font-bold tracking-widest uppercase px-3 py-1 rounded-full">Finance</span>
-        <h3 class="font-display font-bold text-lg text-ink mt-4 mb-2">Invoices that send themselves</h3>
-        <p class="text-sm text-ink/50 leading-relaxed mb-5">Auto-generate invoices from completed jobs. Set reminders. Get paid faster with built-in tracking.</p>
+      <!-- Row 2: three small cards -->
+      <div class="reveal reveal-d3 card-lift bg-white/75 backdrop-blur-sm rounded-3xl p-7 border border-black/[0.05] shadow-glass">
+        <span class="tag-grape text-[10px] font-bold tracking-widest uppercase px-3.5 py-1.5 rounded-full">Invoicing & Cash Flow</span>
+        <h3 class="font-display font-bold text-lg text-ink mt-5 mb-2">Invoice from the driveway</h3>
+        <p class="text-sm text-ink/50 leading-relaxed mb-5">Pull timesheets and materials straight into invoices, take Stripe payments, and use progress invoices for larger projects.</p>
         <div class="flex items-center gap-2">
-          <div class="w-8 h-8 rounded-lg bg-grape/10 flex items-center justify-center"><i data-lucide="receipt" class="w-4 h-4 text-grape"></i></div>
-          <div class="w-8 h-8 rounded-lg bg-grape/10 flex items-center justify-center"><i data-lucide="credit-card" class="w-4 h-4 text-grape"></i></div>
-          <div class="w-8 h-8 rounded-lg bg-grape/10 flex items-center justify-center"><i data-lucide="trending-up" class="w-4 h-4 text-grape"></i></div>
+          <div class="w-8 h-8 rounded-xl bg-grape/[0.09] flex items-center justify-center"><i data-lucide="receipt" class="w-4 h-4 text-grape"></i></div>
+          <div class="w-8 h-8 rounded-xl bg-grape/[0.09] flex items-center justify-center"><i data-lucide="credit-card" class="w-4 h-4 text-grape"></i></div>
+          <div class="w-8 h-8 rounded-xl bg-grape/[0.09] flex items-center justify-center"><i data-lucide="trending-up" class="w-4 h-4 text-grape"></i></div>
         </div>
       </div>
 
-      <!-- Card: Suppliers -->
-      <div class="reveal reveal-delay-4 feature-card bg-white/70 backdrop-blur-sm rounded-2xl p-8 border border-black/[0.05]">
-        <span class="tag-ink text-[10px] font-bold tracking-widest uppercase px-3 py-1 rounded-full">Suppliers & Orders</span>
-        <h3 class="font-display font-bold text-lg text-ink mt-4 mb-2">Purchase orders & bills</h3>
-        <p class="text-sm text-ink/50 leading-relaxed mb-5">Manage suppliers, raise POs, track bills, and keep your price lists organised in one place.</p>
-        <div class="flex items-center gap-2">
-          <div class="w-8 h-8 rounded-lg bg-black/[0.05] flex items-center justify-center"><i data-lucide="package" class="w-4 h-4 text-ink/50"></i></div>
-          <div class="w-8 h-8 rounded-lg bg-black/[0.05] flex items-center justify-center"><i data-lucide="file-text" class="w-4 h-4 text-ink/50"></i></div>
-          <div class="w-8 h-8 rounded-lg bg-black/[0.05] flex items-center justify-center"><i data-lucide="list" class="w-4 h-4 text-ink/50"></i></div>
-        </div>
-      </div>
-
-      <!-- Card: Forms -->
-      <div class="reveal reveal-delay-5 feature-card bg-white/70 backdrop-blur-sm rounded-2xl p-8 border border-black/[0.05]">
-        <span class="tag-orange text-[10px] font-bold tracking-widest uppercase px-3 py-1 rounded-full">Compliance</span>
-        <h3 class="font-display font-bold text-lg text-ink mt-4 mb-2">Digital forms & compliance</h3>
-        <p class="text-sm text-ink/50 leading-relaxed mb-5">Complete gas certs, electrical checks, PS3's and risk assessments on-site. Signed, stored, and sent instantly.</p>
-        <div class="flex items-center gap-2">
-          <div class="w-8 h-8 rounded-lg bg-brand/10 flex items-center justify-center"><i data-lucide="clipboard-check" class="w-4 h-4 text-brand"></i></div>
-          <div class="w-8 h-8 rounded-lg bg-brand/10 flex items-center justify-center"><i data-lucide="pen-tool" class="w-4 h-4 text-brand"></i></div>
-          <div class="w-8 h-8 rounded-lg bg-brand/10 flex items-center justify-center"><i data-lucide="shield-check" class="w-4 h-4 text-brand"></i></div>
+      <!-- 4th card spans extra on desktop -->
+      <div class="reveal reveal-d3 card-lift bg-white/75 backdrop-blur-sm rounded-3xl p-7 border border-black/[0.05] shadow-glass md:col-span-2">
+        <div class="flex flex-col md:flex-row md:items-start gap-6">
+          <div class="flex-1">
+            <span class="tag-neutral text-[10px] font-bold tracking-widest uppercase px-3.5 py-1.5 rounded-full">Stock & Profit</span>
+            <h3 class="font-display font-bold text-lg text-ink mt-5 mb-2">Know your real costs</h3>
+            <p class="text-sm text-ink/50 leading-relaxed">Manage suppliers, raise POs, track bills, watch inventory levels, and see gross profit instead of hoping the margin worked.</p>
+          </div>
+          <div class="flex-1">
+            <span class="tag-orange text-[10px] font-bold tracking-widest uppercase px-3.5 py-1.5 rounded-full">Forms & Compliance</span>
+            <h3 class="font-display font-bold text-lg text-ink mt-5 mb-2">Do the proof before completion</h3>
+            <p class="text-sm text-ink/50 leading-relaxed">Capture required forms, signatures, and evidence photos before the job can be marked complete.</p>
+          </div>
         </div>
       </div>
     </div>
   </div>
 </section>
 
-<!-- ===== HOW IT WORKS ===== -->
-<section id="how-it-works" class="relative z-10 py-24 px-6 bg-ink overflow-hidden">
-  <div class="absolute inset-0 pointer-events-none">
-    <div class="float-1 absolute top-[10%] left-[10%] w-96 h-96 bg-brand/[0.06] rounded-full blur-[100px]"></div>
-    <div class="float-2 absolute bottom-[10%] right-[10%] w-80 h-80 bg-teal/[0.06] rounded-full blur-[100px]"></div>
+<!-- ============================================================ HOW IT WORKS -->
+<section id="how-it-works" class="relative z-10 py-24 md:py-32 px-6 bg-ink overflow-hidden">
+  <div class="absolute inset-0 pointer-events-none" aria-hidden="true">
+    <div class="orb-1 absolute top-[8%] left-[8%] w-[480px] h-[480px] bg-brand/[0.07] rounded-full blur-[100px]"></div>
+    <div class="orb-2 absolute bottom-[8%] right-[8%] w-[420px] h-[420px] bg-teal/[0.07] rounded-full blur-[100px]"></div>
   </div>
   <div class="max-w-7xl mx-auto relative">
     <div class="reveal text-center max-w-2xl mx-auto mb-20">
-      <span class="text-[10px] font-bold tracking-widest uppercase px-3 py-1.5 rounded-full bg-white/10 text-white/60">How It Works</span>
-      <h2 class="font-display font-bold text-3xl md:text-5xl tracking-tight text-white mt-6 mb-5">Three steps to reclaiming your time.</h2>
+      <span class="text-[10px] font-bold tracking-widest uppercase px-4 py-1.5 rounded-full bg-white/[0.08] text-white/55">How It Works</span>
+      <h2 class="font-display font-bold text-3xl md:text-[2.75rem] leading-tight tracking-tight text-white mt-6 mb-5">From first enquiry to final payment.</h2>
+      <p class="text-white/40 text-lg">One repeatable flow replaces the nightly paper chase.</p>
     </div>
-    <div class="grid md:grid-cols-3 gap-8 md:gap-12">
-      <div class="reveal reveal-delay-1 text-center md:text-left">
-        <div class="w-14 h-14 rounded-2xl bg-brand/20 flex items-center justify-center mb-6 mx-auto md:mx-0">
-          <span class="font-display font-bold text-xl text-brand">01</span>
+
+    <div class="grid md:grid-cols-3 gap-8 md:gap-10 relative mb-20">
+      <!-- Step connector lines (desktop) -->
+      <div class="hidden md:block absolute top-[28px] left-[calc(33.33%+14px)] right-[calc(33.33%+14px)] h-px bg-gradient-to-r from-brand/30 to-teal/30"></div>
+
+      <div class="reveal reveal-d1 text-center md:text-left">
+        <div class="w-14 h-14 rounded-2xl bg-brand/20 border border-brand/20 flex items-center justify-center mb-6 mx-auto md:mx-0">
+          <i data-lucide="upload" class="w-6 h-6 text-brand"></i>
         </div>
-        <h3 class="font-display font-bold text-lg text-white mb-3">Import or start fresh</h3>
-        <p class="text-sm text-white/40 leading-relaxed">Bring your existing customer list or start from scratch. Set up in under 10 minutes — no IT degree required.</p>
+        <h3 class="font-display font-bold text-lg text-white mb-3">Capture the enquiry</h3>
+        <p class="text-sm text-white/40 leading-relaxed">Website bookings, SMS, and web enquiries land in one inbox so leads do not disappear between phones and notebooks.</p>
       </div>
-      <div class="reveal reveal-delay-2 text-center md:text-left">
-        <div class="w-14 h-14 rounded-2xl bg-teal/20 flex items-center justify-center mb-6 mx-auto md:mx-0">
-          <span class="font-display font-bold text-xl text-teal-light">02</span>
+      <div class="reveal reveal-d2 text-center md:text-left">
+        <div class="w-14 h-14 rounded-2xl bg-teal/20 border border-teal/20 flex items-center justify-center mb-6 mx-auto md:mx-0">
+          <i data-lucide="zap" class="w-6 h-6 text-teal-light"></i>
         </div>
-        <h3 class="font-display font-bold text-lg text-white mb-3">Jobs flow automatically</h3>
-        <p class="text-sm text-white/40 leading-relaxed">Enquiries become jobs. Jobs trigger schedules. Completed work generates invoices. All hands-free once configured.</p>
+        <h3 class="font-display font-bold text-lg text-white mb-3">Quote, schedule, and complete</h3>
+        <p class="text-sm text-white/40 leading-relaxed">AI quote drafts, multiple job visits, offline mobile forms, and customer signatures keep the work moving cleanly.</p>
       </div>
-      <div class="reveal reveal-delay-3 text-center md:text-left">
-        <div class="w-14 h-14 rounded-2xl bg-grape/20 flex items-center justify-center mb-6 mx-auto md:mx-0">
-          <span class="font-display font-bold text-xl text-grape-light">03</span>
+      <div class="reveal reveal-d3 text-center md:text-left">
+        <div class="w-14 h-14 rounded-2xl bg-grape/20 border border-grape/20 flex items-center justify-center mb-6 mx-auto md:mx-0">
+          <i data-lucide="trending-up" class="w-6 h-6 text-grape-light"></i>
         </div>
-        <h3 class="font-display font-bold text-lg text-white mb-3">Watch your business grow</h3>
-        <p class="text-sm text-white/40 leading-relaxed">Real-time reports show revenue, job margins, time efficiency, and more. Make decisions with data, not guesswork.</p>
+        <h3 class="font-display font-bold text-lg text-white mb-3">Invoice and follow up</h3>
+        <p class="text-sm text-white/40 leading-relaxed">Turn time and materials into invoices, take online payment, request reviews, and wake up to AI to-dos for anything overdue.</p>
       </div>
     </div>
-    <!-- Automation Visual -->
-    <div class="reveal mt-20 bg-white/[0.04] backdrop-blur-sm rounded-2xl border border-white/[0.06] p-6 md:p-10 overflow-hidden">
+
+    <!-- Automation pipeline -->
+    <div class="reveal bg-white/[0.04] backdrop-blur-sm rounded-3xl border border-white/[0.07] p-6 md:p-10 overflow-hidden">
       <div class="flex items-center gap-3 mb-8">
-        <div class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></div>
-        <span class="text-xs text-white/40 font-medium">Automation Pipeline — Live</span>
+        <div class="flex gap-1">
+          <div class="pulse-dot w-2 h-2 rounded-full bg-green-400"></div>
+          <div class="pulse-dot w-2 h-2 rounded-full bg-green-400"></div>
+          <div class="pulse-dot w-2 h-2 rounded-full bg-green-400"></div>
+        </div>
+        <span class="text-[11px] text-white/35 font-medium tracking-wide">Automation Pipeline — Live</span>
       </div>
-      <div class="flex items-center gap-3 md:gap-4 overflow-x-auto pb-4">
-        <div class="flex-shrink-0 bg-brand/20 border border-brand/30 rounded-xl px-5 py-3 text-center">
-          <i data-lucide="message-circle" class="w-5 h-5 text-brand mx-auto mb-1"></i>
-          <p class="text-[10px] text-white/60 font-medium">New Enquiry</p>
+      <div class="flex items-center gap-2 md:gap-3 overflow-x-auto pb-2" style="scrollbar-width: none;">
+        <div class="flex-shrink-0 bg-brand/15 border border-brand/25 rounded-2xl px-4 py-3.5 text-center min-w-[88px]">
+          <i data-lucide="message-circle" class="w-5 h-5 text-brand mx-auto mb-1.5"></i>
+          <p class="text-[10px] text-white/55 font-semibold">New Enquiry</p>
         </div>
-        <i data-lucide="chevron-right" class="w-4 h-4 text-white/20 flex-shrink-0"></i>
-        <div class="flex-shrink-0 bg-orange-500/20 border border-orange-500/30 rounded-xl px-5 py-3 text-center">
-          <i data-lucide="check-circle" class="w-5 h-5 text-orange-400 mx-auto mb-1"></i>
-          <p class="text-[10px] text-white/60 font-medium">Auto-Quote Sent</p>
+        <i data-lucide="chevron-right" class="w-4 h-4 text-white/15 flex-shrink-0"></i>
+        <div class="flex-shrink-0 bg-orange-500/15 border border-orange-500/25 rounded-2xl px-4 py-3.5 text-center min-w-[88px]">
+          <i data-lucide="check-circle" class="w-5 h-5 text-orange-400 mx-auto mb-1.5"></i>
+          <p class="text-[10px] text-white/55 font-semibold">AI Quote</p>
         </div>
-        <i data-lucide="chevron-right" class="w-4 h-4 text-white/20 flex-shrink-0"></i>
-        <div class="flex-shrink-0 bg-yellow-500/20 border border-yellow-500/30 rounded-xl px-5 py-3 text-center">
-          <i data-lucide="folder-kanban" class="w-5 h-5 text-yellow-400 mx-auto mb-1"></i>
-          <p class="text-[10px] text-white/60 font-medium">Job Created</p>
+        <i data-lucide="chevron-right" class="w-4 h-4 text-white/15 flex-shrink-0"></i>
+        <div class="flex-shrink-0 bg-yellow-500/15 border border-yellow-500/25 rounded-2xl px-4 py-3.5 text-center min-w-[88px]">
+          <i data-lucide="folder-kanban" class="w-5 h-5 text-yellow-400 mx-auto mb-1.5"></i>
+          <p class="text-[10px] text-white/55 font-semibold">Job + Visits</p>
         </div>
-        <i data-lucide="chevron-right" class="w-4 h-4 text-white/20 flex-shrink-0"></i>
-        <div class="flex-shrink-0 bg-teal/20 border border-teal/30 rounded-xl px-5 py-3 text-center">
-          <i data-lucide="calendar" class="w-5 h-5 text-teal-light mx-auto mb-1"></i>
-          <p class="text-[10px] text-white/60 font-medium">Scheduled</p>
+        <i data-lucide="chevron-right" class="w-4 h-4 text-white/15 flex-shrink-0"></i>
+        <div class="flex-shrink-0 bg-teal/15 border border-teal/25 rounded-2xl px-4 py-3.5 text-center min-w-[88px]">
+          <i data-lucide="calendar" class="w-5 h-5 text-teal-light mx-auto mb-1.5"></i>
+          <p class="text-[10px] text-white/55 font-semibold">Scheduled</p>
         </div>
-        <i data-lucide="chevron-right" class="w-4 h-4 text-white/20 flex-shrink-0"></i>
-        <div class="flex-shrink-0 bg-blue-500/20 border border-blue-500/30 rounded-xl px-5 py-3 text-center">
-          <i data-lucide="clipboard-check" class="w-5 h-5 text-blue-400 mx-auto mb-1"></i>
-          <p class="text-[10px] text-white/60 font-medium">Forms Completed</p>
+        <i data-lucide="chevron-right" class="w-4 h-4 text-white/15 flex-shrink-0"></i>
+        <div class="flex-shrink-0 bg-blue-500/15 border border-blue-500/25 rounded-2xl px-4 py-3.5 text-center min-w-[88px]">
+          <i data-lucide="clipboard-check" class="w-5 h-5 text-blue-400 mx-auto mb-1.5"></i>
+          <p class="text-[10px] text-white/55 font-semibold">Proof Captured</p>
         </div>
-        <i data-lucide="chevron-right" class="w-4 h-4 text-white/20 flex-shrink-0"></i>
-        <div class="flex-shrink-0 bg-grape/20 border border-grape/30 rounded-xl px-5 py-3 text-center">
-          <i data-lucide="receipt" class="w-5 h-5 text-grape-light mx-auto mb-1"></i>
-          <p class="text-[10px] text-white/60 font-medium">Invoice Generated</p>
+        <i data-lucide="chevron-right" class="w-4 h-4 text-white/15 flex-shrink-0"></i>
+        <div class="flex-shrink-0 bg-grape/15 border border-grape/25 rounded-2xl px-4 py-3.5 text-center min-w-[88px]">
+          <i data-lucide="receipt" class="w-5 h-5 text-grape-light mx-auto mb-1.5"></i>
+          <p class="text-[10px] text-white/55 font-semibold">Stripe Invoice</p>
         </div>
-        <i data-lucide="chevron-right" class="w-4 h-4 text-white/20 flex-shrink-0"></i>
-        <div class="flex-shrink-0 bg-green-500/20 border border-green-500/30 rounded-xl px-5 py-3 text-center">
-          <i data-lucide="banknote" class="w-5 h-5 text-green-400 mx-auto mb-1"></i>
-          <p class="text-[10px] text-white/60 font-medium">Payment Tracked</p>
+        <i data-lucide="chevron-right" class="w-4 h-4 text-white/15 flex-shrink-0"></i>
+        <div class="flex-shrink-0 bg-green-500/15 border border-green-500/25 rounded-2xl px-4 py-3.5 text-center min-w-[88px]">
+          <i data-lucide="banknote" class="w-5 h-5 text-green-400 mx-auto mb-1.5"></i>
+          <p class="text-[10px] text-white/55 font-semibold">Paid ✓</p>
         </div>
       </div>
     </div>
   </div>
 </section>
 
-<!-- ===== TESTIMONIALS ===== -->
-<section class="relative z-10 py-24 px-6">
+<!-- ============================================================ TESTIMONIALS -->
+<section class="relative z-10 py-24 md:py-32 px-6">
   <div class="max-w-7xl mx-auto">
     <div class="reveal text-center max-w-2xl mx-auto mb-16">
-      <div class="line-accent mx-auto mb-6"></div>
-      <h2 class="font-display font-bold text-3xl md:text-5xl tracking-tight text-ink">Trusted by trades who were tired of the chaos.</h2>
+      <div class="accent-line mx-auto mb-6"></div>
+      <h2 class="font-display font-bold text-3xl md:text-[2.75rem] leading-tight tracking-tight text-ink">Trusted by trades who were<br>tired of the chaos.</h2>
     </div>
-    <div class="grid md:grid-cols-3 gap-6">
-      <div class="reveal reveal-delay-1 feature-card bg-white/60 backdrop-blur-sm rounded-2xl p-8 border border-black/[0.05]">
-        <div class="flex items-center gap-1 mb-4">
+    <div class="grid md:grid-cols-3 gap-5">
+      <div class="reveal reveal-d1 card-lift bg-white/70 backdrop-blur-sm rounded-3xl p-8 border border-black/[0.05] shadow-glass relative overflow-hidden">
+        <div class="quote-mark">"</div>
+        <div class="flex items-center gap-0.5 mb-5">
           <i data-lucide="star" class="w-4 h-4 fill-brand text-brand"></i>
           <i data-lucide="star" class="w-4 h-4 fill-brand text-brand"></i>
           <i data-lucide="star" class="w-4 h-4 fill-brand text-brand"></i>
           <i data-lucide="star" class="w-4 h-4 fill-brand text-brand"></i>
           <i data-lucide="star" class="w-4 h-4 fill-brand text-brand"></i>
         </div>
-        <p class="text-sm text-ink/60 leading-relaxed mb-6">"I used to spend my Sunday evenings doing invoices. Now they just... happen. Genuinely life-changing for a one-man band like me."</p>
+        <p class="text-sm text-ink/60 leading-relaxed mb-7">"I used to spend my Sunday evenings doing invoices. Now they just... happen. Genuinely life-changing for a one-man band like me."</p>
         <div class="flex items-center gap-3">
-          <div class="w-10 h-10 rounded-full bg-teal text-white text-sm font-bold flex items-center justify-center">D</div>
+          <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-teal to-teal-light text-white text-sm font-bold flex items-center justify-center">D</div>
           <div>
-            <p class="text-sm font-semibold text-ink">Dave Morrison</p>
+            <p class="text-sm font-bold text-ink">Dave Morrison</p>
             <p class="text-xs text-ink/40">Morrison Electrical</p>
           </div>
         </div>
       </div>
-      <div class="reveal reveal-delay-2 feature-card bg-white/60 backdrop-blur-sm rounded-2xl p-8 border border-black/[0.05]">
-        <div class="flex items-center gap-1 mb-4">
+      <div class="reveal reveal-d2 card-lift bg-white/70 backdrop-blur-sm rounded-3xl p-8 border border-black/[0.05] shadow-glass relative overflow-hidden">
+        <div class="quote-mark">"</div>
+        <div class="flex items-center gap-0.5 mb-5">
           <i data-lucide="star" class="w-4 h-4 fill-brand text-brand"></i>
           <i data-lucide="star" class="w-4 h-4 fill-brand text-brand"></i>
           <i data-lucide="star" class="w-4 h-4 fill-brand text-brand"></i>
           <i data-lucide="star" class="w-4 h-4 fill-brand text-brand"></i>
           <i data-lucide="star" class="w-4 h-4 fill-brand text-brand"></i>
         </div>
-        <p class="text-sm text-ink/60 leading-relaxed mb-6">"We cancelled three separate subscriptions and replaced them all with Industry Forms. The job map alone saves us 2 hours a day in travel."</p>
+        <p class="text-sm text-ink/60 leading-relaxed mb-7">"We cancelled three separate subscriptions and replaced them all with Industry Forms. The job map alone saves us 2 hours a day in travel."</p>
         <div class="flex items-center gap-3">
-          <div class="w-10 h-10 rounded-full bg-brand text-white text-sm font-bold flex items-center justify-center">S</div>
+          <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-brand to-brand-light text-white text-sm font-bold flex items-center justify-center">S</div>
           <div>
-            <p class="text-sm font-semibold text-ink">Sarah Chen</p>
+            <p class="text-sm font-bold text-ink">Sarah Chen</p>
             <p class="text-xs text-ink/40">Chen Plumbing & Heating</p>
           </div>
         </div>
       </div>
-      <div class="reveal reveal-delay-3 feature-card bg-white/60 backdrop-blur-sm rounded-2xl p-8 border border-black/[0.05]">
-        <div class="flex items-center gap-1 mb-4">
+      <div class="reveal reveal-d3 card-lift bg-white/70 backdrop-blur-sm rounded-3xl p-8 border border-black/[0.05] shadow-glass relative overflow-hidden">
+        <div class="quote-mark">"</div>
+        <div class="flex items-center gap-0.5 mb-5">
           <i data-lucide="star" class="w-4 h-4 fill-brand text-brand"></i>
           <i data-lucide="star" class="w-4 h-4 fill-brand text-brand"></i>
           <i data-lucide="star" class="w-4 h-4 fill-brand text-brand"></i>
           <i data-lucide="star" class="w-4 h-4 fill-brand text-brand"></i>
           <i data-lucide="star" class="w-4 h-4 fill-brand text-brand"></i>
         </div>
-        <p class="text-sm text-ink/60 leading-relaxed mb-6">"The compliance forms are brilliant. Gas safe certs done on my phone at the job, signed by the customer, and stored forever. No more filing cabinets."</p>
+        <p class="text-sm text-ink/60 leading-relaxed mb-7">"The compliance forms are brilliant. Gas safe certs done on my phone, signed by the customer, and stored forever. No more filing cabinets."</p>
         <div class="flex items-center gap-3">
-          <div class="w-10 h-10 rounded-full bg-grape text-white text-sm font-bold flex items-center justify-center">J</div>
+          <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-grape to-grape-light text-white text-sm font-bold flex items-center justify-center">J</div>
           <div>
-            <p class="text-sm font-semibold text-ink">Jake Williams</p>
+            <p class="text-sm font-bold text-ink">Jake Williams</p>
             <p class="text-xs text-ink/40">JW Gas Services</p>
           </div>
         </div>
@@ -591,369 +906,360 @@ tailwind.config = {
   </div>
 </section>
 
-<!-- ===== PRICING ===== -->
-<section id="pricing" class="relative z-10 py-24 px-6 bg-paper-dark/40">
+<!-- ============================================================ PRICING -->
+<section id="pricing" class="relative z-10 py-24 md:py-32 px-6">
   <div class="max-w-7xl mx-auto">
     <div class="reveal text-center max-w-2xl mx-auto mb-16">
-      <span class="tag-orange text-xs font-semibold tracking-wider uppercase px-3 py-1.5 rounded-full">Simple Pricing</span>
-      <h2 class="font-display font-bold text-3xl md:text-5xl tracking-tight text-ink mt-6 mb-5">Less than a cup of coffee a day.</h2>
-      <p class="text-ink/50 text-lg">No hidden fees. No contracts. Cancel anytime.</p>
+      <span class="tag-orange text-[11px] font-bold tracking-widest uppercase px-4 py-1.5 rounded-full">Transparent Pricing</span>
+      <h2 class="font-display font-bold text-3xl md:text-[2.75rem] leading-tight tracking-tight text-ink mt-6 mb-4">No pressure calls. No surprise fees.</h2>
+      <p class="text-ink/50 text-lg">Start free, know the monthly cost, and upgrade only when the workflow is earning its keep.</p>
     </div>
-    <div class="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto">
+    <div class="grid md:grid-cols-3 gap-5 max-w-5xl mx-auto">
       <!-- Solo -->
-      <div class="reveal reveal-delay-1 feature-card bg-white/70 backdrop-blur-sm rounded-2xl p-8 md:p-10 border border-black/[0.05]">
-        <p class="text-xs font-bold tracking-widest uppercase text-ink/40 mb-4">Solo</p>
-        <div class="flex items-baseline gap-1 mb-2">
-          <span class="font-display font-bold text-4xl text-ink">$49</span>
-          <span class="text-sm text-ink/40">/month</span>
+      <div class="reveal reveal-d1 card-lift bg-white/75 backdrop-blur-sm rounded-3xl p-8 md:p-10 border border-black/[0.05] shadow-glass">
+        <p class="text-[10px] font-bold tracking-widest uppercase text-ink/35 mb-5">Solo</p>
+        <div class="flex items-baseline gap-2 mb-1">
+          <span class="text-lg text-ink/30 line-through">$49</span>
+          <span class="font-display font-bold text-5xl text-ink tracking-tight">$29</span>
+          <span class="text-sm text-ink/40 mb-1">/month</span>
         </div>
-        <p class="text-sm text-ink/50 mb-8">Perfect for one-person trades.</p>
+        <p class="text-[11px] font-semibold text-teal mb-6">Intro price, locked in for 2026</p>
+        <p class="text-sm text-ink/45 mb-8">Perfect for one-person trades.</p>
         <ul class="space-y-3 mb-8">
-          <li class="flex items-center gap-3 text-sm text-ink/70"><i data-lucide="check" class="w-4 h-4 text-teal flex-shrink-0"></i>Unlimited jobs & customers</li>
-          <li class="flex items-center gap-3 text-sm text-ink/70"><i data-lucide="check" class="w-4 h-4 text-teal flex-shrink-0"></i>Invoicing & payment tracking</li>
-          <li class="flex items-center gap-3 text-sm text-ink/70"><i data-lucide="check" class="w-4 h-4 text-teal flex-shrink-0"></i>Job map & scheduling</li>
-          <li class="flex items-center gap-3 text-sm text-ink/70"><i data-lucide="check" class="w-4 h-4 text-teal flex-shrink-0"></i>Digital forms & compliance</li>
-          <li class="flex items-center gap-3 text-sm text-ink/70"><i data-lucide="check" class="w-4 h-4 text-teal flex-shrink-0"></i>Vehicle logbook</li>
+          <li class="flex items-center gap-3 text-sm text-ink/65"><div class="w-5 h-5 rounded-full bg-teal/10 flex items-center justify-center flex-shrink-0"><i data-lucide="check" class="w-3 h-3 text-teal"></i></div>Unlimited jobs & customers</li>
+          <li class="flex items-center gap-3 text-sm text-ink/65"><div class="w-5 h-5 rounded-full bg-teal/10 flex items-center justify-center flex-shrink-0"><i data-lucide="check" class="w-3 h-3 text-teal"></i></div>Invoicing & payment tracking</li>
+          <li class="flex items-center gap-3 text-sm text-ink/65"><div class="w-5 h-5 rounded-full bg-teal/10 flex items-center justify-center flex-shrink-0"><i data-lucide="check" class="w-3 h-3 text-teal"></i></div>Job map & scheduling</li>
+          <li class="flex items-center gap-3 text-sm text-ink/65"><div class="w-5 h-5 rounded-full bg-teal/10 flex items-center justify-center flex-shrink-0"><i data-lucide="check" class="w-3 h-3 text-teal"></i></div>Digital forms & compliance</li>
+          <li class="flex items-center gap-3 text-sm text-ink/65"><div class="w-5 h-5 rounded-full bg-teal/10 flex items-center justify-center flex-shrink-0"><i data-lucide="check" class="w-3 h-3 text-teal"></i></div>Vehicle logbook</li>
         </ul>
-        <a href="#cta" class="block text-center bg-ink text-white font-semibold text-sm px-6 py-3.5 rounded-full hover:bg-ink-light transition-colors">Start Free Trial</a>
+        <a href="https://app.industryforms.app/signup" class="btn-ink block text-center bg-ink text-white font-semibold text-sm px-6 py-3.5 rounded-full hover:bg-ink-light">Start Free Trial</a>
       </div>
       <!-- Team -->
-      <div class="reveal reveal-delay-2 feature-card bg-ink rounded-2xl p-8 md:p-10 border border-white/[0.06] relative overflow-hidden">
-        <div class="absolute top-4 right-4 bg-brand text-white text-[10px] font-bold tracking-wider uppercase px-3 py-1 rounded-full">Popular</div>
-        <p class="text-xs font-bold tracking-widest uppercase text-white/40 mb-4">Team</p>
-        <div class="flex items-baseline gap-1 mb-2">
-          <span class="font-display font-bold text-4xl text-white">£79</span>
-          <span class="text-sm text-white/40">/month</span>
+      <div class="reveal reveal-d2 pricing-popular rounded-3xl p-8 md:p-10 relative overflow-hidden">
+        <div class="absolute top-5 right-5 bg-brand text-white text-[10px] font-bold tracking-wider uppercase px-3.5 py-1.5 rounded-full shadow-brand">Most Popular</div>
+        <p class="text-[10px] font-bold tracking-widest uppercase text-white/35 mb-5">Team</p>
+        <div class="flex items-baseline gap-2 mb-1">
+          <span class="text-lg text-white/30 line-through">$79</span>
+          <span class="font-display font-bold text-5xl text-white tracking-tight">$49</span>
+          <span class="text-sm text-white/40 mb-1">/month</span>
         </div>
+        <p class="text-[11px] font-semibold text-brand mb-6">Intro price, locked in for 2026</p>
         <p class="text-sm text-white/40 mb-8">For growing businesses with a crew.</p>
         <ul class="space-y-3 mb-8">
-          <li class="flex items-center gap-3 text-sm text-white/70"><i data-lucide="check" class="w-4 h-4 text-brand flex-shrink-0"></i>Everything in Solo</li>
-          <li class="flex items-center gap-3 text-sm text-white/70"><i data-lucide="check" class="w-4 h-4 text-brand flex-shrink-0"></i>Up to 10 team members</li>
-          <li class="flex items-center gap-3 text-sm text-white/70"><i data-lucide="check" class="w-4 h-4 text-brand flex-shrink-0"></i>Purchase orders & supplier mgmt</li>
-          <li class="flex items-center gap-3 text-sm text-white/70"><i data-lucide="check" class="w-4 h-4 text-brand flex-shrink-0"></i>Advanced reports & analytics</li>
-          <li class="flex items-center gap-3 text-sm text-white/70"><i data-lucide="check" class="w-4 h-4 text-brand flex-shrink-0"></i>Client-facing website builder</li>
-          <li class="flex items-center gap-3 text-sm text-white/70"><i data-lucide="check" class="w-4 h-4 text-brand flex-shrink-0"></i>Priority support</li>
+          <li class="flex items-center gap-3 text-sm text-white/65"><div class="w-5 h-5 rounded-full bg-brand/20 flex items-center justify-center flex-shrink-0"><i data-lucide="check" class="w-3 h-3 text-brand"></i></div>Everything in Solo</li>
+          <li class="flex items-center gap-3 text-sm text-white/65"><div class="w-5 h-5 rounded-full bg-brand/20 flex items-center justify-center flex-shrink-0"><i data-lucide="check" class="w-3 h-3 text-brand"></i></div>Up to 10 team members</li>
+          <li class="flex items-center gap-3 text-sm text-white/65"><div class="w-5 h-5 rounded-full bg-brand/20 flex items-center justify-center flex-shrink-0"><i data-lucide="check" class="w-3 h-3 text-brand"></i></div>Purchase orders & supplier mgmt</li>
+          <li class="flex items-center gap-3 text-sm text-white/65"><div class="w-5 h-5 rounded-full bg-brand/20 flex items-center justify-center flex-shrink-0"><i data-lucide="check" class="w-3 h-3 text-brand"></i></div>Advanced reports & analytics</li>
+          <li class="flex items-center gap-3 text-sm text-white/65"><div class="w-5 h-5 rounded-full bg-brand/20 flex items-center justify-center flex-shrink-0"><i data-lucide="check" class="w-3 h-3 text-brand"></i></div>Client-facing website builder</li>
+          <li class="flex items-center gap-3 text-sm text-white/65"><div class="w-5 h-5 rounded-full bg-brand/20 flex items-center justify-center flex-shrink-0"><i data-lucide="check" class="w-3 h-3 text-brand"></i></div>Priority support</li>
         </ul>
-        <a href="#cta" class="mag-btn block text-center bg-brand text-white font-semibold text-sm px-6 py-3.5 rounded-full">Start Free Trial</a>
+        <a href="https://app.industryforms.app/signup" class="btn-brand bg-brand block text-center text-white font-semibold text-sm px-6 py-3.5 rounded-full shadow-brand">Start Free Trial</a>
       </div>
-    </div>
-  </div>
-</section>
-
-<!-- ===== FINAL CTA ===== -->
-<section id="cta" class="relative z-10 py-28 md:py-36 px-6">
-  <div class="max-w-3xl mx-auto text-center">
-    <div class="reveal">
-      <h2 class="font-display font-bold text-3xl md:text-5xl lg:text-6xl tracking-tight text-ink mb-6">Stop losing hours.<br>Start gaining ground.</h2>
-      <p class="text-lg text-ink/50 mb-10 max-w-lg mx-auto">Join the many tradespeople who've already reclaimed their time. Free for 28 days — no credit card needed.</p>
-      <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
-        <div class="flex items-center bg-white/70 backdrop-blur-sm rounded-full border border-black/[0.08] p-1.5 w-full sm:w-auto">
-          <input type="email" placeholder="you@yourtrade.com" class="bg-transparent text-sm text-ink placeholder-ink/30 px-4 py-3 w-full sm:w-64 outline-none">
-          <button class="mag-btn bg-brand text-white font-semibold text-sm px-6 py-3 rounded-full whitespace-nowrap flex-shrink-0">Start Free Trial</button>
+      <!-- Pro -->
+      <div class="reveal reveal-d3 card-lift bg-white/75 backdrop-blur-sm rounded-3xl p-8 md:p-10 border border-black/[0.05] shadow-glass">
+        <p class="text-[10px] font-bold tracking-widest uppercase text-ink/35 mb-5">Pro</p>
+        <div class="flex items-baseline gap-2 mb-1">
+          <span class="text-lg text-ink/30 line-through">$149</span>
+          <span class="font-display font-bold text-5xl text-ink tracking-tight">$99</span>
+          <span class="text-sm text-ink/40 mb-1">/month</span>
         </div>
+        <p class="text-[11px] font-semibold text-teal mb-6">Intro price, locked in for 2026</p>
+        <p class="text-sm text-ink/45 mb-8">For multi-crew operations at scale.</p>
+        <ul class="space-y-3 mb-8">
+          <li class="flex items-center gap-3 text-sm text-ink/65"><div class="w-5 h-5 rounded-full bg-teal/10 flex items-center justify-center flex-shrink-0"><i data-lucide="check" class="w-3 h-3 text-teal"></i></div>Everything in Team</li>
+          <li class="flex items-center gap-3 text-sm text-ink/65"><div class="w-5 h-5 rounded-full bg-teal/10 flex items-center justify-center flex-shrink-0"><i data-lucide="check" class="w-3 h-3 text-teal"></i></div>Unlimited team members</li>
+          <li class="flex items-center gap-3 text-sm text-ink/65"><div class="w-5 h-5 rounded-full bg-teal/10 flex items-center justify-center flex-shrink-0"><i data-lucide="check" class="w-3 h-3 text-teal"></i></div>Multi-location & multi-brand</li>
+          <li class="flex items-center gap-3 text-sm text-ink/65"><div class="w-5 h-5 rounded-full bg-teal/10 flex items-center justify-center flex-shrink-0"><i data-lucide="check" class="w-3 h-3 text-teal"></i></div>Custom onboarding & training</li>
+          <li class="flex items-center gap-3 text-sm text-ink/65"><div class="w-5 h-5 rounded-full bg-teal/10 flex items-center justify-center flex-shrink-0"><i data-lucide="check" class="w-3 h-3 text-teal"></i></div>Dedicated account manager</li>
+        </ul>
+        <a href="https://app.industryforms.app/signup" class="btn-ink block text-center bg-ink text-white font-semibold text-sm px-6 py-3.5 rounded-full hover:bg-ink-light">Start Free Trial</a>
       </div>
-      <p class="text-xs text-ink/30 mt-4">Free 14-day trial · No credit card · Cancel anytime</p>
     </div>
   </div>
 </section>
 
-<!-- ===== FOOTER ===== -->
-<footer class="relative z-10 bg-ink border-t border-white/[0.06] pt-16 pb-32 px-6">
+<!-- ============================================================ FAQ -->
+<section id="faq" class="relative z-10 py-24 md:py-32 px-6 bg-paper-dark/40">
+  <div class="max-w-4xl mx-auto">
+    <div class="reveal text-center mb-14">
+      <span class="tag-teal text-[11px] font-bold tracking-widest uppercase px-4 py-1.5 rounded-full">Questions Tradies Ask</span>
+      <h2 class="font-display font-bold text-3xl md:text-[2.75rem] leading-tight tracking-tight text-ink mt-6 mb-5">Short answers before you start.</h2>
+      <p class="text-ink/50 text-lg">Built for people who want the facts, not a sales ambush.</p>
+    </div>
+
+    <div class="space-y-3">
+      <article class="faq-item is-open reveal bg-white/75 border border-black/[0.05] shadow-glass rounded-2xl overflow-hidden">
+        <button class="faq-trigger w-full flex items-center justify-between gap-4 text-left p-6">
+          <span class="font-display font-bold text-ink">What is Industry Forms?</span>
+          <i data-lucide="plus" class="faq-icon w-5 h-5 text-brand transition-transform"></i>
+        </button>
+        <div class="faq-panel px-6 pb-6 text-sm text-ink/55 leading-relaxed">
+          Industry Forms is job management software for NZ and AU tradies. It brings quotes, jobs, bookings, forms, schedules, timesheets, invoices, payments, reminders, messaging, and reporting into one workflow.
+        </div>
+      </article>
+      <article class="faq-item reveal bg-white/75 border border-black/[0.05] shadow-glass rounded-2xl overflow-hidden">
+        <button class="faq-trigger w-full flex items-center justify-between gap-4 text-left p-6">
+          <span class="font-display font-bold text-ink">Can customers accept quotes and pay online?</span>
+          <i data-lucide="plus" class="faq-icon w-5 h-5 text-brand transition-transform"></i>
+        </button>
+        <div class="faq-panel px-6 pb-6 text-sm text-ink/55 leading-relaxed">
+          Yes. Customers can accept quotes, pay deposits, and pay invoices online through secure links without creating an account.
+        </div>
+      </article>
+      <article class="faq-item reveal bg-white/75 border border-black/[0.05] shadow-glass rounded-2xl overflow-hidden">
+        <button class="faq-trigger w-full flex items-center justify-between gap-4 text-left p-6">
+          <span class="font-display font-bold text-ink">Does the mobile app work without cell service?</span>
+          <i data-lucide="plus" class="faq-icon w-5 h-5 text-brand transition-transform"></i>
+        </button>
+        <div class="faq-panel px-6 pb-6 text-sm text-ink/55 leading-relaxed">
+          Yes. Crews can capture notes, photos, time, and job evidence offline. Updates sync when the device gets signal again.
+        </div>
+      </article>
+      <article class="faq-item reveal bg-white/75 border border-black/[0.05] shadow-glass rounded-2xl overflow-hidden">
+        <button class="faq-trigger w-full flex items-center justify-between gap-4 text-left p-6">
+          <span class="font-display font-bold text-ink">What makes it different from generic trade software?</span>
+          <i data-lucide="plus" class="faq-icon w-5 h-5 text-brand transition-transform"></i>
+        </button>
+        <div class="faq-panel px-6 pb-6 text-sm text-ink/55 leading-relaxed">
+          Industry Forms is built around practical NZ and AU trade workflows: multiple visits per job, offline field capture, real inventory, Google Calendar sync, Stripe payments, AI quote drafting from your price list, and transparent pricing.
+        </div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ CTA -->
+<section id="cta" class="relative z-10 py-28 md:py-40 px-6 overflow-hidden">
+  <div class="cta-ring"></div>
+  <div class="max-w-2xl mx-auto text-center">
+    <div class="reveal">
+      <h2 class="font-display font-bold text-4xl md:text-[3.25rem] lg:text-[3.75rem] leading-[0.95] tracking-tight text-ink mb-6">
+        Get your evenings back.<br>
+        <span class="grad-text">Start the free trial.</span>
+      </h2>
+      <p class="text-lg text-ink/50 mb-10 max-w-md mx-auto leading-relaxed">Turn messy job admin into a clean, repeatable workflow. Free for 28 days, no credit card needed.</p>
+      <div class="flex flex-col sm:flex-row items-center justify-center gap-3 mb-5">
+        <form action="https://app.industryforms.app/signup" method="get" class="flex items-center bg-white/80 backdrop-blur-sm rounded-full border border-black/[0.07] shadow-glass p-1.5 w-full sm:w-auto">
+          <input type="email" name="email" placeholder="you@yourtrade.com" class="bg-transparent text-sm text-ink placeholder-ink/30 px-4 py-2.5 w-full sm:w-60 outline-none" autocomplete="email" aria-label="Work email">
+          <button type="submit" class="btn-brand bg-brand text-white font-semibold text-sm px-6 py-2.5 rounded-full whitespace-nowrap flex-shrink-0 shadow-brand">
+            Start Free Trial
+          </button>
+        </form>
+      </div>
+      <p class="text-xs text-ink/30">Free 28-day trial · No credit card · Cancel anytime</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ FOOTER -->
+<footer class="relative z-10 bg-ink border-t border-white/[0.05] pt-16 pb-32 px-6">
   <div class="max-w-7xl mx-auto">
     <div class="grid grid-cols-2 md:grid-cols-5 gap-8 mb-16">
-      <!-- Brand -->
       <div class="col-span-2 md:col-span-1">
-        <a href="#" class="flex items-center gap-2.5 mb-4">
-          <svg width="28" height="28" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect x="2" y="2" width="24" height="32" rx="4" fill="white" opacity="0.15"/>
-            <rect x="10" y="2" width="24" height="32" rx="4" fill="#E8722A"/>
-            <rect x="16" y="10" width="12" height="2" rx="1" fill="white" opacity="0.9"/>
-            <rect x="16" y="15" width="8" height="2" rx="1" fill="white" opacity="0.6"/>
-            <rect x="16" y="20" width="12" height="2" rx="1" fill="white" opacity="0.9"/>
-            <rect x="16" y="25" width="6" height="2" rx="1" fill="white" opacity="0.6"/>
-          </svg>
-          <span class="font-display font-bold text-sm text-white">Industry Forms</span>
+        <a href="#" class="flex items-center gap-2.5 mb-5">
+          <img src="Logo/Logo.png" alt="Industry Forms" class="h-16 w-auto brightness-0 invert opacity-70">
         </a>
         <p class="text-xs text-white/30 leading-relaxed">Intelligent job management for tradespeople and SMEs.</p>
       </div>
-      <!-- Product -->
       <div>
-        <p class="text-[10px] font-bold tracking-widest uppercase text-white/30 mb-4">Product</p>
-        <ul class="space-y-2.5">
-          <li><a href="#features" class="text-sm text-white/50 hover:text-white transition-colors">Features</a></li>
-          <li><a href="#pricing" class="text-sm text-white/50 hover:text-white transition-colors">Pricing</a></li>
-          <li><a href="#" class="text-sm text-white/50 hover:text-white transition-colors">Integrations</a></li>
-          <li><a href="#" class="text-sm text-white/50 hover:text-white transition-colors">Changelog</a></li>
+        <p class="text-[10px] font-bold tracking-widest uppercase text-white/25 mb-5">Product</p>
+        <ul class="space-y-3">
+          <li><a href="#features" class="text-sm text-white/45 hover:text-white transition-colors duration-150">Features</a></li>
+          <li><a href="#pricing" class="text-sm text-white/45 hover:text-white transition-colors duration-150">Pricing</a></li>
+          <li><a href="#" class="text-sm text-white/45 hover:text-white transition-colors duration-150">Integrations</a></li>
+          <li><a href="#" class="text-sm text-white/45 hover:text-white transition-colors duration-150">Changelog</a></li>
         </ul>
       </div>
-      <!-- Solutions -->
       <div>
-        <p class="text-[10px] font-bold tracking-widest uppercase text-white/30 mb-4">Solutions</p>
-        <ul class="space-y-2.5">
-          <li><a href="#" class="text-sm text-white/50 hover:text-white transition-colors">Plumbers</a></li>
-          <li><a href="#" class="text-sm text-white/50 hover:text-white transition-colors">Electricians</a></li>
-          <li><a href="#" class="text-sm text-white/50 hover:text-white transition-colors">Builders</a></li>
-          <li><a href="#" class="text-sm text-white/50 hover:text-white transition-colors">HVAC</a></li>
+        <p class="text-[10px] font-bold tracking-widest uppercase text-white/25 mb-5">Solutions</p>
+        <ul class="space-y-3">
+          <li><a href="blog.html#plumbing-digital" class="text-sm text-white/45 hover:text-white transition-colors duration-150">Plumbers</a></li>
+          <li><a href="blog.html#sparkies" class="text-sm text-white/45 hover:text-white transition-colors duration-150">Electricians</a></li>
+          <li><a href="blog.html#builders-quotes" class="text-sm text-white/45 hover:text-white transition-colors duration-150">Builders</a></li>
+          <li><a href="blog.html#hvac-xero" class="text-sm text-white/45 hover:text-white transition-colors duration-150">HVAC</a></li>
+          <li><a href="blog.html#quoting" class="text-sm text-white/45 hover:text-white transition-colors duration-150">Painters</a></li>
+          <li><a href="blog.html#roofing-scheduling" class="text-sm text-white/45 hover:text-white transition-colors duration-150">Roofers</a></li>
+          <li><a href="blog.html#handyman-invoicing" class="text-sm text-white/45 hover:text-white transition-colors duration-150">Handyman</a></li>
+          <li><a href="blog.html#team-scheduling" class="text-sm text-white/45 hover:text-white transition-colors duration-150">Garden Care</a></li>
         </ul>
       </div>
-      <!-- Company -->
       <div>
-        <p class="text-[10px] font-bold tracking-widest uppercase text-white/30 mb-4">Company</p>
-        <ul class="space-y-2.5">
-          <li><a href="#" class="text-sm text-white/50 hover:text-white transition-colors">About</a></li>
-          <li><a href="#" class="text-sm text-white/50 hover:text-white transition-colors">Blog</a></li>
-          <li><a href="#" class="text-sm text-white/50 hover:text-white transition-colors">Careers</a></li>
-          <li><a href="#" class="text-sm text-white/50 hover:text-white transition-colors">Contact</a></li>
+        <p class="text-[10px] font-bold tracking-widest uppercase text-white/25 mb-5">Company</p>
+        <ul class="space-y-3">
+          <li><a href="#" class="text-sm text-white/45 hover:text-white transition-colors duration-150">About</a></li>
+          <li><a href="blog.html" class="text-sm text-white/45 hover:text-white transition-colors duration-150">Blog</a></li>
+          <li><a href="#" class="text-sm text-white/45 hover:text-white transition-colors duration-150">Careers</a></li>
+          <li><a href="#" class="text-sm text-white/45 hover:text-white transition-colors duration-150">Contact</a></li>
         </ul>
       </div>
-      <!-- Legal -->
       <div>
-        <p class="text-[10px] font-bold tracking-widest uppercase text-white/30 mb-4">Legal</p>
-        <ul class="space-y-2.5">
-          <li><a href="#" class="text-sm text-white/50 hover:text-white transition-colors">Privacy</a></li>
-          <li><a href="#" class="text-sm text-white/50 hover:text-white transition-colors">Terms</a></li>
-          <li><a href="#" class="text-sm text-white/50 hover:text-white transition-colors">Security</a></li>
-          <li><a href="#" class="text-sm text-white/50 hover:text-white transition-colors">GDPR</a></li>
+        <p class="text-[10px] font-bold tracking-widest uppercase text-white/25 mb-5">Legal</p>
+        <ul class="space-y-3">
+          <li><a href="privacy.html" class="text-sm text-white/45 hover:text-white transition-colors duration-150">Privacy</a></li>
+          <li><a href="terms.html" class="text-sm text-white/45 hover:text-white transition-colors duration-150">Terms</a></li>
+          <li><a href="#" class="text-sm text-white/45 hover:text-white transition-colors duration-150">Security</a></li>
+          <li><a href="#" class="text-sm text-white/45 hover:text-white transition-colors duration-150">GDPR</a></li>
         </ul>
       </div>
     </div>
-    <div class="border-t border-white/[0.06] pt-6 flex flex-col md:flex-row items-center justify-between gap-4">
-      <p class="text-xs text-white/20">© 2025 Industry Forms. All rights reserved.</p>
+    <div class="border-t border-white/[0.05] pt-6 flex flex-col md:flex-row items-center justify-between gap-4">
+      <p class="text-xs text-white/20">© 2025 Industry Forms Ltd. All rights reserved.</p>
       <div class="flex items-center gap-4">
-        <a href="#" class="text-white/20 hover:text-white/60 transition-colors"><i data-lucide="twitter" class="w-4 h-4"></i></a>
-        <a href="#" class="text-white/20 hover:text-white/60 transition-colors"><i data-lucide="linkedin" class="w-4 h-4"></i></a>
-        <a href="#" class="text-white/20 hover:text-white/60 transition-colors"><i data-lucide="instagram" class="w-4 h-4"></i></a>
-        <a href="#" class="text-white/20 hover:text-white/60 transition-colors"><i data-lucide="youtube" class="w-4 h-4"></i></a>
+        <a href="#" class="w-8 h-8 rounded-lg bg-white/[0.05] flex items-center justify-center text-white/25 hover:text-white/60 hover:bg-white/[0.08] transition-all duration-150" aria-label="Twitter"><i data-lucide="twitter" class="w-3.5 h-3.5"></i></a>
+        <a href="#" class="w-8 h-8 rounded-lg bg-white/[0.05] flex items-center justify-center text-white/25 hover:text-white/60 hover:bg-white/[0.08] transition-all duration-150" aria-label="LinkedIn"><i data-lucide="linkedin" class="w-3.5 h-3.5"></i></a>
+        <a href="#" class="w-8 h-8 rounded-lg bg-white/[0.05] flex items-center justify-center text-white/25 hover:text-white/60 hover:bg-white/[0.08] transition-all duration-150" aria-label="Instagram"><i data-lucide="instagram" class="w-3.5 h-3.5"></i></a>
+        <a href="#" class="w-8 h-8 rounded-lg bg-white/[0.05] flex items-center justify-center text-white/25 hover:text-white/60 hover:bg-white/[0.08] transition-all duration-150" aria-label="YouTube"><i data-lucide="youtube" class="w-3.5 h-3.5"></i></a>
       </div>
     </div>
   </div>
 </footer>
 
-<!-- ===== STICKY SCROLLING FOOTER ===== -->
-<div id="stickyFooter" class="fixed bottom-0 left-0 right-0 z-50 bg-ink border-t border-white/[0.08] overflow-hidden transition-transform duration-500" style="transform: translateY(100%);">
+<!-- ============================================================ STICKY TICKER -->
+<div id="stickyTicker" class="fixed bottom-0 left-0 right-0 z-50 bg-ink/95 backdrop-blur-xl border-t border-white/[0.07] overflow-hidden transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]" style="transform: translateY(100%);" aria-hidden="true">
   <div class="py-4">
-    <div id="footerTrack" class="sticky-footer-track">
-      <!-- Items repeated 3x for seamless loop -->
-      <div class="sticky-footer-item">
-        <span class="text-white/30 text-xs font-medium tracking-wider uppercase">Save</span>
-        <span class="font-display font-bold text-lg text-brand counter-value" data-target="12" data-suffix=" hrs/week">0 hrs/week</span>
-        <span class="text-white/30 text-xs">on admin</span>
-      </div>
-      <div class="sticky-footer-item">
-        <span class="text-white/30 text-xs font-medium tracking-wider uppercase">Cut</span>
-        <span class="font-display font-bold text-lg text-teal-light counter-value" data-target="85" data-suffix="%">0%</span>
-        <span class="text-white/30 text-xs">of paperwork</span>
-      </div>
-      <div class="sticky-footer-item">
-        <span class="text-white/30 text-xs font-medium tracking-wider uppercase">Reduce missed calls by</span>
-        <span class="font-display font-bold text-lg text-grape-light counter-value" data-target="90" data-suffix="%">0%</span>
-      </div>
-      <div class="sticky-footer-item">
-        <span class="text-white/30 text-xs font-medium tracking-wider uppercase">Save</span>
-        <span class="font-display font-bold text-lg text-brand counter-value" data-target="4200" data-prefix="£" data-suffix="/yr">$0/yr</span>
-        <span class="text-white/30 text-xs">on software</span>
-      </div>
-      <div class="sticky-footer-item">
-        <span class="text-white/30 text-xs font-medium tracking-wider uppercase">Eliminate</span>
-        <span class="font-display font-bold text-lg text-teal-light">double entry</span>
-        <span class="text-white/30 text-xs">forever</span>
-      </div>
-      <div class="sticky-footer-item">
-        <span class="text-white/30 text-xs font-medium tracking-wider uppercase">Get paid</span>
-        <span class="font-display font-bold text-lg text-brand counter-value" data-target="2" data-suffix="x faster">0x faster</span>
-      </div>
-      <div class="sticky-footer-item">
-        <span class="text-white/30 text-xs font-medium tracking-wider uppercase">Automate</span>
-        <span class="font-display font-bold text-lg text-grape-light">invoicing</span>
-        <span class="text-white/30 text-xs">completely</span>
-      </div>
-      <div class="sticky-footer-item">
-        <span class="text-white/30 text-xs font-medium tracking-wider uppercase">Replace</span>
-        <span class="font-display font-bold text-lg text-teal-light counter-value" data-target="5" data-suffix=" apps">0 apps</span>
-        <span class="text-white/30 text-xs">with one</span>
-      </div>
-      <!-- Repeat -->
-      <div class="sticky-footer-item">
-        <span class="text-white/30 text-xs font-medium tracking-wider uppercase">Save</span>
-        <span class="font-display font-bold text-lg text-brand counter-value" data-target="12" data-suffix=" hrs/week">0 hrs/week</span>
-        <span class="text-white/30 text-xs">on admin</span>
-      </div>
-      <div class="sticky-footer-item">
-        <span class="text-white/30 text-xs font-medium tracking-wider uppercase">Cut</span>
-        <span class="font-display font-bold text-lg text-teal-light counter-value" data-target="85" data-suffix="%">0%</span>
-        <span class="text-white/30 text-xs">of paperwork</span>
-      </div>
-      <div class="sticky-footer-item">
-        <span class="text-white/30 text-xs font-medium tracking-wider uppercase">Reduce missed calls by</span>
-        <span class="font-display font-bold text-lg text-grape-light counter-value" data-target="90" data-suffix="%">0%</span>
-      </div>
-      <div class="sticky-footer-item">
-        <span class="text-white/30 text-xs font-medium tracking-wider uppercase">Save</span>
-        <span class="font-display font-bold text-lg text-brand counter-value" data-target="4200" data-prefix="£" data-suffix="/yr">£0/yr</span>
-        <span class="text-white/30 text-xs">on software</span>
-      </div>
-      <div class="sticky-footer-item">
-        <span class="text-white/30 text-xs font-medium tracking-wider uppercase">Eliminate</span>
-        <span class="font-display font-bold text-lg text-teal-light">double entry</span>
-        <span class="text-white/30 text-xs">forever</span>
-      </div>
-      <div class="sticky-footer-item">
-        <span class="text-white/30 text-xs font-medium tracking-wider uppercase">Get paid</span>
-        <span class="font-display font-bold text-lg text-brand counter-value" data-target="2" data-suffix="x faster">0x faster</span>
-      </div>
-      <div class="sticky-footer-item">
-        <span class="text-white/30 text-xs font-medium tracking-wider uppercase">Automate</span>
-        <span class="font-display font-bold text-lg text-grape-light">invoicing</span>
-        <span class="text-white/30 text-xs">completely</span>
-      </div>
-      <div class="sticky-footer-item">
-        <span class="text-white/30 text-xs font-medium tracking-wider uppercase">Replace</span>
-        <span class="font-display font-bold text-lg text-teal-light counter-value" data-target="5" data-suffix=" apps">0 apps</span>
-        <span class="text-white/30 text-xs">with one</span>
-      </div>
-      <!-- Repeat 3 -->
-      <div class="sticky-footer-item">
-        <span class="text-white/30 text-xs font-medium tracking-wider uppercase">Save</span>
-        <span class="font-display font-bold text-lg text-brand counter-value" data-target="12" data-suffix=" hrs/week">0 hrs/week</span>
-        <span class="text-white/30 text-xs">on admin</span>
-      </div>
-      <div class="sticky-footer-item">
-        <span class="text-white/30 text-xs font-medium tracking-wider uppercase">Cut</span>
-        <span class="font-display font-bold text-lg text-teal-light counter-value" data-target="85" data-suffix="%">0%</span>
-        <span class="text-white/30 text-xs">of paperwork</span>
-      </div>
-      <div class="sticky-footer-item">
-        <span class="text-white/30 text-xs font-medium tracking-wider uppercase">Reduce missed calls by</span>
-        <span class="font-display font-bold text-lg text-grape-light counter-value" data-target="90" data-suffix="%">0%</span>
-      </div>
-      <div class="sticky-footer-item">
-        <span class="text-white/30 text-xs font-medium tracking-wider uppercase">Save</span>
-        <span class="font-display font-bold text-lg text-brand counter-value" data-target="4200" data-prefix="£" data-suffix="/yr">£0/yr</span>
-        <span class="text-white/30 text-xs">on software</span>
-      </div>
-      <div class="sticky-footer-item">
-        <span class="text-white/30 text-xs font-medium tracking-wider uppercase">Eliminate</span>
-        <span class="font-display font-bold text-lg text-teal-light">double entry</span>
-        <span class="text-white/30 text-xs">forever</span>
-      </div>
-      <div class="sticky-footer-item">
-        <span class="text-white/30 text-xs font-medium tracking-wider uppercase">Get paid</span>
-        <span class="font-display font-bold text-lg text-brand counter-value" data-target="2" data-suffix="x faster">0x faster</span>
-      </div>
-      <div class="sticky-footer-item">
-        <span class="text-white/30 text-xs font-medium tracking-wider uppercase">Automate</span>
-        <span class="font-display font-bold text-lg text-grape-light">invoicing</span>
-        <span class="text-white/30 text-xs">completely</span>
-      </div>
-      <div class="sticky-footer-item">
-        <span class="text-white/30 text-xs font-medium tracking-wider uppercase">Replace</span>
-        <span class="font-display font-bold text-lg text-teal-light counter-value" data-target="5" data-suffix=" apps">0 apps</span>
-        <span class="text-white/30 text-xs">with one</span>
-      </div>
+    <div id="tickerTrack" class="ticker-track select-none">
+      <!-- 3× for seamless loop -->
+      <template id="tickerItems">
+        <div class="ticker-item">
+          <span class="text-white/25 text-[11px] font-medium tracking-wide uppercase">Save</span>
+          <span class="font-display font-bold text-base text-brand tabular-nums counter" data-target="12" data-suffix=" hrs/week">0 hrs/week</span>
+          <span class="text-white/25 text-[11px]">on admin</span>
+        </div>
+        <div class="ticker-item">
+          <span class="text-white/25 text-[11px] font-medium tracking-wide uppercase">Cut</span>
+          <span class="font-display font-bold text-base text-teal-light tabular-nums counter" data-target="85" data-suffix="%">0%</span>
+          <span class="text-white/25 text-[11px]">of paperwork</span>
+        </div>
+        <div class="ticker-item">
+          <span class="text-white/25 text-[11px] font-medium tracking-wide uppercase">Reduce missed calls by</span>
+          <span class="font-display font-bold text-base text-grape-light tabular-nums counter" data-target="90" data-suffix="%">0%</span>
+        </div>
+        <div class="ticker-item">
+          <span class="text-white/25 text-[11px] font-medium tracking-wide uppercase">Save</span>
+          <span class="font-display font-bold text-base text-brand tabular-nums counter" data-target="4200" data-prefix="$" data-suffix="/yr">$0/yr</span>
+          <span class="text-white/25 text-[11px]">on software</span>
+        </div>
+        <div class="ticker-item">
+          <span class="text-white/25 text-[11px] font-medium tracking-wide uppercase">Eliminate</span>
+          <span class="font-display font-bold text-base text-teal-light">double entry</span>
+          <span class="text-white/25 text-[11px]">forever</span>
+        </div>
+        <div class="ticker-item">
+          <span class="text-white/25 text-[11px] font-medium tracking-wide uppercase">Get paid</span>
+          <span class="font-display font-bold text-base text-brand tabular-nums counter" data-target="2" data-suffix="x faster">0x faster</span>
+        </div>
+        <div class="ticker-item">
+          <span class="text-white/25 text-[11px] font-medium tracking-wide uppercase">Automate</span>
+          <span class="font-display font-bold text-base text-grape-light">invoicing</span>
+          <span class="text-white/25 text-[11px]">completely</span>
+        </div>
+        <div class="ticker-item">
+          <span class="text-white/25 text-[11px] font-medium tracking-wide uppercase">Replace</span>
+          <span class="font-display font-bold text-base text-teal-light tabular-nums counter" data-target="5" data-suffix=" apps">0 apps</span>
+          <span class="text-white/25 text-[11px]">with one</span>
+        </div>
+      </template>
     </div>
   </div>
 </div>
 
 <script>
-  // Initialize Lucide icons
   lucide.createIcons();
 
-  // Mobile menu toggle
-  const mobileMenuBtn = document.getElementById('mobileMenuBtn');
-  const mobileMenu = document.getElementById('mobileMenu');
-  mobileMenuBtn.addEventListener('click', () => {
-    mobileMenu.classList.toggle('hidden');
-  });
-  // Close mobile menu on link click
-  mobileMenu.querySelectorAll('a').forEach(link => {
-    link.addEventListener('click', () => mobileMenu.classList.add('hidden'));
-  });
-
-  // Scroll reveal animation
-  const revealElements = document.querySelectorAll('.reveal');
-  const revealObserver = new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
-      if (entry.isIntersecting) {
-        entry.target.classList.add('visible');
-      }
-    });
-  }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
-  revealElements.forEach(el => revealObserver.observe(el));
-
-  // Sticky footer: show after scrolling past hero, sync horizontal scroll
-  const stickyFooter = document.getElementById('stickyFooter');
-  const footerTrack = document.getElementById('footerTrack');
-  let footerVisible = false;
-  let countersAnimated = false;
-
-  function updateStickyFooter() {
-    const scrollY = window.scrollY;
-    const docHeight = document.body.scrollHeight - window.innerHeight;
-    const scrollPercent = scrollY / docHeight;
-
-    // Show footer after 15% scroll
-    if (scrollPercent > 0.15 && !footerVisible) {
-      stickyFooter.style.transform = 'translateY(0)';
-      footerVisible = true;
-    } else if (scrollPercent <= 0.15 && footerVisible) {
-      stickyFooter.style.transform = 'translateY(100%)';
-      footerVisible = false;
-    }
-
-    // Hide footer near actual footer
-    const footerTop = document.querySelector('footer').getBoundingClientRect().top;
-    if (footerTop < window.innerHeight - 60) {
-      stickyFooter.style.transform = 'translateY(100%)';
-    } else if (scrollPercent > 0.15) {
-      stickyFooter.style.transform = 'translateY(0)';
-    }
-
-    // Horizontal scroll sync — move track based on page scroll
-    const trackWidth = footerTrack.scrollWidth / 3; // width of one set
-    const maxTranslate = trackWidth;
-    const translateX = -(scrollPercent * maxTranslate * 1.5);
-    footerTrack.style.transform = `translateX(${translateX}px)`;
-
-    // Animate counters when footer first appears
-    if (footerVisible && !countersAnimated) {
-      countersAnimated = true;
-      animateCounters();
-    }
+  // Populate ticker with 3 repeats
+  const tmpl = document.getElementById('tickerItems');
+  const track = document.getElementById('tickerTrack');
+  for (let i = 0; i < 3; i++) {
+    track.appendChild(tmpl.content.cloneNode(true));
   }
 
-  // Counter animation
+  // Mobile menu
+  const mobileBtn = document.getElementById('mobileMenuBtn');
+  const mobileMenu = document.getElementById('mobileMenu');
+  mobileBtn.addEventListener('click', () => mobileMenu.classList.toggle('hidden'));
+  mobileMenu.querySelectorAll('a').forEach(a => a.addEventListener('click', () => mobileMenu.classList.add('hidden')));
+
+  // Workflow pillar tabs
+  const pillarTabs = document.querySelectorAll('.pillar-tab');
+  const pillarPanels = document.querySelectorAll('.pillar-panel');
+  pillarTabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      const key = tab.dataset.pillar;
+      pillarTabs.forEach(t => {
+        t.classList.remove('is-active');
+        t.classList.add('text-ink/65', 'hover:bg-black/[0.04]');
+      });
+      tab.classList.add('is-active');
+      tab.classList.remove('text-ink/65', 'hover:bg-black/[0.04]');
+      pillarPanels.forEach(panel => panel.classList.toggle('is-active', panel.dataset.panel === key));
+    });
+  });
+
+  // FAQ accordion
+  document.querySelectorAll('.faq-trigger').forEach(trigger => {
+    trigger.addEventListener('click', () => {
+      trigger.closest('.faq-item').classList.toggle('is-open');
+    });
+  });
+
+  // Reveal on scroll
+  const revealEls = document.querySelectorAll('.reveal');
+  const revealObs = new IntersectionObserver((entries) => {
+    entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('in'); });
+  }, { threshold: 0.08, rootMargin: '0px 0px -48px 0px' });
+  revealEls.forEach(el => revealObs.observe(el));
+
+  // Sticky ticker
+  const ticker = document.getElementById('stickyTicker');
+  let tickerVisible = false;
+  let countersRan = false;
+
   function animateCounters() {
-    document.querySelectorAll('.counter-value').forEach(el => {
+    if (countersRan) return;
+    countersRan = true;
+    document.querySelectorAll('.counter').forEach(el => {
       const target = parseInt(el.dataset.target);
       const prefix = el.dataset.prefix || '';
       const suffix = el.dataset.suffix || '';
-      const duration = 1500;
+      const duration = 1400;
       const start = performance.now();
-
-      function update(now) {
-        const elapsed = now - start;
-        const progress = Math.min(elapsed / duration, 1);
-        // Ease out cubic
-        const eased = 1 - Math.pow(1 - progress, 3);
-        const current = Math.round(target * eased);
-        el.textContent = prefix + current.toLocaleString() + suffix;
-        if (progress < 1) requestAnimationFrame(update);
+      function tick(now) {
+        const p = Math.min((now - start) / duration, 1);
+        const eased = 1 - Math.pow(1 - p, 3);
+        el.textContent = prefix + Math.round(target * eased).toLocaleString() + suffix;
+        if (p < 1) requestAnimationFrame(tick);
       }
-      requestAnimationFrame(update);
+      requestAnimationFrame(tick);
     });
   }
 
-  window.addEventListener('scroll', updateStickyFooter, { passive: true });
-  updateStickyFooter();
+  function onScroll() {
+    const scrollY = window.scrollY;
+    const docH = document.body.scrollHeight - window.innerHeight;
+    const pct = scrollY / docH;
+    const footerTop = document.querySelector('footer').getBoundingClientRect().top;
+    const nearFooter = footerTop < window.innerHeight - 80;
 
-  // Smooth scroll for anchor links
-  document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-    anchor.addEventListener('click', function(e) {
-      const target = document.querySelector(this.getAttribute('href'));
-      if (target) {
-        e.preventDefault();
-        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
+    const shouldShow = pct > 0.12 && !nearFooter;
+    if (shouldShow !== tickerVisible) {
+      ticker.style.transform = shouldShow ? 'translateY(0)' : 'translateY(100%)';
+      tickerVisible = shouldShow;
+      if (shouldShow) animateCounters();
+    }
+
+    // Scroll-sync ticker
+    const trackW = track.scrollWidth / 3;
+    track.style.transform = `translateX(${-(pct * trackW * 1.4)}px)`;
+  }
+
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+
+  // Smooth anchors
+  document.querySelectorAll('a[href^="#"]').forEach(a => {
+    a.addEventListener('click', e => {
+      const t = document.querySelector(a.getAttribute('href'));
+      if (t) { e.preventDefault(); t.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
     });
   });
 </script>

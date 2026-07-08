@@ -24,21 +24,19 @@ interface Props {
   company: Company
   team: Profile[]
   googleConnected: boolean
-  integrationStatus: {
-    twilio: boolean
-    resend: boolean
-    stripe: boolean
-    anthropic: boolean
-  }
 }
 
-export function SettingsClient({ profile, company, team: initialTeam, googleConnected: initialGoogleConnected, integrationStatus }: Props) {
+export function SettingsClient({ profile, company, team: initialTeam, googleConnected: initialGoogleConnected }: Props) {
   const supabase = createClient()
   const router = useRouter()
   const searchParams = useSearchParams()
   const mfaRequired = searchParams.get('mfa_required') === '1'
+  const requestedTab = searchParams.get('tab')
+  const initialTab = requestedTab && ['business', 'workflow', 'team', 'profile', 'integrations', 'subscription', 'developer'].includes(requestedTab)
+    ? requestedTab as 'business' | 'workflow' | 'team' | 'profile' | 'integrations' | 'subscription' | 'developer'
+    : 'business'
   const { toast } = useToast()
-  const [tab, setTab] = useState<'business' | 'workflow' | 'team' | 'profile' | 'integrations' | 'subscription' | 'developer'>(mfaRequired ? 'profile' : 'business')
+  const [tab, setTab] = useState<'business' | 'workflow' | 'team' | 'profile' | 'integrations' | 'subscription' | 'developer'>(mfaRequired ? 'profile' : initialTab)
   const [testMode, setTestMode] = useState<boolean>(!!(company as Company & { test_mode?: boolean }).test_mode)
   const [testToggling, setTestToggling] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -367,7 +365,7 @@ export function SettingsClient({ profile, company, team: initialTeam, googleConn
         {tab === 'workflow'     && 'Customise the lists and rates that drive jobs, quotes and invoices.'}
         {tab === 'team'         && 'Invite people, set their rate, and control what they can see.'}
         {tab === 'profile'      && 'Your personal details, signature and trade qualifications.'}
-        {tab === 'integrations' && 'Connect external services — accounting, calendar, SMS, email.'}
+        {tab === 'integrations' && 'Connect external services — accounting, calendar and data import.'}
         {tab === 'developer'    && 'Load demo data to explore the system without touching real records.'}
         {tab === 'subscription' && 'Your plan, billing history and seat usage.'}
       </p>
@@ -377,12 +375,26 @@ export function SettingsClient({ profile, company, team: initialTeam, googleConn
           <CardHeader><CardTitle>Business settings</CardTitle></CardHeader>
           <CardContent>
             {/* Plan summary — full management lives under the Subscription tab */}
-            <div className="flex items-center justify-between gap-3 mb-6 p-3 bg-orange-50 rounded-lg border border-orange-100">
+            <div className="flex items-center justify-between gap-3 mb-6 p-3 bg-[var(--accent,#f97316)]/10 rounded-lg border border-[var(--accent,#f97316)]/20">
               <div>
-                <p className="text-sm font-medium text-orange-800">Current plan: <strong>{planLabel[company.subscription_plan] ?? company.subscription_plan}</strong></p>
+                <p className="text-sm font-medium text-[var(--accent,#f97316)]">Current plan: <strong>{planLabel[company.subscription_plan] ?? company.subscription_plan}</strong></p>
                 <p className="text-xs text-[var(--accent,#f97316)]">Status: {company.subscription_status}</p>
               </div>
-              <button type="button" onClick={() => setTab('subscription')} className="text-xs font-medium text-orange-700 hover:underline">Manage →</button>
+              <button type="button" onClick={() => setTab('subscription')} className="text-xs font-medium text-[var(--accent,#f97316)] hover:underline">Manage →</button>
+            </div>
+            <div className="mb-6 flex items-center justify-between gap-3 rounded-lg border border-gray-200 bg-white px-3 py-3">
+              <div>
+                <p className="text-sm font-medium text-gray-900">Starting tutorial</p>
+                <p className="text-xs text-gray-500 mt-0.5">Replay the welcome walkthrough and feature overview.</p>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => window.dispatchEvent(new Event('industryforms:replay-welcome-tutorial'))}
+              >
+                Replay tutorial
+              </Button>
             </div>
 
             {/* Logo */}
@@ -780,56 +792,6 @@ export function SettingsClient({ profile, company, team: initialTeam, googleConn
             </CardContent>
           </Card>
 
-          {/* Platform integrations — credentials live in env vars, not the DB.
-              Cards display green-tick / amber-warning based on env presence. */}
-          <Card>
-            <CardHeader><CardTitle>Email sending (Resend)</CardTitle></CardHeader>
-            <CardContent>
-              <StatusRow
-                ok={integrationStatus.resend}
-                okText="Connected — quote, invoice, reminder and review-request emails will send."
-                missingText="Not configured — set RESEND_API_KEY and EMAIL_FROM in your Vercel project (Production + Preview env vars), then redeploy."
-                docs="https://resend.com/docs"
-              />
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader><CardTitle>SMS sending (Twilio)</CardTitle></CardHeader>
-            <CardContent>
-              <StatusRow
-                ok={integrationStatus.twilio}
-                okText="Connected — outgoing SMS and the two-way customer thread are live."
-                missingText="Not configured — set TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN and TWILIO_FROM_NUMBER in your Vercel env vars, then redeploy. After that, in Twilio set the number's 'A MESSAGE COMES IN' webhook to https://app.industryforms.app/api/sms/inbound (POST)."
-                docs="https://www.twilio.com/docs/usage/secure-credentials"
-              />
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader><CardTitle>Online payments (Stripe)</CardTitle></CardHeader>
-            <CardContent>
-              <StatusRow
-                ok={integrationStatus.stripe}
-                okText="Connected — customers can pay invoices online and Tap to Pay is unlocked."
-                missingText="Not configured — set STRIPE_SECRET_KEY, STRIPE_PUBLISHABLE_KEY and STRIPE_WEBHOOK_SECRET in your Vercel env vars, then redeploy."
-                docs="https://docs.stripe.com/keys"
-              />
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader><CardTitle>AI (Anthropic Claude)</CardTitle></CardHeader>
-            <CardContent>
-              <StatusRow
-                ok={integrationStatus.anthropic}
-                okText="Connected — SmartWrite, AI quote drafting and the daily AI to-do list are active."
-                missingText="Not configured — set ANTHROPIC_API_KEY in your Vercel env vars, then redeploy."
-                docs="https://docs.anthropic.com/"
-              />
-            </CardContent>
-          </Card>
-
           {/* Import */}
           <Card>
             <CardHeader><CardTitle className="flex items-center gap-2"><ArrowRightLeft className="h-4 w-4 text-orange-500" />Import data</CardTitle></CardHeader>
@@ -844,7 +806,7 @@ export function SettingsClient({ profile, company, team: initialTeam, googleConn
       )}
 
       {tab === 'subscription' && (
-        <div className="space-y-6 max-w-2xl">
+        <div className="space-y-6 max-w-7xl">
           <BillingTab company={company} />
         </div>
       )}
@@ -1014,30 +976,6 @@ export function SettingsClient({ profile, company, team: initialTeam, googleConn
 }
 
 // Compact configured/not-configured indicator for the Integrations cards.
-// Hides credential names by default; reveals the setup instructions inline.
-function StatusRow({ ok, okText, missingText, docs }: {
-  ok: boolean
-  okText: string
-  missingText: string
-  docs?: string
-}) {
-  return (
-    <div className="flex items-start justify-between gap-3">
-      <div className="flex-1">
-        {ok ? (
-          <p className="text-sm font-medium text-green-700">&#10003; Connected</p>
-        ) : (
-          <p className="text-sm font-medium text-amber-700">Needs setup</p>
-        )}
-        <p className="text-xs text-gray-500 mt-0.5 whitespace-pre-line">{ok ? okText : missingText}</p>
-      </div>
-      {docs && (
-        <a href={docs} target="_blank" rel="noreferrer" className="text-xs text-gray-500 hover:underline shrink-0 mt-0.5">Docs →</a>
-      )}
-    </div>
-  )
-}
-
 // ── Signature capture modal ───────────────────────────────────────────────────
 function SignatureCaptureModal({
   open,
@@ -1164,7 +1102,7 @@ const PLAN_DETAILS = [
     price: '$49/mo',
     users: '1 user',
     desc: 'Perfect for sole traders',
-    features: ['All core features', 'Unlimited jobs & quotes', 'Invoice payments', 'Customer portal', 'Price list & materials', 'SMS & email'],
+    features: ['All core features', 'Unlimited jobs & quotes', 'Invoice payments', 'Customer portal', 'Price list & materials', 'Email included; SMS add-on'],
     highlight: false,
   },
   {
@@ -1189,7 +1127,9 @@ const PLAN_DETAILS = [
 
 function BillingTab({ company }: { company: Company }) {
   const [loading, setLoading] = useState<string>('')
+  const [smsLoading, setSmsLoading] = useState(false)
   const { toast } = useToast()
+  const router = useRouter()
 
   const [nowMs] = useState(() => Date.now())
   const trialDaysLeft = company.trial_ends_at
@@ -1197,13 +1137,16 @@ function BillingTab({ company }: { company: Company }) {
     : null
 
   const currentPlan = company.subscription_plan ?? 'trial'
+  const companyAddons = ((company as Company & { addons?: Record<string, { active?: boolean }> }).addons ?? {})
+  const initialSmsEnabled = (company as Company & { billing_exempt?: boolean }).billing_exempt === true || companyAddons.sms_usage?.active === true
+  const [smsEnabled, setSmsEnabled] = useState(initialSmsEnabled)
 
   async function subscribe(plan: string) {
     setLoading(plan)
     const res = await fetch('/api/stripe/checkout', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ plan }) })
     const data = await res.json()
     if (!res.ok) { toast(data.error ?? 'Failed to start checkout', 'error'); setLoading(''); return }
-    window.location.href = data.url
+    window.location.assign(data.url)
   }
 
   async function openPortal() {
@@ -1211,7 +1154,30 @@ function BillingTab({ company }: { company: Company }) {
     const res = await fetch('/api/stripe/portal', { method: 'POST' })
     const data = await res.json()
     if (!res.ok) { toast(data.error ?? 'Failed to open billing portal', 'error'); setLoading(''); return }
-    window.location.href = data.url
+    window.location.assign(data.url)
+  }
+
+  async function toggleSmsBilling(next: boolean) {
+    setSmsLoading(true)
+    const res = await fetch('/api/billing/addon', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ slug: 'sms_usage', active: next }),
+    })
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok) {
+      toast(data.error ?? 'Failed to update SMS billing', 'error')
+      setSmsLoading(false)
+      return
+    }
+    if (data.url) {
+      window.location.assign(data.url)
+      return
+    }
+    setSmsEnabled(next)
+    setSmsLoading(false)
+    toast(next ? 'SMS billing enabled' : 'SMS billing disabled')
+    router.refresh()
   }
 
   const PLAN_ORDER = ['trial', 'solo', 'team', 'pro']
@@ -1222,7 +1188,7 @@ function BillingTab({ company }: { company: Company }) {
       {/* Status banner */}
       <Card>
         <CardContent className="py-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <p className="text-base font-semibold text-gray-900">
                 Current plan: <span className="text-[var(--accent,#f97316)] capitalize">{currentPlan === 'trial' ? 'Free trial' : currentPlan}</span>
@@ -1239,19 +1205,32 @@ function BillingTab({ company }: { company: Company }) {
               <Button variant="outline" size="sm" loading={loading === 'portal'} onClick={openPortal}>Manage billing</Button>
             )}
           </div>
+          <label className="mt-4 flex items-start gap-3 rounded-lg border border-gray-200 bg-white px-3 py-3 text-sm text-gray-700">
+            <input
+              type="checkbox"
+              className="mt-1 h-4 w-4 rounded border-gray-300 text-[var(--accent,#f97316)] focus:ring-[var(--accent,#f97316)]"
+              checked={smsEnabled}
+              disabled={smsLoading}
+              onChange={(event) => toggleSmsBilling(event.target.checked)}
+            />
+            <span>
+              <span className="font-medium text-gray-900">Enable SMS (Quote, booking, late payments follow ups) - 13c per message</span>
+              <span className="block text-xs text-gray-500 mt-0.5">Billed monthly through Stripe from the outbound SMS usage ledger.</span>
+            </span>
+          </label>
         </CardContent>
       </Card>
 
       {/* Plan grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {PLAN_DETAILS.map((plan, i) => {
+      <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-4 gap-5">
+        {PLAN_DETAILS.map((plan) => {
           const isCurrent = plan.key === currentPlan
           const isUpgrade = PLAN_ORDER.indexOf(plan.key) > currentIdx
           const isDowngrade = PLAN_ORDER.indexOf(plan.key) < currentIdx && plan.key !== 'trial'
           return (
             <div
               key={plan.key}
-              className={`relative rounded-2xl border-2 p-5 flex flex-col transition-all ${
+              className={`relative min-w-0 rounded-2xl border-2 p-5 flex flex-col transition-all ${
                 isCurrent
                   ? 'border-[var(--accent,#f97316)] bg-orange-50'
                   : plan.highlight
@@ -1261,7 +1240,7 @@ function BillingTab({ company }: { company: Company }) {
             >
               {isCurrent && (
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                  <span className="bg-[var(--accent,#f97316)] text-white text-xs font-bold px-3 py-0.5 rounded-full">Current plan</span>
+                  <span className="bg-[var(--accent,#f97316)] text-white text-xs font-bold px-3 py-0.5 rounded-full whitespace-nowrap">Current plan</span>
                 </div>
               )}
               {plan.highlight && !isCurrent && (

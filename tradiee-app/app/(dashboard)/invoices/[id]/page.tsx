@@ -7,6 +7,7 @@ import { formatCurrency, formatDate, formatDateTime } from '@/lib/utils'
 import { discountLabel } from '@/lib/pricing'
 import { InvoiceDetailClient } from './client'
 import { RecurringInvoiceCard } from './recurring-card'
+import { SaveInvoiceTemplateButton } from './save-template'
 import type { InvoicePdfData } from '@/components/pdf/invoice-pdf'
 import Link from 'next/link'
 
@@ -18,7 +19,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
 
   const { data: invoice } = await supabase
     .from('invoices')
-    .select('*, customers(name, email, phone, billing_address), jobs(job_number, title), invoice_line_items(*), payments(*)')
+    .select('*, customers(name, email, phone, billing_address, pricing_group_id), jobs(job_number, title), invoice_line_items(*), payments(*)')
     .eq('id', id)
     .eq('company_id', profile!.company_id)
     .single()
@@ -26,8 +27,8 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
   if (!invoice) notFound()
 
   const [priceItemsRes, kitsRes] = await Promise.all([
-    supabase.from('price_list_items').select('id, name, unit, sell_price, cost_price, type').eq('company_id', profile!.company_id).eq('is_active', true).order('name'),
-    supabase.from('kits').select('*, kit_items(*, price_list_items(*))').eq('company_id', profile!.company_id).order('name'),
+    supabase.from('price_list_items').select('id, name, unit, sell_price, cost_price, type, customer_group_prices(customer_group_id, sell_price)').eq('company_id', profile!.company_id).eq('is_active', true).order('name'),
+    supabase.from('kits').select('*, kit_items(*, price_list_items(*, customer_group_prices(customer_group_id, sell_price)))').eq('company_id', profile!.company_id).order('name'),
   ])
 
   const lines = [...(invoice.invoice_line_items ?? [])].sort((a, b) => a.sort_order - b.sort_order)
@@ -69,7 +70,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
             {invoice.sent_at && <p className="text-xs text-gray-400 mt-1">Sent {formatDateTime(invoice.sent_at)}{invoice.viewed_at && ` · Viewed ${formatDateTime(invoice.viewed_at)}`}</p>}
           </div>
           <InvoiceDetailClient
-            invoice={{ ...invoice, customer_email: (invoice.customers as {name: string; email: string | null} | null)?.email, customer_phone: (invoice.customers as {phone: string | null} | null)?.phone }}
+            invoice={{ ...invoice, customer_email: (invoice.customers as {name: string; email: string | null; pricing_group_id?: string | null} | null)?.email, customer_phone: (invoice.customers as {phone: string | null} | null)?.phone, pricing_group_id: (invoice.customers as {pricing_group_id?: string | null} | null)?.pricing_group_id ?? null }}
             companyId={profile!.company_id}
             gstRate={gstRate}
             pricesIncludeTax={!!co?.prices_include_tax}
@@ -78,6 +79,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
             priceItems={priceItemsRes.data ?? []}
             kits={kitsRes.data ?? []}
           />
+          <SaveInvoiceTemplateButton invoiceId={invoice.id} defaultName={invoice.reference || invoice.invoice_number} />
         </div>
 
         {/* Line items */}

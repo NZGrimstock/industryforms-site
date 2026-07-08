@@ -265,7 +265,7 @@ export function WebsiteClient({
           <div className="flex items-center gap-2 mb-1">
             <Globe className="h-4 w-4 text-gray-400" />
             <label className="text-sm font-medium text-gray-700">Use your own domain</label>
-            <span className="rounded-full bg-orange-50 px-2 py-0.5 text-[11px] font-semibold text-[var(--accent,#f97316)]">Add-on</span>
+            <span className="rounded-full bg-[var(--accent,#f97316)]/10 px-2 py-0.5 text-[11px] font-semibold text-[var(--accent,#f97316)]">Add-on</span>
             {domainStatus === 'active' && <span className="rounded-full bg-green-50 px-2 py-0.5 text-[11px] font-semibold text-green-600">Live</span>}
             {domainStatus === 'pending' && <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-600">Pending DNS</span>}
           </div>
@@ -339,8 +339,8 @@ export function WebsiteClient({
       {/* Custom site hosting */}
       <Card title="Site hosting">
         <div className="flex items-center gap-2 mb-3">
-          <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${siteMode === 'builder' ? 'bg-orange-50 text-[var(--accent,#f97316)]' : 'bg-gray-100 text-gray-500'}`}>Builder</span>
-          <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${siteMode === 'custom' ? 'bg-orange-50 text-[var(--accent,#f97316)]' : 'bg-gray-100 text-gray-500'}`}>Custom upload</span>
+          <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${siteMode === 'builder' ? 'bg-[var(--accent,#f97316)]/10 text-[var(--accent,#f97316)]' : 'bg-gray-100 text-gray-500'}`}>Builder</span>
+          <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${siteMode === 'custom' ? 'bg-[var(--accent,#f97316)]/10 text-[var(--accent,#f97316)]' : 'bg-gray-100 text-gray-500'}`}>Custom upload</span>
         </div>
         {siteMode === 'builder' ? (
           <>

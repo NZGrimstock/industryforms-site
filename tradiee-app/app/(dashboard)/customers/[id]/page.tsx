@@ -24,19 +24,20 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
 
   if (!customer) notFound()
 
-  const [quotesRes, jobsRes, invoicesRes, commsRes, messagesRes] = await Promise.all([
+  const [quotesRes, jobsRes, invoicesRes, commsRes, messagesRes, pricingGroupsRes] = await Promise.all([
     supabase.from('quotes').select('id, quote_number, status, total, created_at').eq('customer_id', id).order('created_at', { ascending: false }).limit(10),
     supabase.from('jobs').select('id, job_number, title, status, created_at').eq('customer_id', id).order('created_at', { ascending: false }).limit(10),
     supabase.from('invoices').select('id, invoice_number, status, total, amount_paid, due_date').eq('customer_id', id).order('created_at', { ascending: false }).limit(10),
     supabase.from('communications').select('id, channel, direction, subject, summary, created_at').eq('customer_id', id).order('created_at', { ascending: false }).limit(20),
     supabase.from('customer_messages').select('id, direction, body, created_at').eq('customer_id', id).order('created_at', { ascending: true }).limit(200),
+    supabase.from('customer_groups').select('id, name').eq('company_id', profile!.company_id).order('name'),
   ])
 
   return (
     <>
       <Header title={customer.name} profile={profile} />
       <div className="p-6 space-y-6">
-        <CustomerDetailClient customer={customer} companyId={profile!.company_id} />
+        <CustomerDetailClient customer={customer} companyId={profile!.company_id} pricingGroups={pricingGroupsRes.data ?? []} />
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Quotes */}

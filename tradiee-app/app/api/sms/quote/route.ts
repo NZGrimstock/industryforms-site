@@ -33,7 +33,14 @@ export async function POST(req: NextRequest) {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
   const body = `Hi ${customer.name.split(' ')[0]}, here's quote ${quote.quote_number} from ${company?.name ?? 'us'}: ${appUrl}/q/${quote.public_token}`
 
-  const result = await sendSms({ to: customer.phone, body, country: (company?.country as 'NZ' | 'AU') ?? 'NZ' })
+  const result = await sendSms({
+    to: customer.phone,
+    body,
+    country: (company?.country as 'NZ' | 'AU') ?? 'NZ',
+    companyId: quote.company_id,
+    relatedType: 'quote',
+    relatedId: quoteId,
+  })
   if (result.error) return NextResponse.json({ error: result.error }, { status: 500 })
 
   await service.from('quotes').update({ status: 'sent', sent_at: new Date().toISOString() }).eq('id', quoteId).eq('status', 'draft')

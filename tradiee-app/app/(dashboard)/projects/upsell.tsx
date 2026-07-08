@@ -28,6 +28,10 @@ export function ProjectsUpsell() {
     const data = await res.json()
     setLoading(false)
     if (!res.ok) { toast(data.error ?? 'Could not enable', 'error'); return }
+    if (data.url) {
+      window.location.href = data.url
+      return
+    }
     toast('Projects add-on enabled')
     router.refresh()
   }

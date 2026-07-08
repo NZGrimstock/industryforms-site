@@ -35,7 +35,14 @@ export async function POST(req: NextRequest) {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
   const body = `Hi ${customer.name.split(' ')[0]}, invoice ${invoice.invoice_number} from ${company?.name ?? 'us'} — ${formatCurrency(due)} due. View & pay: ${appUrl}/i/${invoice.public_token}`
 
-  const result = await sendSms({ to: customer.phone, body, country: (company?.country as 'NZ' | 'AU') ?? 'NZ' })
+  const result = await sendSms({
+    to: customer.phone,
+    body,
+    country: (company?.country as 'NZ' | 'AU') ?? 'NZ',
+    companyId: invoice.company_id,
+    relatedType: 'invoice',
+    relatedId: invoiceId,
+  })
   if (result.error) return NextResponse.json({ error: result.error }, { status: 500 })
   await logCommunication(service, {
     companyId: invoice.company_id, customerId: invoice.customer_id, channel: 'sms',

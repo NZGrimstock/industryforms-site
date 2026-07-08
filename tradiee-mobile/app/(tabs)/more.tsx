@@ -17,13 +17,16 @@ type MenuItem = {
 export default function MoreScreen() {
   const [profile, setProfile] = useState<{ full_name: string | null; email: string; role: string } | null>(null)
   const [pendingCount, setPendingCount] = useState(0)
+  const [projectsEnabled, setProjectsEnabled] = useState(false)
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) return
-      supabase.from('profiles').select('full_name, role, company_id').eq('id', user.id).single()
+      supabase.from('profiles').select('full_name, role, company_id, companies(addons, billing_exempt)').eq('id', user.id).single()
         .then(async ({ data }) => {
           setProfile({ full_name: data?.full_name ?? null, email: user.email ?? '', role: data?.role ?? '' })
+          const company = data?.companies as { addons?: Record<string, { active?: boolean }> | null; billing_exempt?: boolean | null } | null
+          setProjectsEnabled(company?.billing_exempt === true || company?.addons?.projects?.active === true)
           if (data?.company_id) {
             const { count } = await supabase.from('job_invitations')
               .select('id', { count: 'exact', head: true })
@@ -49,6 +52,7 @@ export default function MoreScreen() {
 
   const workItems: MenuItem[] = [
     { icon: 'users',       label: 'Customers',   route: '/customers' },
+    ...(projectsEnabled ? [{ icon: 'folder' as FeatherName, label: 'Projects', route: '/projects' }] : []),
     { icon: 'credit-card', label: 'Invoices',     route: '/invoices' },
     { icon: 'zap',         label: 'Tap to Pay',   route: '/pay-now' },
     { icon: 'clock',       label: 'Time Logs',    route: '/timesheets' },

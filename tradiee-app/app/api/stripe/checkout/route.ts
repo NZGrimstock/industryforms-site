@@ -2,8 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { getStripe } from '@/lib/stripe'
+import { BILLING_ADDONS, type BillingAddonSlug } from '@/lib/billing'
 
-const bodySchema = z.object({ plan: z.enum(['solo', 'team', 'pro', 'bookings_website']) })
+const bodySchema = z.object({ plan: z.enum(['solo', 'team', 'pro', 'bookings_website', 'projects', 'sms_usage']) })
+const MAIN_PLANS = new Set(['solo', 'team', 'pro'])
 
 export async function POST(req: NextRequest) {
   const stripe = getStripe()
@@ -34,23 +36,27 @@ export async function POST(req: NextRequest) {
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
 
-  // Price lookup keys: solo_monthly, team_monthly, pro_monthly (main plan) and
-  // bookings_website_monthly (the $19/mo Bookings Website add-on — website
-  // builder + custom hosting + bookings, all gated together) — set these up in Stripe.
-  const priceKey = `${plan}_monthly`
-  const isWebsiteAddon = plan === 'bookings_website'
-  const returnPath = isWebsiteAddon ? '/website' : '/settings'
+  // Codex build audit marker (2026-07-08): checkout supports main plans plus
+  // Stripe-owned add-ons; webhooks are the source of truth for add-on access.
+  const isAddon = !MAIN_PLANS.has(plan)
+  const addon = isAddon ? BILLING_ADDONS[plan as BillingAddonSlug] : null
+  const priceKey = addon?.lookupKey ?? `${plan}_monthly`
+  const returnPath = addon?.returnPath ?? '/settings'
+  const successUrl = buildReturnUrl(appUrl, returnPath, { subscribed: '1' })
 
   const session = await stripe.checkout.sessions.create({
     customer: stripeCustomerId,
     mode: 'subscription',
     line_items: [{ price: await getPriceId(priceKey), quantity: 1 }],
-    success_url: `${appUrl}${returnPath}?subscribed=1`,
+    success_url: successUrl,
     cancel_url: `${appUrl}${returnPath}`,
     allow_promotion_codes: true,
-    // The add-on is a separate subscription from the main plan; tag it so the
-    // webhook flips companies.addons.bookings_website instead of the main plan.
-    subscription_data: { metadata: { company_id: profile.company_id, ...(isWebsiteAddon ? { addon: 'bookings_website' } : {}) } },
+    subscription_data: {
+      metadata: {
+        company_id: profile.company_id,
+        ...(addon ? { addon: plan } : {}),
+      },
+    },
   })
 
   return NextResponse.json({ url: session.url })
@@ -60,4 +66,10 @@ async function getPriceId(lookupKey: string): Promise<string> {
   const prices = await getStripe().prices.list({ lookup_keys: [lookupKey], limit: 1 })
   if (!prices.data[0]) throw new Error(`Price not found for key: ${lookupKey}. Create it in Stripe dashboard.`)
   return prices.data[0].id
+}
+
+function buildReturnUrl(appUrl: string, path: string, params: Record<string, string>) {
+  const url = new URL(path, appUrl)
+  for (const [key, value] of Object.entries(params)) url.searchParams.set(key, value)
+  return url.toString()
 }

@@ -21,13 +21,16 @@ interface Props {
   standardMarkupPct: number
   items: PriceListItem[]
   kits: Kit[]
+  customerGroups: { id: string; name: string }[]
 }
 
 type CsvRow = { name: string; code: string; type: string; unit: string; cost_price: string; sell_price: string }
 
-export function PriceListClient({ companyId, standardMarkupEnabled, standardMarkupPct, items, kits }: Props) {
-  const [tab, setTab] = useState<'items' | 'kits'>('items')
+export function PriceListClient({ companyId, standardMarkupEnabled, standardMarkupPct, items, kits, customerGroups }: Props) {
+  const [tab, setTab] = useState<'items' | 'kits' | 'groups'>('items')
   const [itemDialog, setItemDialog] = useState<PriceListItem | null | 'new'>(null)
+  const [groups, setGroups] = useState(customerGroups)
+  const [newGroup, setNewGroup] = useState('')
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [csvOpen, setCsvOpen] = useState(false)
   const [csvRows, setCsvRows] = useState<CsvRow[]>([])
@@ -57,6 +60,32 @@ export function PriceListClient({ companyId, standardMarkupEnabled, standardMark
 
   function toggleSelected(id: string) {
     setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
+  }
+
+  async function addGroup() {
+    if (!newGroup.trim()) return
+    const { data, error } = await supabase
+      .from('customer_groups')
+      .insert({ company_id: companyId, name: newGroup.trim() })
+      .select('id, name')
+      .single()
+    if (error) toast(error.message, 'error')
+    else {
+      setGroups(prev => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)))
+      setNewGroup('')
+      toast('Pricing group added')
+    }
+  }
+
+  async function deleteGroup(id: string) {
+    if (!confirm('Delete this pricing group? Customers assigned to it will fall back to standard pricing.')) return
+    const { error } = await supabase.from('customer_groups').delete().eq('id', id)
+    if (error) toast(error.message, 'error')
+    else {
+      setGroups(prev => prev.filter(group => group.id !== id))
+      toast('Pricing group deleted')
+      router.refresh()
+    }
   }
 
   function handleCsvFile(e: React.ChangeEvent<HTMLInputElement>) {
@@ -116,10 +145,10 @@ export function PriceListClient({ companyId, standardMarkupEnabled, standardMark
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
         <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
-          {(['items', 'kits'] as const).map(t => (
+          {(['items', 'kits', 'groups'] as const).map(t => (
             <button key={t} onClick={() => setTab(t)}
               className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${tab === t ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}>
-              {t === 'items' ? `Items (${items.length})` : `Kits (${kits.length})`}
+              {t === 'items' ? `Items (${items.length})` : t === 'kits' ? `Kits (${kits.length})` : `Groups (${groups.length})`}
             </button>
           ))}
         </div>
@@ -134,9 +163,11 @@ export function PriceListClient({ companyId, standardMarkupEnabled, standardMark
               <Upload className="h-3.5 w-3.5" /> CSV import
             </button>
           )}
-          <Button onClick={() => setItemDialog('new')} size="sm">
-            <Plus className="h-4 w-4" /> Add {tab === 'items' ? 'item' : 'kit'}
-          </Button>
+          {tab !== 'groups' && (
+            <Button onClick={() => setItemDialog('new')} size="sm">
+              <Plus className="h-4 w-4" /> Add {tab === 'items' ? 'item' : 'kit'}
+            </Button>
+          )}
         </div>
       </div>
 
@@ -283,6 +314,30 @@ export function PriceListClient({ companyId, standardMarkupEnabled, standardMark
         )
       )}
 
+      {tab === 'groups' && (
+        <Card className="p-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end mb-4">
+            <div className="flex-1">
+              <Label>New pricing group</Label>
+              <Input value={newGroup} onChange={e => setNewGroup(e.target.value)} placeholder="Wholesale, VIP, Builders, Property managers" />
+            </div>
+            <Button type="button" onClick={addGroup}>Add group</Button>
+          </div>
+          {groups.length === 0 ? (
+            <p className="text-sm text-gray-400">No pricing groups yet. Add one, assign customers to it, then set item overrides.</p>
+          ) : (
+            <div className="divide-y divide-gray-100">
+              {groups.map(group => (
+                <div key={group.id} className="flex items-center justify-between py-3">
+                  <span className="text-sm font-medium text-gray-800">{group.name}</span>
+                  <button onClick={() => deleteGroup(group.id)} className="p-1 text-gray-400 hover:text-red-500"><Trash2 className="h-4 w-4" /></button>
+                </div>
+              ))}
+            </div>
+          )}
+        </Card>
+      )}
+
       <Dialog open={!!itemDialog} onClose={() => setItemDialog(null)} title={itemDialog === 'new' ? 'Add item' : 'Edit item'}>
         {itemDialog && (
           <PriceItemForm
@@ -290,6 +345,7 @@ export function PriceListClient({ companyId, standardMarkupEnabled, standardMark
             item={itemDialog === 'new' ? undefined : itemDialog}
             standardMarkupEnabled={standardMarkupEnabled}
             standardMarkupPct={standardMarkupPct}
+            customerGroups={groups}
             onSuccess={() => { setItemDialog(null); router.refresh() }}
           />
         )}
@@ -298,10 +354,14 @@ export function PriceListClient({ companyId, standardMarkupEnabled, standardMark
   )
 }
 
-function PriceItemForm({ companyId, item, standardMarkupEnabled, standardMarkupPct, onSuccess }: { companyId: string; item?: PriceListItem; standardMarkupEnabled: boolean; standardMarkupPct: number; onSuccess: () => void }) {
+function PriceItemForm({ companyId, item, standardMarkupEnabled, standardMarkupPct, customerGroups, onSuccess }: { companyId: string; item?: PriceListItem; standardMarkupEnabled: boolean; standardMarkupPct: number; customerGroups: { id: string; name: string }[]; onSuccess: () => void }) {
   const supabase = createClient()
   const { toast } = useToast()
   const [loading, setLoading] = useState(false)
+  const [groupPrices, setGroupPrices] = useState<Record<string, string>>(() => {
+    const rows = item?.customer_group_prices ?? []
+    return Object.fromEntries(rows.map(row => [row.customer_group_id, String(row.sell_price)]))
+  })
   const [form, setForm] = useState({
     type: item?.type ?? 'material',
     code: item?.code ?? '',
@@ -327,6 +387,10 @@ function PriceItemForm({ companyId, item, standardMarkupEnabled, standardMarkupP
     })
   }
 
+  function setGroupPrice(groupId: string, value: string) {
+    setGroupPrices(prev => ({ ...prev, [groupId]: value }))
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
@@ -344,11 +408,31 @@ function PriceItemForm({ companyId, item, standardMarkupEnabled, standardMarkupP
       low_stock_threshold: form.low_stock_threshold !== '' ? parseFloat(form.low_stock_threshold) : null,
       is_active: form.is_active,
     }
-    const { error } = item
-      ? await supabase.from('price_list_items').update(payload).eq('id', item.id)
-      : await supabase.from('price_list_items').insert(payload)
-    if (error) toast(error.message, 'error')
-    else { toast(item ? 'Item updated' : 'Item added'); onSuccess() }
+    const saved = item
+      ? await supabase.from('price_list_items').update(payload).eq('id', item.id).select('id').single()
+      : await supabase.from('price_list_items').insert(payload).select('id').single()
+    if (saved.error) toast(saved.error.message, 'error')
+    else {
+      const itemId = saved.data!.id
+      const rows = Object.entries(groupPrices)
+        .map(([customer_group_id, raw]) => ({ customer_group_id, price_list_item_id: itemId, sell_price: Number(raw) }))
+        .filter(row => Number.isFinite(row.sell_price) && row.sell_price > 0)
+      const emptyGroupIds = Object.entries(groupPrices)
+        .filter(([, raw]) => !raw || Number(raw) <= 0)
+        .map(([groupId]) => groupId)
+      if (rows.length) {
+        const { error } = await supabase.from('customer_group_prices').upsert(rows)
+        if (error) { toast(error.message, 'error'); setLoading(false); return }
+      }
+      if (emptyGroupIds.length) {
+        await supabase
+          .from('customer_group_prices')
+          .delete()
+          .eq('price_list_item_id', itemId)
+          .in('customer_group_id', emptyGroupIds)
+      }
+      toast(item ? 'Item updated' : 'Item added'); onSuccess()
+    }
     setLoading(false)
   }
 
@@ -391,6 +475,26 @@ function PriceItemForm({ companyId, item, standardMarkupEnabled, standardMarkupP
           <Input type="number" step="0.01" value={form.sell_price} onChange={e => set('sell_price', e.target.value)} />
         </div>
       </div>
+      {customerGroups.length > 0 && (
+        <div className="rounded-lg border border-gray-200 p-3">
+          <Label>Pricing levels</Label>
+          <p className="text-xs text-gray-500 mb-3">Optional sell price overrides for customer groups.</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {customerGroups.map(group => (
+              <div key={group.id}>
+                <Label>{group.name}</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  placeholder={form.sell_price}
+                  value={groupPrices[group.id] ?? ''}
+                  onChange={e => setGroupPrice(group.id, e.target.value)}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
       <div>
         <Label>Supplier</Label>
         <Input value={form.supplier_name} onChange={e => set('supplier_name', e.target.value)} />

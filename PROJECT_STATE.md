@@ -1,6 +1,6 @@
 # IndustryForms — Project State (handoff)
 
-Last updated: 2026-07-07. Catch-up doc for a fresh session. Read this first.
+Last updated: 2026-07-08. Catch-up doc for a fresh session. Read this first.
 
 ## What it is
 **IndustryForms** — a SaaS job-management app for NZ/AU tradespeople (a Tradify
@@ -24,7 +24,36 @@ the older applied set; the 2026-07-07 local migrations listed below still need
 deploy verification. PowerSync sync rules switched to **streams (edition 3)**
 — already validated + deployed via the PowerSync Dashboard.
 Latest APK is `tradiee-mobile/android/app/build/outputs/apk/release/app-release.apk`
-(Jun 25, 145 MB — mobile untouched by the Growth Engine sprints).
+(Jun 25, 145 MB). Mobile Projects view was added on 2026-07-08; iOS EAS
+production build was attempted non-interactively and blocked at Apple/EAS
+credential setup. Run `cd tradiee-mobile && npx eas build --platform ios
+--profile production` interactively after Apple credentials are available.
+
+**Backlog build batch (Codex, 2026-07-08):**
+- Added Stripe-owned add-ons for Projects and SMS usage. `/api/billing/addon`
+  now sends normal companies to Checkout/Portal; only super-admin/billing-
+  exempt accounts direct-toggle add-ons. Stripe webhook now handles
+  `projects`, `bookings_website`, and `sms_usage` metadata. SMS opt-in is in
+  Settings → Subscription and outbound SMS writes `sms_usage_events`, reports
+  Stripe meter events, and retries failed meter rows from the reminders cron.
+- Added migrations `20260707211441_billing_addons_sms_usage.sql` and
+  `20260707212320_customer_group_pricing.sql`.
+- Added customer-group pricing: groups in Price List, per-item group override
+  prices, customer assignment, and quote/job/invoice price resolution.
+- Added standalone invoice templates: save invoice as template, `/invoices/templates`,
+  and create draft invoice from a template + customer.
+- Added mobile Projects list with current stage/progress, plus PowerSync schema
+  and `sync-rules.yaml` project/project_stage streams. Upload the updated sync
+  rules in PowerSync before relying on offline project data.
+- Removed end-user Settings cards for admin/provider integrations
+  (Resend/Twilio/Stripe/Anthropic). Keep provider health in the admin console.
+- Spot-cleaned remaining accent-owned chips/pills in quote builder, website,
+  voice input, and settings; semantic status/warning colours remain.
+- Added first-run welcome/tutorial overlay (2026-07-08): animated transparent
+  Welcome screen, liquid-glass benefits walkthrough, differentiator list, and
+  Settings replay button. Persistence flag is
+  `profiles.welcome_tutorial_seen_at` via migration
+  `20260708021858_welcome_tutorial_seen.sql`.
 
 **Sprint E (automations + growth reporting) shipped 2026-07-06.** New
 `automation_events` table (migration `20260704090000_automation_events.sql`)
@@ -192,8 +221,20 @@ on each of these so the owner sees what's missing without peeking at env vars.
 - **Stripe (live — confirmed 2026-07-04)** — `STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY`,
   `STRIPE_WEBHOOK_SECRET` are all live; Sprint D's testing created and refunded real test-mode
   PaymentIntents successfully. Webhook target: `/api/stripe/webhook`.
+  Add-on billing now also requires Stripe lookup keys `projects_monthly`,
+  `bookings_website_monthly`, and `sms_usage_metered`. `sms_usage_metered`
+  must be a usage/metered price at **13c per SMS event** using meter event name
+  `tradiee_sms_message` unless `STRIPE_SMS_METER_EVENT_NAME` is set.
 - **Anthropic (live)** — `ANTHROPIC_API_KEY` for SmartWrite / AI quote drafting / daily AI to-dos.
 - **Xero (real value present, 2026-07-07)** — `XERO_CLIENT_ID`/`XERO_CLIENT_SECRET` now set in `.env.local`. Not yet mirrored in Vercel — do that before relying on Xero sync in prod.
+- **MYOB / QuickBooks** — not production-wired yet because both need developer
+  apps, OAuth redirect URLs, client IDs/secrets, scopes, and approval/production
+  readiness before safe sync work. Build OAuth + sync only after those are
+  available.
+- **Google Business Profile** — `lib/gbp-sync.ts` remains a deliberate stub
+  until Google grants Business Profile API access. You need Google Cloud project
+  ownership, Business Profile API approval, OAuth consent/verification, and a
+  verified business profile/location before this can be wired.
 - **Google (real value present)** — `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` set. Google Calendar sync is fully implemented (see Features built) — the OAuth callback (`app/api/google/callback/route.ts`) had its `state`-param trust fixed during the 2026-07-07 security pass (see below).
 - **Other placeholders** — `CLOUDFLARE_API_TOKEN`+`CLOUDFLARE_ZONE_ID` (+optional `CLOUDFLARE_SAAS_FALLBACK_HOSTNAME`), `INBOUND_EMAIL_SECRET`.
 

@@ -39,7 +39,14 @@ export async function POST(req: NextRequest) {
   if (!customer.phone) return NextResponse.json({ error: 'Customer has no phone' }, { status: 400 })
 
   const country = (customer.companies as unknown as { country: 'NZ' | 'AU' } | null)?.country ?? 'NZ'
-  const result = await sendSms({ to: customer.phone, body, country })
+  const result = await sendSms({
+    to: customer.phone,
+    body,
+    country,
+    companyId: customer.company_id,
+    relatedType: 'customer_message',
+    relatedId: customer.id,
+  })
   if (result.error) return NextResponse.json({ error: result.error }, { status: 502 })
 
   const service = createServiceClient()

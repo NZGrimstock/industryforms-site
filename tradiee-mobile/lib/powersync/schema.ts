@@ -125,6 +125,33 @@ const travel_logs = new Table({
   created_at:  column.text,
 })
 
+const projects = new Table({
+  company_id: column.text,
+  customer_id: column.text,
+  project_manager_id: column.text,
+  name: column.text,
+  description: column.text,
+  status: column.text,
+  total_budget: column.real,
+  start_date: column.text,
+  target_end_date: column.text,
+  reference: column.text,
+  created_at: column.text,
+  updated_at: column.text,
+})
+
+const project_stages = new Table({
+  project_id: column.text,
+  name: column.text,
+  description: column.text,
+  sort_order: column.integer,
+  status: column.text,
+  target_end_date: column.text,
+  completed_at: column.text,
+  created_at: column.text,
+  updated_at: column.text,
+})
+
 const quotes = new Table({
   company_id:       column.text,
   customer_id:      column.text,
@@ -229,6 +256,8 @@ export const AppSchema = new Schema({
   form_submissions,
   price_list_items,
   travel_logs,
+  projects,
+  project_stages,
   quotes,
   quote_sections,
   quote_line_items,

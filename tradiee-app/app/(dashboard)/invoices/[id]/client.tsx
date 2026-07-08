@@ -13,8 +13,9 @@ import { formatCurrency } from '@/lib/utils'
 import { Plus, Send, DollarSign, Trash2, Mail, RefreshCw, MessageSquare, Tag, Undo2, Briefcase, Search } from 'lucide-react'
 import { PrintInvoice } from '@/components/pdf/print-invoice'
 import type { InvoicePdfData } from '@/components/pdf/invoice-pdf'
+import { priceForCustomerGroup } from '@/lib/customer-pricing'
 
-type PriceItem = { id: string; name: string; unit: string; sell_price: number; cost_price: number; type: string }
+type PriceItem = { id: string; name: string; unit: string; sell_price: number; cost_price: number; type: string; customer_group_prices?: { customer_group_id: string; sell_price: number }[] | null }
 type Kit = { id: string; name: string; kit_items: { quantity: number; price_list_items: PriceItem | null }[] }
 
 interface Props {
@@ -32,6 +33,7 @@ interface Props {
     discount_amount: number
     customer_email?: string | null
     customer_phone?: string | null
+    pricing_group_id?: string | null
     external_id?: string | null
   }
   companyId: string
@@ -55,6 +57,7 @@ export function InvoiceDetailClient({ invoice, companyId, gstRate, pricesInclude
   const [lineForm, setLineForm] = useState({ description: '', quantity: '1', unit: 'each', unit_price: '0', discount_value: '0', discount_type: 'amount' as 'amount' | 'percent', tax_rate: String(gstRate) })
   const [priceSearch, setPriceSearch] = useState('')
   const filteredPriceItems = priceItems.filter(p => p.name.toLowerCase().includes(priceSearch.toLowerCase()))
+  const invoiceCustomer = { pricing_group_id: invoice.pricing_group_id ?? null }
 
   // Company tax rates for the line tax picker (fallback: GST + GST Free).
   const [taxRates, setTaxRates] = useState<{ name: string; rate: number }[]>([{ name: 'GST', rate: gstRate }, { name: 'GST Free', rate: 0 }])
@@ -115,14 +118,14 @@ export function InvoiceDetailClient({ invoice, companyId, gstRate, pricesInclude
   }
 
   function pickPriceItem(item: PriceItem) {
-    setLineForm(f => ({ ...f, description: item.name, unit: item.unit, unit_price: String(item.sell_price || item.cost_price) }))
+    setLineForm(f => ({ ...f, description: item.name, unit: item.unit, unit_price: String(priceForCustomerGroup(item, invoiceCustomer) || item.cost_price) }))
     setPriceSearch('')
   }
 
   async function addKit(kit: Kit) {
     const rows = kit.kit_items.filter(ki => ki.price_list_items).map((ki, i) => {
       const item = ki.price_list_items!
-      const price = item.sell_price || item.cost_price
+      const price = priceForCustomerGroup(item, invoiceCustomer) || item.cost_price
       return {
         invoice_id: invoice.id,
         price_list_item_id: item.id,
@@ -350,7 +353,7 @@ export function InvoiceDetailClient({ invoice, companyId, gstRate, pricesInclude
               {filteredPriceItems.map(item => (
                 <button key={item.id} type="button" onClick={() => pickPriceItem(item)} className="w-full text-left px-3 py-2 rounded-lg flex items-center justify-between text-sm hover:bg-gray-50">
                   <span className="text-gray-800">{item.name}</span>
-                  <span className="text-gray-500 text-xs">{formatCurrency(item.sell_price || item.cost_price)}</span>
+                  <span className="text-gray-500 text-xs">{formatCurrency(priceForCustomerGroup(item, invoiceCustomer) || item.cost_price)}</span>
                 </button>
               ))}
             </div>

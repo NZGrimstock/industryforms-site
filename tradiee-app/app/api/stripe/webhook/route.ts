@@ -3,7 +3,7 @@ import type Stripe from 'stripe'
 import { createServiceClient } from '@/lib/supabase/server'
 import { getStripe } from '@/lib/stripe'
 import { maybeSendReviewRequest } from '@/lib/review-request'
-import { setAddonActive } from '@/lib/billing'
+import { BILLING_ADDONS, type BillingAddonSlug, setAddonActive } from '@/lib/billing'
 import { createJobFromBooking } from '@/lib/bookings/fulfill'
 import { sendBookingConfirmationEmail } from '@/lib/bookings/notify'
 
@@ -66,11 +66,19 @@ export async function POST(req: NextRequest) {
       const stripeCustomerId = sub.customer as string
       const status = sub.status
 
-      // The Bookings Website add-on ($19/mo — website builder + bookings) is a
-      // separate subscription from the company's main plan.
-      if (sub.metadata?.addon === 'bookings_website') {
+      // Codex build audit marker (2026-07-08): paid add-ons are separate Stripe
+      // subscriptions tagged with metadata.addon; webhook state owns access.
+      if (isBillingAddon(sub.metadata?.addon)) {
         const active = status === 'active' || status === 'trialing'
-        await setAddonActive(service, sub.metadata.company_id, 'bookings_website', active)
+        const companyId = sub.metadata.company_id || await findCompanyIdForCustomer(service, stripeCustomerId)
+        if (companyId) {
+          await setAddonActive(service, companyId, sub.metadata.addon, active, {
+            stripe_subscription_id: sub.id,
+            stripe_status: status,
+          })
+        } else {
+          console.error('[stripe-webhook] add-on subscription missing company_id', { subscription: sub.id, addon: sub.metadata.addon })
+        }
         break
       }
 
@@ -78,6 +86,7 @@ export async function POST(req: NextRequest) {
       await service.from('companies').update({
         subscription_status: status,
         subscription_plan: plan,
+        stripe_subscription_id: sub.id,
         trial_ends_at: sub.trial_end ? new Date(sub.trial_end * 1000).toISOString() : null,
       }).eq('stripe_customer_id', stripeCustomerId)
       break
@@ -85,19 +94,38 @@ export async function POST(req: NextRequest) {
 
     case 'customer.subscription.deleted': {
       const sub = event.data.object as Stripe.Subscription
-      if (sub.metadata?.addon === 'bookings_website') {
-        await setAddonActive(service, sub.metadata.company_id, 'bookings_website', false)
+      if (isBillingAddon(sub.metadata?.addon)) {
+        const companyId = sub.metadata.company_id || await findCompanyIdForCustomer(service, sub.customer as string)
+        if (companyId) {
+          await setAddonActive(service, companyId, sub.metadata.addon, false, {
+            stripe_subscription_id: sub.id,
+            stripe_status: sub.status,
+          })
+        } else {
+          console.error('[stripe-webhook] deleted add-on subscription missing company_id', { subscription: sub.id, addon: sub.metadata.addon })
+        }
         break
       }
       await service.from('companies').update({
         subscription_status: 'canceled',
         subscription_plan: 'trial',
+        stripe_subscription_id: null,
       }).eq('stripe_customer_id', sub.customer as string)
       break
     }
   }
 
   return NextResponse.json({ received: true })
+}
+
+function isBillingAddon(slug: string | undefined): slug is BillingAddonSlug {
+  return !!slug && slug in BILLING_ADDONS
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function findCompanyIdForCustomer(service: any, stripeCustomerId: string): Promise<string | null> {
+  const { data } = await service.from('companies').select('id').eq('stripe_customer_id', stripeCustomerId).maybeSingle()
+  return data?.id ?? null
 }
 
 // Idempotent under Stripe retries: every write is guarded by the booking's

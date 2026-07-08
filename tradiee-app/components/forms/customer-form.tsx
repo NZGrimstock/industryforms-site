@@ -17,10 +17,11 @@ import { AddressAutocomplete } from '@/components/ui/address-autocomplete'
 interface Props {
   companyId: string
   customer?: Customer
+  pricingGroups?: { id: string; name: string }[]
   onSuccess?: () => void
 }
 
-export function CustomerForm({ companyId, customer, onSuccess }: Props) {
+export function CustomerForm({ companyId, customer, pricingGroups = [], onSuccess }: Props) {
   const supabase = createClient()
   const router = useRouter()
   const { toast } = useToast()
@@ -33,6 +34,7 @@ export function CustomerForm({ companyId, customer, onSuccess }: Props) {
     email: customer?.email ?? '',
     phone: customer?.phone ?? '',
     billing_address: customer?.billing_address ?? '',
+    pricing_group_id: customer?.pricing_group_id ?? '',
     notes: customer?.notes ?? '',
   })
   const [addAsJobSite, setAddAsJobSite] = useState(true)
@@ -52,6 +54,7 @@ export function CustomerForm({ companyId, customer, onSuccess }: Props) {
       email: form.email || null,
       phone: form.phone || null,
       billing_address: form.billing_address || null,
+      pricing_group_id: form.pricing_group_id || null,
       notes: form.notes || null,
     }
 
@@ -153,6 +156,19 @@ export function CustomerForm({ companyId, customer, onSuccess }: Props) {
             <Input value={form.phone} onChange={e => set('phone', e.target.value)} required />
           </div>
         </div>
+        {pricingGroups.length > 0 && (
+          <div>
+            <Label>Pricing level</Label>
+            <Select
+              value={form.pricing_group_id}
+              onChange={e => set('pricing_group_id', e.target.value)}
+              options={[
+                { value: '', label: 'Standard pricing' },
+                ...pricingGroups.map(group => ({ value: group.id, label: group.name })),
+              ]}
+            />
+          </div>
+        )}
         <div>
           <Label>Billing address <span className="text-red-400">*</span></Label>
           <AddressAutocomplete value={form.billing_address} onChange={v => set('billing_address', v)} placeholder="Start typing an address…" required />

@@ -14,10 +14,11 @@ import { SmartWriteButton } from '@/components/ui/smart-write'
 import { Plus, Trash2, ChevronRight, Package } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
 import { geocodeAddress } from '@/lib/geocode'
+import { priceForCustomerGroup } from '@/lib/customer-pricing'
 
 type Site = { id: string; label: string | null; address: string }
 
-interface PriceItem { id: string; name: string; unit: string; sell_price: number; cost_price: number }
+interface PriceItem { id: string; name: string; unit: string; sell_price: number; cost_price: number; customer_group_prices?: { customer_group_id: string; sell_price: number }[] | null }
 
 interface QuickLine {
   description: string
@@ -31,7 +32,7 @@ interface QuickLine {
 
 interface Props {
   companyId: string
-  customers: { id: string; name: string }[]
+  customers: { id: string; name: string; pricing_group_id?: string | null }[]
   nextJobNumber: string
   priceItems?: PriceItem[]
   standardMarkupEnabled?: boolean
@@ -60,6 +61,7 @@ export function NewJobButton({ companyId, customers, nextJobNumber, priceItems =
   const router = useRouter()
   const { toast } = useToast()
   const [form, setForm] = useState({ customerId: initialCustomerId, title: initialTitle, description: initialDescription, status: 'unscheduled', reference: '', siteId: '' })
+  const selectedCustomer = customers.find(customer => customer.id === form.customerId)
   const [customerMode, setCustomerMode] = useState<'existing' | 'new'>('existing')
   const [newCust, setNewCust] = useState({ name: '', phone: '', addAsSite: false, siteAddress: '' })
   const [sites, setSites] = useState<Site[]>([])
@@ -127,7 +129,8 @@ export function NewJobButton({ companyId, customers, nextJobNumber, priceItems =
   }
 
   function pickPriceItem(i: number, item: PriceItem) {
-    const sellPrice = item.sell_price || (standardMarkupEnabled ? Number((item.cost_price * (1 + standardMarkupPct / 100)).toFixed(2)) : item.cost_price)
+    const groupPrice = priceForCustomerGroup(item, selectedCustomer)
+    const sellPrice = groupPrice || (standardMarkupEnabled ? Number((item.cost_price * (1 + standardMarkupPct / 100)).toFixed(2)) : item.cost_price)
     setLines(prev => prev.map((l, idx) => idx === i ? {
       ...l,
       description: item.name,
@@ -157,7 +160,8 @@ export function NewJobButton({ companyId, customers, nextJobNumber, priceItems =
     setLines(prev => [
       ...prev.filter(l => l.description.trim()),
       ...selected.map(item => {
-        const sellPrice = item.sell_price || (standardMarkupEnabled ? Number((item.cost_price * (1 + standardMarkupPct / 100)).toFixed(2)) : item.cost_price)
+        const groupPrice = priceForCustomerGroup(item, selectedCustomer)
+        const sellPrice = groupPrice || (standardMarkupEnabled ? Number((item.cost_price * (1 + standardMarkupPct / 100)).toFixed(2)) : item.cost_price)
         return {
           description: item.name,
           quantity: '1',
@@ -411,7 +415,7 @@ export function NewJobButton({ companyId, customers, nextJobNumber, priceItems =
                               className="w-full text-left px-3 py-2 text-sm hover:bg-orange-50 flex items-center justify-between"
                             >
                               <span className="text-gray-800">{s.name}</span>
-                              <span className="text-xs text-gray-400">{formatCurrency(s.sell_price)}/{s.unit}</span>
+                              <span className="text-xs text-gray-400">{formatCurrency(priceForCustomerGroup(s, selectedCustomer))}/{s.unit}</span>
                             </button>
                           ))}
                         </div>
@@ -502,7 +506,8 @@ export function NewJobButton({ companyId, customers, nextJobNumber, priceItems =
                     .filter(item => !bulkSearch || item.name.toLowerCase().includes(bulkSearch.toLowerCase()))
                     .map(item => {
                       const selected = bulkSelectedIds.includes(item.id)
-                      const sellPrice = item.sell_price || (standardMarkupEnabled ? Number((item.cost_price * (1 + standardMarkupPct / 100)).toFixed(2)) : item.cost_price)
+                      const groupPrice = priceForCustomerGroup(item, selectedCustomer)
+                      const sellPrice = groupPrice || (standardMarkupEnabled ? Number((item.cost_price * (1 + standardMarkupPct / 100)).toFixed(2)) : item.cost_price)
                       return (
                         <button key={item.id} type="button" onClick={() => toggleBulkItem(item.id)} className={`w-full text-left px-3 py-2 rounded-lg flex items-center justify-between text-sm ${selected ? 'bg-orange-50 text-orange-700' : 'hover:bg-white text-gray-700'}`}>
                           <span>{selected ? '✓ ' : ''}{item.name}</span>

@@ -25,8 +25,11 @@ export interface Company {
   phone: string | null
   address: string | null
   stripe_customer_id: string | null
+  stripe_subscription_id?: string | null
   subscription_plan: string
   subscription_status: string
+  billing_exempt?: boolean | null
+  addons?: Record<string, { active?: boolean } & Record<string, unknown>> | null
   trial_ends_at: string | null
   xero_tenant_id: string | null
   xero_access_token: string | null
@@ -52,6 +55,7 @@ export interface Profile {
   google_refresh_token: string | null
   google_token_expiry: string | null
   google_calendar_id: string | null
+  welcome_tutorial_seen_at?: string | null
   created_at: string
   updated_at: string
 }
@@ -65,6 +69,7 @@ export interface Customer {
   email: string | null
   phone: string | null
   billing_address: string | null
+  pricing_group_id?: string | null
   notes: string | null
   is_active?: boolean
   archived_at?: string | null
@@ -98,6 +103,7 @@ export interface PriceListItem {
   quantity_on_hand: number | null
   low_stock_threshold: number | null
   is_active: boolean
+  customer_group_prices?: { customer_group_id: string; sell_price: number }[]
   created_at: string
   updated_at: string
 }

@@ -8,6 +8,7 @@ import { DashboardShell } from '@/components/layout/dashboard-shell'
 import { SidebarProvider } from '@/components/layout/sidebar-context'
 import { PowerSyncProvider } from '@/components/providers/powersync-provider'
 import { SyncStatusBar } from '@/components/ui/sync-status-bar'
+import { WelcomeTutorial } from '@/components/ui/welcome-tutorial'
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
@@ -18,7 +19,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   // billing-exempt review accounts bypass this).
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role, is_super_admin, companies(subscription_status, subscription_plan, trial_ends_at, billing_exempt, theme_accent, test_mode)')
+    .select('role, is_super_admin, welcome_tutorial_seen_at, companies(subscription_status, subscription_plan, trial_ends_at, billing_exempt, theme_accent, test_mode)')
     .eq('id', user.id)
     .single()
   const company = (profile?.companies ?? null) as (BillingCompany & { theme_accent?: string | null; test_mode?: boolean | null }) | null
@@ -40,6 +41,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
           <DashboardShell brandAccent={brandAccent} testMode={testMode}>
             <SyncStatusBar />
             {children}
+            <WelcomeTutorial initiallyOpen={!profile?.welcome_tutorial_seen_at} />
           </DashboardShell>
         </div>
         <MobileNav isStaff={isStaff} unreadMessages={unreadMessages} />

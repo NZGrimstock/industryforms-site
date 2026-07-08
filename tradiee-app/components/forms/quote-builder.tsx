@@ -12,6 +12,7 @@ import { Dialog } from '@/components/ui/dialog'
 import { useToast } from '@/components/ui/toast'
 import { formatCurrency } from '@/lib/utils'
 import { lineNet, computeTaxedTotals, type DiscountType } from '@/lib/pricing'
+import { priceForCustomerGroup } from '@/lib/customer-pricing'
 import { Plus, Trash2, GripVertical, ChevronDown, ChevronRight, Package, Clock } from 'lucide-react'
 
 type DraftSection = Omit<QuoteSection, 'id'> & { id: string; lines: DraftLine[] }
@@ -268,11 +269,12 @@ export function QuoteBuilder({ companyId, profileId, quoteNumber, gstRate, custo
   }
 
   function addFromPriceList(sectionId: string, item: PriceListItem) {
+    const unitPrice = priceForCustomerGroup(item, selectedCustomer)
     setSections(ss => ss.map(s => s.id !== sectionId ? s : {
       ...s, lines: [...s.lines, emptyLine({
         price_list_item_id: item.id, type: item.type, description: item.name,
-        unit: item.unit, unit_cost: item.cost_price, unit_price: item.sell_price,
-        line_total: netOf(1, item.sell_price, null, 0, gstRate),
+        unit: item.unit, unit_cost: item.cost_price, unit_price: unitPrice,
+        line_total: netOf(1, unitPrice, null, 0, gstRate),
       })]
     }))
     setAddItemOpen(null)
@@ -282,12 +284,15 @@ export function QuoteBuilder({ companyId, profileId, quoteNumber, gstRate, custo
     const newLines = kit.kit_items
       .sort((a, b) => a.sort_order - b.sort_order)
       .filter(ki => ki.price_list_items)
-      .map(ki => emptyLine({
-        price_list_item_id: ki.price_list_item_id, type: ki.price_list_items!.type,
-        description: ki.price_list_items!.name, unit: ki.price_list_items!.unit,
-        unit_cost: ki.price_list_items!.cost_price, unit_price: ki.price_list_items!.sell_price,
-        quantity: ki.quantity, line_total: netOf(ki.quantity, ki.price_list_items!.sell_price, null, 0, gstRate),
-      }))
+      .map(ki => {
+        const unitPrice = priceForCustomerGroup(ki.price_list_items!, selectedCustomer)
+        return emptyLine({
+          price_list_item_id: ki.price_list_item_id, type: ki.price_list_items!.type,
+          description: ki.price_list_items!.name, unit: ki.price_list_items!.unit,
+          unit_cost: ki.price_list_items!.cost_price, unit_price: unitPrice,
+          quantity: ki.quantity, line_total: netOf(ki.quantity, unitPrice, null, 0, gstRate),
+        })
+      })
     setSections(ss => ss.map(s => s.id !== sectionId ? s : { ...s, lines: [...s.lines, ...newLines] }))
     setAddItemOpen(null)
   }
@@ -397,9 +402,9 @@ export function QuoteBuilder({ companyId, profileId, quoteNumber, gstRate, custo
               <Label>Expires</Label>
               <div className="flex gap-1.5 items-center">
                 <Input type="date" value={meta.expires_at} onChange={e => updateMeta('expires_at', e.target.value)} className="flex-1" />
-                <button onClick={() => setExpiry(7)} className="px-2 py-1.5 text-xs font-medium bg-gray-100 hover:bg-orange-100 hover:text-[var(--accent,#f97316)] rounded-lg whitespace-nowrap transition-colors">7d</button>
-                <button onClick={() => setExpiry(30)} className="px-2 py-1.5 text-xs font-medium bg-gray-100 hover:bg-orange-100 hover:text-[var(--accent,#f97316)] rounded-lg whitespace-nowrap transition-colors">30d</button>
-                <button onClick={() => setExpiry(90)} className="px-2 py-1.5 text-xs font-medium bg-gray-100 hover:bg-orange-100 hover:text-[var(--accent,#f97316)] rounded-lg whitespace-nowrap transition-colors">90d</button>
+                <button onClick={() => setExpiry(7)} className="px-2 py-1.5 text-xs font-medium bg-gray-100 hover:bg-[var(--accent,#f97316)]/10 hover:text-[var(--accent,#f97316)] rounded-lg whitespace-nowrap transition-colors">7d</button>
+                <button onClick={() => setExpiry(30)} className="px-2 py-1.5 text-xs font-medium bg-gray-100 hover:bg-[var(--accent,#f97316)]/10 hover:text-[var(--accent,#f97316)] rounded-lg whitespace-nowrap transition-colors">30d</button>
+                <button onClick={() => setExpiry(90)} className="px-2 py-1.5 text-xs font-medium bg-gray-100 hover:bg-[var(--accent,#f97316)]/10 hover:text-[var(--accent,#f97316)] rounded-lg whitespace-nowrap transition-colors">90d</button>
               </div>
             </div>
           </CardContent>
@@ -612,7 +617,7 @@ export function QuoteBuilder({ companyId, profileId, quoteNumber, gstRate, custo
                     <p className="text-sm text-gray-800">{item.name}</p>
                     <p className="text-xs text-gray-400 capitalize">{item.type} · {item.unit}</p>
                   </div>
-                  <span className="text-sm font-medium text-gray-700">{formatCurrency(item.sell_price)}</span>
+                  <span className="text-sm font-medium text-gray-700">{formatCurrency(priceForCustomerGroup(item, selectedCustomer))}</span>
                 </button>
               ))}
             </div>

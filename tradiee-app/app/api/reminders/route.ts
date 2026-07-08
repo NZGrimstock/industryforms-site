@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
 import { sendEmail, reminderEmailHtml, invoiceEmailHtml } from '@/lib/email'
-import { sendSms, smsConfigured, toE164 } from '@/lib/sms'
+import { isSmsBillingDisabledError, retryFailedSmsMeterEvents, sendSms, smsConfigured, toE164 } from '@/lib/sms'
 import { nextDocNumber } from '@/lib/numbering'
 import { notify } from '@/lib/notify'
 import { DEFAULT_JOB_STATUSES } from '@/lib/job-statuses'
@@ -42,12 +42,15 @@ async function runReminders() {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
   const sent: string[] = []
   const errors: string[] = []
+  const smsMeterRetry = await retryFailedSmsMeterEvents()
+  if (smsMeterRetry.retried) sent.push(`SMS meter retries ${smsMeterRetry.retried}`)
+  if (smsMeterRetry.failed) errors.push(`SMS meter retries failed ${smsMeterRetry.failed}`)
 
   // ── Quote follow-ups ─────────────────────────────────────────────────────
   // Sent quotes not viewed/accepted in 3 days, follow_up_at <= now
   const { data: quotesToRemind } = await service
     .from('quotes')
-    .select('id, quote_number, title, public_token, subtotal, expires_at, customers(name, email, phone), companies(name, email, phone, country)')
+    .select('id, company_id, customer_id, quote_number, title, public_token, subtotal, expires_at, customers(name, email, phone), companies(name, email, phone, country)')
     .eq('status', 'sent')
     .lte('follow_up_at', new Date().toISOString())
     .is('viewed_at', null)
@@ -72,8 +75,11 @@ async function runReminders() {
       const r = await sendSms({
         to: customer.phone, country: (company.country as 'NZ' | 'AU') ?? 'NZ',
         body: `Hi ${customer.name.split(' ')[0]}, just following up on quote ${quote.quote_number} from ${company.name}: ${viewUrl}`,
+        companyId: quote.company_id,
+        relatedType: 'quote_followup',
+        relatedId: quote.id,
       })
-      if (r.error && r.error !== 'SMS service not configured') errors.push(`Quote ${quote.quote_number} sms: ${r.error}`)
+      if (r.error && r.error !== 'SMS service not configured' && !isSmsBillingDisabledError(r.error)) errors.push(`Quote ${quote.quote_number} sms: ${r.error}`)
       else if (!r.error) { delivered = true; sent.push(`Quote ${quote.quote_number} sms`) }
     }
     if (delivered) {
@@ -88,7 +94,7 @@ async function runReminders() {
   const sixDaysAgo = new Date(Date.now() - 6 * 86400000).toISOString()
   const { data: dueInvoices } = await service
     .from('invoices')
-    .select('id, invoice_number, total, amount_paid, public_token, due_date, last_reminder_at, customers(name, email, phone), companies(name, email, phone, country)')
+    .select('id, company_id, customer_id, invoice_number, total, amount_paid, public_token, due_date, last_reminder_at, customers(name, email, phone), companies(name, email, phone, country)')
     .in('status', ['sent', 'partially_paid', 'overdue'])
     .not('due_date', 'is', null)
     .lte('due_date', windowEnd)
@@ -119,8 +125,11 @@ async function runReminders() {
       const r = await sendSms({
         to: customer.phone, country: (company.country as 'NZ' | 'AU') ?? 'NZ',
         body: `Hi ${customer.name.split(' ')[0]}, invoice ${invoice.invoice_number} from ${company.name} ($${amountDue.toFixed(2)}) is ${dueLabel}. View & pay: ${viewUrl}`,
+        companyId: invoice.company_id,
+        relatedType: 'invoice_reminder',
+        relatedId: invoice.id,
       })
-      if (r.error && r.error !== 'SMS service not configured') errors.push(`Invoice ${invoice.invoice_number} sms: ${r.error}`)
+      if (r.error && r.error !== 'SMS service not configured' && !isSmsBillingDisabledError(r.error)) errors.push(`Invoice ${invoice.invoice_number} sms: ${r.error}`)
       else if (!r.error) { delivered = true; sent.push(`Invoice ${invoice.invoice_number} sms (${dueLabel})`) }
     }
     if (delivered || overdue) {
@@ -251,6 +260,8 @@ async function runReminders() {
       })
       sent.push('Appointment reminder sms')
       await service.from('job_visits').update({ reminder_sent_at: now.toISOString() }).eq('id', visit.id)
+    } else if (smsResult?.status === 'skipped_sms_billing_off') {
+      sent.push(`Visit ${visit.id} sms skipped: billing off`)
     } else {
       errors.push(`Visit ${visit.id} reminder not sent: ${smsResult?.status ?? 'no_sms_result'}${smsResult?.error ? ` (${smsResult.error})` : ''}`)
     }

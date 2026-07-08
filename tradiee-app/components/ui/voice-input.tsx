@@ -112,7 +112,7 @@ export function VoiceInput({ mode, onParsed, hint, label = 'VoiceFill' }: VoiceI
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-1.5 text-xs font-medium text-[var(--accent,#f97316)] hover:text-[var(--accent,#f97316)] border border-orange-200 rounded-lg px-3 py-1.5 hover:bg-orange-50 transition-colors"
+        className="inline-flex items-center gap-1.5 text-xs font-medium text-[var(--accent,#f97316)] hover:text-[var(--accent,#f97316)] border border-[var(--accent,#f97316)]/30 rounded-lg px-3 py-1.5 hover:bg-[var(--accent,#f97316)]/10 transition-colors"
       >
         <Sparkles className="h-3.5 w-3.5" />
         {label}

@@ -6,7 +6,7 @@
 // of silently vanishing, and flips to actually sending with zero code changes
 // once Twilio go-live happens.
 import { sendEmail } from '@/lib/email'
-import { sendSms, smsConfigured } from '@/lib/sms'
+import { isSmsBillingDisabledError, sendSms, smsConfigured } from '@/lib/sms'
 
 type EmailPayload = { to: string | null; subject: string; html: string; replyTo?: string | null }
 type SmsPayload = { to: string | null; country?: 'NZ' | 'AU'; body: string }
@@ -64,8 +64,8 @@ export async function notify(params: {
       await logEvent(service, { companyId, customerId, bookingId, eventType, channel: 'sms', status: 'skipped_sms_dark' })
       results.push({ channel: 'sms', status: 'skipped_sms_dark' })
     } else {
-      const result = await sendSms({ to: sms.to, country: sms.country, body: sms.body })
-      const status = result.error ? 'failed' : 'sent'
+      const result = await sendSms({ to: sms.to, country: sms.country, body: sms.body, companyId, relatedType: eventType, relatedId: bookingId ?? undefined })
+      const status = isSmsBillingDisabledError(result.error) ? 'skipped_sms_billing_off' : result.error ? 'failed' : 'sent'
       await logEvent(service, {
         companyId, customerId, bookingId, eventType, channel: 'sms',
         status, error: result.error,
@@ -97,8 +97,8 @@ export async function notifyPreferred(params: {
   const results: NotificationResult[] = []
 
   if (preferSms && smsConfigured()) {
-    const result = await sendSms({ to: sms!.to, country: sms!.country, body: sms!.body })
-    const status = result.error ? 'failed' : 'sent'
+    const result = await sendSms({ to: sms!.to, country: sms!.country, body: sms!.body, companyId, relatedType: eventType, relatedId: bookingId ?? undefined })
+    const status = isSmsBillingDisabledError(result.error) ? 'skipped_sms_billing_off' : result.error ? 'failed' : 'sent'
     await logEvent(service, {
       companyId, customerId, bookingId, eventType, channel: 'sms',
       status, error: result.error,

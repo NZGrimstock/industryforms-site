@@ -1,43 +1,93 @@
 /**
  * POST /api/billing/addon
  * Enable or disable a paid add-on for the caller's company. Owners/admins only.
- *
- * In production, this would create a Stripe Checkout/Portal session for the
- * add-on price; the Stripe webhook is the source of truth. Until STRIPE_* env
- * vars are real, we flip the flag directly so the feature is testable end-to-
- * end. Super-admins / billing-exempt accounts already get add-ons for free
- * via lib/billing.ts → hasAddon().
+ * Codex build audit marker (2026-07-08): production add-ons now use Stripe
+ * Checkout/Portal and the Stripe webhook is the source of truth. Super-admins
+ * and billing-exempt review accounts keep the direct path because they do not
+ * enter Stripe billing.
  */
 export const runtime = 'nodejs'
 
 import { NextResponse } from 'next/server'
+import { z } from 'zod'
 import { resolveCompanyUser } from '@/lib/api-auth'
+import { BILLING_ADDONS, type BillingAddonSlug, setAddonActive } from '@/lib/billing'
+import { getStripe } from '@/lib/stripe'
 import { createServiceClient } from '@/lib/supabase/server'
 
-const KNOWN: Record<string, { monthly: number; label: string }> = {
-  projects: { monthly: 19, label: 'Projects' },
-  website:  { monthly: 9,  label: 'Instant Website' },
-}
+const bodySchema = z.object({
+  slug: z.enum(['projects', 'bookings_website', 'sms_usage']),
+  active: z.boolean().optional(),
+})
 
 export async function POST(req: Request) {
   const auth = await resolveCompanyUser(req)
   if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { slug, active } = await req.json() as { slug?: string; active?: boolean }
-  if (!slug || !KNOWN[slug]) return NextResponse.json({ error: 'Unknown add-on' }, { status: 400 })
+  const parsed = bodySchema.safeParse(await req.json().catch(() => ({})))
+  if (!parsed.success) return NextResponse.json({ error: 'Unknown add-on' }, { status: 400 })
+  const { slug, active = true } = parsed.data
+  const addon = BILLING_ADDONS[slug as BillingAddonSlug]
 
   const svc = createServiceClient()
-  const { data: caller } = await svc.from('profiles').select('role').eq('id', auth.userId).single()
-  if (!caller || (caller.role !== 'owner' && caller.role !== 'admin')) {
+  const { data: caller } = await svc.from('profiles').select('role, is_super_admin').eq('id', auth.userId).single()
+  if (!caller || (!caller.is_super_admin && caller.role !== 'owner' && caller.role !== 'admin')) {
     return NextResponse.json({ error: 'Only owners or admins can change add-ons.' }, { status: 403 })
   }
 
-  const { data: company } = await svc.from('companies').select('addons').eq('id', auth.companyId).single()
-  const addons = { ...((company?.addons ?? {}) as Record<string, { active?: boolean }>) }
-  addons[slug] = { active: active !== false }
+  const { data: company } = await svc
+    .from('companies')
+    .select('name, billing_exempt, stripe_customer_id, addons')
+    .eq('id', auth.companyId)
+    .single()
+  if (!company) return NextResponse.json({ error: 'Company not found' }, { status: 404 })
 
-  const { error } = await svc.from('companies').update({ addons }).eq('id', auth.companyId)
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (caller.is_super_admin || company.billing_exempt) {
+    await setAddonActive(svc, auth.companyId, slug, active)
+    return NextResponse.json({ ok: true, slug, active, monthly: addon.monthly, direct: true })
+  }
 
-  return NextResponse.json({ ok: true, slug, active: addons[slug].active, monthly: KNOWN[slug].monthly })
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
+  const stripe = getStripe()
+  let stripeCustomerId = company.stripe_customer_id as string | null
+  if (!stripeCustomerId) {
+    const customer = await stripe.customers.create({
+      name: company.name ?? undefined,
+      metadata: { company_id: auth.companyId },
+    })
+    stripeCustomerId = customer.id
+    await svc.from('companies').update({ stripe_customer_id: stripeCustomerId }).eq('id', auth.companyId)
+  }
+
+  if (active === false) {
+    const portal = await stripe.billingPortal.sessions.create({
+      customer: stripeCustomerId,
+      return_url: buildReturnUrl(appUrl, '/settings', { tab: 'subscription' }),
+    })
+    return NextResponse.json({ ok: true, slug, active: false, url: portal.url })
+  }
+
+  const session = await stripe.checkout.sessions.create({
+    customer: stripeCustomerId,
+    mode: 'subscription',
+    line_items: [{ price: await getPriceId(addon.lookupKey), quantity: 1 }],
+    success_url: buildReturnUrl(appUrl, addon.returnPath, { subscribed: '1' }),
+    cancel_url: new URL(addon.returnPath, appUrl).toString(),
+    allow_promotion_codes: true,
+    subscription_data: { metadata: { company_id: auth.companyId, addon: slug } },
+  })
+
+  return NextResponse.json({ ok: true, slug, active: true, monthly: addon.monthly, url: session.url })
+}
+
+async function getPriceId(lookupKey: string): Promise<string> {
+  const prices = await getStripe().prices.list({ lookup_keys: [lookupKey], limit: 1 })
+  if (!prices.data[0]) throw new Error(`Price not found for key: ${lookupKey}. Create it in Stripe dashboard.`)
+  return prices.data[0].id
+}
+
+function buildReturnUrl(appUrl: string, path: string, params: Record<string, string>) {
+  const url = new URL(path, appUrl)
+  for (const [key, value] of Object.entries(params)) url.searchParams.set(key, value)
+  return url.toString()
 }
