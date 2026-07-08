@@ -1100,6 +1100,8 @@ const PLAN_DETAILS = [
     key: 'solo',
     label: 'Solo',
     price: '$29/mo',
+    origPrice: '$49',
+    intro: 'Intro price, locked in for 2026',
     users: '1 user',
     desc: 'Perfect for sole traders',
     features: ['All core features', 'Unlimited jobs & quotes', 'Invoice payments', 'Customer portal', 'Price list & materials', 'Email included; SMS add-on'],
@@ -1109,6 +1111,8 @@ const PLAN_DETAILS = [
     key: 'team',
     label: 'Team',
     price: '$49/mo',
+    origPrice: '$79',
+    intro: 'Intro price, locked in for 2026',
     users: 'Up to 10 users',
     desc: 'Grow your crew',
     features: ['Everything in Solo', 'Team scheduling & GPS map', 'Role-based access', 'Timesheets & travel logs', 'Supplier/PO/Bills module', 'Projects add-on ($19/mo)', 'Instant website ($19/mo)'],
@@ -1118,6 +1122,8 @@ const PLAN_DETAILS = [
     key: 'pro',
     label: 'Pro',
     price: '$99/mo',
+    origPrice: '$149',
+    intro: 'Intro price, locked in for 2026',
     users: 'Unlimited users',
     desc: 'For larger operations',
     features: ['Everything in Team', 'Unlimited team members', 'Priority support', 'Advanced reporting', 'Bulk invoicing', 'Xero & accounting sync'],
@@ -1300,7 +1306,11 @@ function BillingTab({ company }: { company: Company }) {
               )}
               <div className="mb-4">
                 <p className="text-base font-bold text-gray-900">{plan.label}</p>
-                <p className="text-2xl font-bold text-[var(--accent,#f97316)] mt-1">{plan.price}</p>
+                <p className="mt-1 flex items-baseline gap-2">
+                  {plan.origPrice && <span className="text-base font-semibold text-gray-400 line-through">{plan.origPrice}</span>}
+                  <span className="text-2xl font-bold text-[var(--accent,#f97316)]">{plan.price}</span>
+                </p>
+                {plan.intro && <p className="text-xs font-medium text-green-600 mt-0.5">{plan.intro}</p>}
                 <p className="text-xs text-gray-500 mt-0.5">{plan.users}</p>
                 <p className="text-xs text-gray-400 mt-1">{plan.desc}</p>
               </div>

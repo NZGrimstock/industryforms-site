@@ -37,6 +37,7 @@ type Kit = {
   code?: string | null
   name: string
   sell_price?: number | null
+  use_item_sell_total?: boolean | null
   kit_items: { quantity: number; price_list_items: PriceItem | null }[]
 }
 
@@ -231,23 +232,25 @@ export function JobMaterials({ jobId, companyId, profileId, materials, priceItem
     for (const component of components) {
       if (!confirmStock(component.price_list_items!, Number(component.quantity))) return
     }
-    const rows = components.map(ki => {
-      const item = ki.price_list_items!
-      return {
-        job_id: jobId,
-        company_id: companyId,
-        added_by: profileId,
-        price_list_item_id: item.id,
-        description: item.name,
-        quantity: ki.quantity,
-        unit: item.unit,
-        unit_cost: item.cost_price,
-        unit_price: sellPrice(item, standardMarkupEnabled, standardMarkupPct),
-      }
-    })
-    if (rows.length === 0) return
+    if (components.length === 0) return
+    // Add the kit as a single line — kit name + kit price — not its components.
+    // Stock is still consumed per underlying component below.
+    const kitCost = components.reduce((sum, ki) => sum + Number(ki.price_list_items!.cost_price) * Number(ki.quantity), 0)
+    const kitSell = kit.use_item_sell_total
+      ? components.reduce((sum, ki) => sum + sellPrice(ki.price_list_items!, standardMarkupEnabled, standardMarkupPct) * Number(ki.quantity), 0)
+      : Number(kit.sell_price ?? 0)
     setLoading(true)
-    const { error } = await supabase.from('job_materials').insert(rows)
+    const { error } = await supabase.from('job_materials').insert({
+      job_id: jobId,
+      company_id: companyId,
+      added_by: profileId,
+      price_list_item_id: null,
+      description: kit.code ? `${kit.name} (${kit.code})` : kit.name,
+      quantity: 1,
+      unit: 'kit',
+      unit_cost: Number(kitCost.toFixed(2)),
+      unit_price: Number(kitSell.toFixed(2)),
+    })
     if (!error) await consumeStock(components.map(ki => ({ item_id: ki.price_list_items!.id, quantity: Number(ki.quantity) })))
     setLoading(false)
     if (error) return

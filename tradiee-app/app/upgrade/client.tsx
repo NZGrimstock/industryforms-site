@@ -4,9 +4,9 @@ import { createClient } from '@/lib/supabase/client'
 import { Check } from 'lucide-react'
 
 const PLANS = [
-  { key: 'solo', label: 'Solo', price: '$29', desc: '1 user · unlimited jobs, quotes & invoices' },
-  { key: 'team', label: 'Team', price: '$79', desc: 'Up to 10 users · all features', popular: true },
-  { key: 'pro', label: 'Pro', price: '$149', desc: 'Unlimited users · priority support' },
+  { key: 'solo', label: 'Solo', price: '$29', origPrice: '$49', desc: '1 user · unlimited jobs, quotes & invoices' },
+  { key: 'team', label: 'Team', price: '$49', origPrice: '$79', desc: 'Up to 10 users · all features', popular: true },
+  { key: 'pro', label: 'Pro', price: '$99', origPrice: '$149', desc: 'Unlimited users · priority support' },
 ]
 
 export function UpgradeClient({ companyName }: { companyName: string }) {
@@ -57,7 +57,11 @@ export function UpgradeClient({ companyName }: { companyName: string }) {
             <div key={p.key} className={`rounded-2xl border bg-white p-5 flex flex-col ${p.popular ? 'border-orange-400 ring-1 ring-orange-200' : 'border-gray-200'}`}>
               {p.popular && <span className="self-start mb-2 text-xs font-semibold text-orange-600 bg-orange-50 px-2 py-0.5 rounded-full">Most popular</span>}
               <h2 className="text-lg font-semibold text-gray-900">{p.label}</h2>
-              <p className="mt-1"><span className="text-2xl font-bold text-gray-900">{p.price}</span><span className="text-sm text-gray-500">/mo</span></p>
+              <p className="mt-1 flex items-baseline gap-2">
+                {p.origPrice && <span className="text-base font-semibold text-gray-400 line-through">{p.origPrice}</span>}
+                <span className="text-2xl font-bold text-gray-900">{p.price}</span><span className="text-sm text-gray-500">/mo</span>
+              </p>
+              <p className="text-xs font-medium text-green-600 mt-0.5">Intro price, locked in for 2026</p>
               <p className="text-sm text-gray-500 mt-2 flex-1">{p.desc}</p>
               <button
                 onClick={() => subscribe(p.key)}
